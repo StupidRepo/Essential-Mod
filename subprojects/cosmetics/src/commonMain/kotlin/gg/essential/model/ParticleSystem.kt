@@ -248,6 +248,7 @@ class ParticleSystem(
         particleVertexConsumerProvider: VertexConsumerProvider,
         cameraUuid: UUID,
         cameraFirstPerson: Boolean,
+        hideParticlesInFirstPerson: Boolean,
     ) {
         val cameraFacing = vec3(0f, 0f, -1f).rotateBy(cameraRot)
         for ((renderPass, particles) in billboardRenderPasses.entries.sortedBy { it.key.material.needsSorting }) {
@@ -260,12 +261,12 @@ class ParticleSystem(
                         particle.distance = cameraPos.minus(particle.billboardPosition).dot(billboardNormal)
                     }
                     for (particle in particles.sortedByDescending { it.distance }) {
-                        particle.renderBillboard(matrixStack, vertexConsumer, cameraFacing, cameraUuid, cameraFirstPerson)
+                        particle.renderBillboard(matrixStack, vertexConsumer, cameraFacing, cameraUuid, cameraFirstPerson, hideParticlesInFirstPerson)
                     }
                 } else {
                     for (particle in particles) {
                         particle.prepareBillboard(cameraPos, cameraRot)
-                        particle.renderBillboard(matrixStack, vertexConsumer, cameraFacing, cameraUuid, cameraFirstPerson)
+                        particle.renderBillboard(matrixStack, vertexConsumer, cameraFacing, cameraUuid, cameraFirstPerson, hideParticlesInFirstPerson)
                     }
                 }
             }
@@ -981,9 +982,11 @@ class ParticleSystem(
             cameraFacing: Vec3,
             cameraUuid: UUID,
             cameraFirstPerson: Boolean,
+            hideParticlesInFirstPerson: Boolean,
         ) {
             // Abide by the particle effect visibility component for the current player.
             if (cameraUuid == emitter.sourceEntity.uuid) {
+                if (cameraFirstPerson && hideParticlesInFirstPerson) return
                 if (!components.particleVisibility.let { if (cameraFirstPerson) it.firstPerson else it.thirdPerson }) return
             }
 

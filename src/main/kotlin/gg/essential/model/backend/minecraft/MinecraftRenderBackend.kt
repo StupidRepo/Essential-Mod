@@ -102,6 +102,7 @@ object MinecraftRenderBackend : RenderBackend {
     }
 
     //#if MC>=12105
+    //#if FABRIC || FORGE
     //$$ private fun RenderPipeline.toBuilder(): RenderPipeline.Builder = RenderPipeline.builder().copyFrom(this)
     //$$ private fun RenderPipeline.Builder.copyFrom(pipeline: RenderPipeline): RenderPipeline.Builder = apply {
     //$$     withLocation(pipeline.location)
@@ -132,7 +133,8 @@ object MinecraftRenderBackend : RenderBackend {
     //$$     withVertexFormat(pipeline.vertexFormat, pipeline.vertexFormatMode)
     //$$     withDepthBias(pipeline.depthBiasScaleFactor, pipeline.depthBiasConstant)
     //$$ }
-    //#if FORGE==0
+    //#endif
+    //#if FABRIC
     //$$ // Note: Cannot pass `program` directly because Iris might not be installed
     //$$ private fun RenderPipeline.assignIrisProgram(program: () -> IrisProgram): RenderPipeline = apply {
     //$$     if (ModLoaderUtil.isModLoaded("iris")) {
@@ -186,7 +188,7 @@ object MinecraftRenderBackend : RenderBackend {
     //$$ private val particleAdditivePipeline = RenderPipelines.TRANSLUCENT_PARTICLE.toBuilder()
     //$$     .withBlend(BlendFunction.LIGHTNING)
     //$$     .build()
-        //#if FORGE==0
+        //#if FABRIC
         //$$ .assignIrisProgram { IrisProgram.PARTICLES_TRANSLUCENT }
         //#endif
     //#endif
@@ -246,7 +248,7 @@ object MinecraftRenderBackend : RenderBackend {
     //$$ // have to build it ourselves.
     //#if MC>=12105
     //$$ private val entityTranslucentCullPipeline = RenderPipelines.ENTITY_TRANSLUCENT.toBuilder().withCull(true).build()
-        //#if FORGE==0
+        //#if FABRIC
         //$$ .assignIrisProgram { IrisProgram.ENTITIES_TRANSLUCENT }
         //#endif
     //#endif

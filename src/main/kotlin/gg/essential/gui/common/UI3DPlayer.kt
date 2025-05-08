@@ -683,7 +683,15 @@ open class UI3DPlayer(
 
         val camera = perspectiveCamera ?: rotationAngleCamera
         val cameraPos = camera.camera.rotateBy(realRotation).plus(realPosition)
-        particleSystem.render(stack, cameraPos, realRotation * camera.rotation, vertexConsumerProvider, UUID(0, 0), false)
+        particleSystem.render(
+            stack,
+            cameraPos,
+            realRotation * camera.rotation,
+            vertexConsumerProvider,
+            UUID(0, 0),
+            false,
+            false
+        )
 
         //#if MC>=12104
         //$$ immediate.draw()

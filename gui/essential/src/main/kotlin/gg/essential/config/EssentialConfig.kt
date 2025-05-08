@@ -260,6 +260,8 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
 
     val playEmoteSoundsInWardrobe = property("Hidden.play_emote_sounds_in_wardrobe", true)
 
+    val hideCosmeticParticlesInFirstPerson = property("Cosmetics.General.Hide cosmetic particles in first person", false)
+
     override val migrations = listOf(
         Migration { config ->
             val overrideGuiScale = config.remove("general.general.gui_scale") as Boolean? ?: return@Migration
@@ -420,6 +422,11 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                         switch(ownCosmeticsHiddenStateWithSource.bimap({ it.first }, { it to true })) {
                             name = "Hide your cosmetics"
                             description = "Hide your equipped cosmetics for everyone."
+                        }
+
+                        switch(hideCosmeticParticlesInFirstPerson) {
+                            name = "Hide cosmetic particles in first person"
+                            description = "Hide particle effects coming from your equipped cosmetics in first person."
                         }
 
                         val swapFirstTwo: (Int) -> Int = { if (it in 0..1) (it + 1) % 2 else it }

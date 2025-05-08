@@ -11,6 +11,7 @@
  */
 package gg.essential.mixins.transformers.feature.particles;
 
+import gg.essential.config.EssentialConfig;
 import gg.essential.mixins.ext.client.ParticleSystemHolder;
 import gg.essential.model.ParticleSystem;
 import gg.essential.model.backend.minecraft.MinecraftRenderBackend;
@@ -217,7 +218,15 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
         );
 
         boolean isFirstPerson = getPerspective() == 0;
-        particleSystem.render(stack, cameraPos, cameraRot, particleVertexConsumer, cameraUuid, isFirstPerson);
+        particleSystem.render(
+                stack,
+                cameraPos,
+                cameraRot,
+                particleVertexConsumer,
+                cameraUuid,
+                isFirstPerson,
+                EssentialConfig.INSTANCE.getHideCosmeticParticlesInFirstPerson().getUntracked()
+        );
 
         profiler.endSection();
     }
