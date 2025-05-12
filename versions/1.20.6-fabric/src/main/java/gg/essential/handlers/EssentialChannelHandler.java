@@ -55,7 +55,7 @@ public class EssentialChannelHandler {
     //#if NEOFORGE
     //$$ @SubscribeEvent
     //$$ public static void registerWithNeoForge(RegisterPayloadHandlersEvent event) {
-    //$$     event.registrar("1").playBidirectional(Payload.ID, Payload.CODEC, (__, ___) -> {});
+    //$$     event.registrar("1").optional().playBidirectional(Payload.ID, Payload.CODEC, (__, ___) -> {});
     //$$ }
     //#endif
 
