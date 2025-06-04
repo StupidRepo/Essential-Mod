@@ -28,9 +28,14 @@ import gg.essential.connectionmanager.common.packet.media.ServerMediaUploadUrlPa
 import gg.essential.connectionmanager.common.packet.response.ResponseActionPacket;
 import gg.essential.event.render.RenderTickEvent;
 import gg.essential.gui.NotificationsKt;
+import gg.essential.gui.elementa.state.v2.MutableState;
+import gg.essential.gui.elementa.state.v2.State;
+import gg.essential.gui.elementa.state.v2.collections.MutableTrackedList;
+import gg.essential.gui.elementa.state.v2.collections.TrackedList;
 import gg.essential.gui.notification.Notifications;
 import gg.essential.gui.screenshot.LocalScreenshot;
 import gg.essential.gui.screenshot.ScreenshotId;
+import gg.essential.gui.screenshot.ScreenshotInfo;
 import gg.essential.gui.screenshot.ScreenshotOverlay;
 import gg.essential.gui.screenshot.ScreenshotUploadToast;
 import gg.essential.gui.screenshot.action.PostScreenshotAction;
@@ -68,6 +73,7 @@ import gg.essential.util.UUIDUtil;
 import gg.essential.util.lwjgl3.Lwjgl3Loader;
 import gg.essential.util.lwjgl3.api.NativeImageReader;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import kotlin.Pair;
 import kotlin.Unit;
 import me.kbrewster.eventbus.Subscribe;
 import net.minecraft.client.Minecraft;
@@ -85,16 +91,13 @@ import java.awt.image.RenderedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -103,10 +106,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import static gg.essential.gui.elementa.state.v2.ListKt.clear;
+import static gg.essential.gui.elementa.state.v2.ListKt.mutableListStateOf;
 import static gg.essential.gui.screenshot.UtilsKt.getImageTime;
 import static gg.essential.gui.screenshot.providers.WindowProviderKt.toSingleWindowRequest;
+import static gg.essential.util.HelpersKt.combinedOrderedScreenshotsState;
 
 public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
+
+    private final MutableState<MutableTrackedList<Pair</*name*/ String, /*checksum*/ String>>> localScreenshots = mutableListStateOf();
+    private final MutableState<MutableTrackedList<Media>> remoteScreenshots = mutableListStateOf();
+
+    private final State<TrackedList<ScreenshotInfo>> screenshots;
 
     private final NativeImageReader nativeImageReader;
     private final Map<String, Media> uploadedScreenshots = new HashMap<>();
@@ -116,7 +127,6 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
 
     private final PriorityThreadPoolExecutor backgroundExecutor = new PriorityThreadPoolExecutor(1);
     private final FileCachedWindowedImageProvider minResolutionProvider;
-    private final List<WeakReference<Consumer<ScreenshotCollectionChangeEvent>>> screenshotCollectionChangeHandlers = new ArrayList<>();
 
     private final ScreenshotChecksumManager screenshotChecksumManager;
 
@@ -142,14 +152,28 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         nativeImageReader = lwjgl3.get(NativeImageReader.class);
         screenshotChecksumManager = new ScreenshotChecksumManager(HelpersKt.getScreenshotFolder(), new File(baseDir, "screenshot-checksum-caches.json"));
         screenshotMetadataManager = new ScreenshotMetadataManager(metadataFolder, screenshotChecksumManager);
-        minResolutionProvider = ScreenshotProviderManager.Companion.createFileCachedBicubicProvider(ScreenshotProviderManager.minResolutionTargetResolution, backgroundExecutor, UnpooledByteBufAllocator.DEFAULT, baseDir, nativeImageReader, true);
+        minResolutionProvider = ScreenshotProviderManager.Companion.createFileCachedBicubicProvider(ScreenshotProviderManager.minResolutionTargetResolution, backgroundExecutor, UnpooledByteBufAllocator.DEFAULT, baseDir.toPath(), nativeImageReader, true);
         Multithreading.runAsync(this::preloadScreenshots);
         screenshotFolderWatcher = new DirectoryWatcher(HelpersKt.getScreenshotFolder().toPath(), false, 1, TimeUnit.SECONDS);
         screenshotFolderWatcher.onBatchUpdate(this::flushFilesystemOperationsQueue);
+
+        screenshots = combinedOrderedScreenshotsState(
+            screenshotMetadataManager,
+            HelpersKt.getScreenshotFolder().toPath(),
+            localScreenshots,
+            remoteScreenshots
+        );
+    }
+
+    @Override
+    public void resetState() {
+        uploadedScreenshots.clear();
+        clear(remoteScreenshots);
     }
 
     @Override
     public void onConnected() {
+        resetState();
         this.connectionManager.send(new ClientMediaRequestPacket(null));
     }
 
@@ -165,6 +189,11 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
                 screenshotFiles.add(file.getName());
                 precompute(file);
                 getScreenshotMetadataManager().getMetadata(file);
+
+                String checksum = screenshotChecksumManager.get(file);
+                if (checksum == null) continue;
+                ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() ->
+                    localScreenshots.set(list -> list.add(new Pair<>(file.getName(), checksum))));
             }
         }
     }
@@ -177,19 +206,14 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         return nativeImageReader;
     }
 
-    public void registerScreenshotCollectionChangeHandler(final Consumer<ScreenshotCollectionChangeEvent> handler) {
-        this.screenshotCollectionChangeHandlers.add(new WeakReference<>(handler));
+    @Override
+    public @NotNull Path getScreenshotFolder() {
+        return HelpersKt.getScreenshotFolder().toPath();
     }
 
-    private void callScreenshotCollectionChangeHandlers(final ScreenshotCollectionChangeEvent event) {
-        for (WeakReference<Consumer<ScreenshotCollectionChangeEvent>> reference : new ArrayList<>(this.screenshotCollectionChangeHandlers)) {
-            Consumer<ScreenshotCollectionChangeEvent> handler = reference.get();
-            if (handler == null) {
-                this.screenshotCollectionChangeHandlers.remove(reference);
-                continue;
-            }
-            handler.accept(event);
-        }
+    @Override
+    public @NotNull State<TrackedList<ScreenshotInfo>> getScreenshots() {
+        return screenshots;
     }
 
     public CompletableFuture<Media> upload(Path path) {
@@ -232,10 +256,12 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         return uploadFuture;
     }
 
+    @Override
     public CompletableFuture<Media> uploadAndCopyLinkToClipboard(Path path) {
         return uploadAndCopyLinkToClipboard(path, screenshotMetadataManager.getOrCreateMetadata(path));
     }
 
+    @Override
     public CompletableFuture<Media> uploadAndCopyLinkToClipboard(Path path, ClientScreenshotMetadata metadata) {
         return uploadAndCopyLinkToClipboard(path, metadata, ScreenshotUploadToast.create());
     }
@@ -244,10 +270,12 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         return uploadAndAcceptMedia(path, metadata, progressConsumer, media -> copyLinkToClipboard(media, progressConsumer));
     }
 
+    @Override
     public CompletableFuture<Media> uploadAndShareLinkToChannels(List<Channel> channels, Path path) {
         return uploadAndShareLinkToChannels(channels, path, screenshotMetadataManager.getOrCreateMetadata(path));
     }
 
+    @Override
     public CompletableFuture<Media> uploadAndShareLinkToChannels(List<Channel> channels, Path path, ClientScreenshotMetadata metadata) {
         return uploadAndShareLinkToChannels(channels, path, metadata, ScreenshotUploadToast.create());
     }
@@ -256,6 +284,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         return uploadAndAcceptMedia(path, metadata, progressConsumer, media -> shareLinkToChannels(channels, media, progressConsumer));
     }
 
+    @Override
     public void copyLinkToClipboard(Media media) {
         copyLinkToClipboard(media, ScreenshotUploadToast.create());
     }
@@ -270,6 +299,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Link copied to clipboard", true));
     }
 
+    @Override
     public void shareLinkToChannels(List<Channel> channels, Media media) {
         shareLinkToChannels(channels, media, ScreenshotUploadToast.create());
     }
@@ -323,6 +353,21 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         if (screenshots == null) return;
         for (Media media : screenshots) {
             uploadedScreenshots.put(media.getId(), media);
+
+            MutableTrackedList<Media> list = remoteScreenshots.getUntracked();
+            int index = -1;
+            for (int i = 0; i < list.size(); i++) {
+                if (list.get(i).getId().equals(media.getId())) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index != -1) {
+                list = list.set(index, media);
+            } else {
+                list = list.add(media);
+            }
+            remoteScreenshots.set(list);
         }
     }
 
@@ -385,8 +430,8 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
                 uploadFuture.complete(((ServerMediaPopulatePacket) packet1).getMedias().get(0));
             }
             // Update the screenshot metadata store the media ID
-            metadata.setMediaId(packet.getMediaId());
-            Multithreading.runAsync(() -> screenshotMetadataManager.updateMetadata(metadata));
+            ClientScreenshotMetadata newMetadata = metadata.withMediaId(packet.getMediaId());
+            Multithreading.runAsync(() -> screenshotMetadataManager.updateMetadata(newMetadata));
         });
     }
 
@@ -488,6 +533,8 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         screenshotChecksumManager.set(imgFile, metadata.getChecksum());
         screenshotMetadataManager.updateMetadata(metadata);
         screenshotFiles.add(imgFile.getName());
+        ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() ->
+            localScreenshots.set(list -> list.add(new Pair<>(imgFile.getName(), metadata.getChecksum()))));
         precompute(imgFile);
 
         if (showOverlay) {
@@ -495,8 +542,6 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         }
 
         ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() -> {
-            callScreenshotCollectionChangeHandlers(new ScreenshotCollectionChangeEvent(true, Collections.emptySet()));
-
             int currentId = ++latestScreenshotActionId;
             Multithreading.scheduleOnMainThread(
                 () -> {
@@ -558,8 +603,8 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
 
     @Override
     public ClientScreenshotMetadata setFavorite(Path path, boolean favorite) {
-        final ClientScreenshotMetadata metadata = screenshotMetadataManager.getOrCreateMetadata(path);
-        metadata.setFavorite(favorite);
+        final ClientScreenshotMetadata metadata = screenshotMetadataManager.getOrCreateMetadata(path)
+            .withFavorite(favorite);
         screenshotMetadataManager.updateMetadata(metadata);
         return metadata;
     }
@@ -594,22 +639,28 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         final List<FileSystemEvent> items = FileSystemEventKt.filterRedundancy(events);
 
 
-        Set<Path> deletedPaths = new HashSet<>();
-        boolean anyNewItems = false;
+        MutableTrackedList<Pair<String, String>> list = localScreenshots.getUntracked();
         for (FileSystemEvent event : items) {
-            if (!fileNameMatchesImage(event.getPath().getFileName().toString())) {
+            String name = event.getPath().getFileName().toString();
+            if (!fileNameMatchesImage(name)) {
                 continue;
             }
             switch (event.getEventType()) {
                 case CREATE: {
-                    if (screenshotFiles.add(event.getPath().getFileName().toString())) {
-                        anyNewItems = true;
+                    if (screenshotFiles.add(name)) {
+                        String checksum = screenshotChecksumManager.get(event.getPath().toFile());
+                        list = list.add(new Pair<>(name, checksum));
                     }
                     break;
                 }
                 case DELETE: {
                     if (handleDelete(event.getPath().toFile(), true)) {
-                        deletedPaths.add(event.getPath());
+                        for (int i = 0; i < list.size(); i++) {
+                            if (name.equals(list.get(i).component1())) {
+                                list = list.removeAt(i);
+                                break;
+                            }
+                        }
                     }
                     break;
                 }
@@ -617,8 +668,13 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
             }
         }
 
-        callScreenshotCollectionChangeHandlers(new ScreenshotCollectionChangeEvent(anyNewItems, deletedPaths));
+        localScreenshots.set(list);
         return Unit.INSTANCE;
+    }
+
+    @Override
+    public void deleteFile(@NotNull Path path) {
+        handleDelete(path.toFile(), false);
     }
 
     /**
@@ -645,6 +701,16 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         }
 
         boolean mutated = screenshotFiles.remove(file.getName());
+        if (mutated) {
+            MutableTrackedList<Pair<String, String>> list = localScreenshots.getUntracked();
+            for (int i = 0; i < list.size(); i++) {
+                if (list.get(i).component1().equals(file.getName())) {
+                    localScreenshots.set(list.removeAt(i));
+                    break;
+                }
+            }
+        }
+
         ScreenshotOverlay.INSTANCE.delete(file);
         if (external) {
             getScreenshotMetadataManager().handleExternalDelete(file.getName());
@@ -655,8 +721,17 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         return mutated;
     }
 
+    @Override
     public void deleteMedia(String mediaId, Path localFile) {
         uploadedScreenshots.remove(mediaId);
+
+        MutableTrackedList<Media> list = remoteScreenshots.getUntracked();
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).getId().equals(mediaId)) {
+                remoteScreenshots.set(list.removeAt(i));
+                break;
+            }
+        }
 
         if (localFile != null) {
             // FIXME: Should ideally only update this once CM confirms that it's been deleted.
@@ -710,6 +785,8 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
             // Precomputing not done here because the UI is already open and will it will generate what it needs as it needs it
 
             ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() -> {
+                localScreenshots.set(list -> list.add(new Pair<>(output.getName(), checksum)));
+
                 NotificationsKt.sendCheckmarkNotification("Picture saved as copy");
             });
             return output;

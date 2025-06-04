@@ -133,19 +133,19 @@ class CosmeticCategoryConfiguration(
     }
 
     @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
-    override fun getDeleteModal(modalManager: ModalManager, category: CosmeticCategory): Modal {
-        val cosmeticNames = cosmeticsDataWithChanges.cosmetics.get().filter { category.id in it.categories }.joinToString { it.displayName }
+    override fun getDeleteModal(modalManager: ModalManager, categoryId: CosmeticCategoryId): Modal {
+        val cosmeticNames = cosmeticsDataWithChanges.cosmetics.get().filter { categoryId in it.categories }.joinToString { it.displayName }
 
         return DangerConfirmationEssentialModal(modalManager, "Delete", false).configure {
-            titleText = "Are you sure you want to delete ${category.id}?"
+            titleText = "Are you sure you want to delete ${categoryId}?"
             contentText =
                 "This will remove the category from all cosmetics that use it. The following cosmetics will be affected: $cosmeticNames"
         }.onPrimaryAction {
             cosmeticsDataWithChanges.cosmetics.get().forEach { cosmetic ->
-                if (!cosmetic.categories.containsKey(category.id)) return@forEach
-                cosmeticsDataWithChanges.updateCosmetic(cosmetic.id, cosmetic.copy(categories = cosmetic.categories - category.id))
+                if (!cosmetic.categories.containsKey(categoryId)) return@forEach
+                cosmeticsDataWithChanges.updateCosmetic(cosmetic.id, cosmetic.copy(categories = cosmetic.categories - categoryId))
             }
-            cosmeticsDataWithChanges.unregisterCategory(category.id)
+            cosmeticsDataWithChanges.unregisterCategory(categoryId)
             state.currentlyEditingCosmeticCategoryId.set(null)
         }
     }

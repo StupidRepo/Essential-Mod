@@ -11,13 +11,18 @@
  */
 package gg.essential.gui.screenshot.components
 
-import gg.essential.elementa.state.BasicState
-import gg.essential.elementa.state.State
+import com.google.common.collect.MapMaker
+import gg.essential.gui.elementa.state.v2.MutableState
+import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.memo
+import gg.essential.gui.elementa.state.v2.withSetter
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.State as StateV2
 import gg.essential.gui.screenshot.LocalScreenshot
 import gg.essential.gui.screenshot.RemoteScreenshot
+import gg.essential.gui.screenshot.ScreenshotId
+import gg.essential.handlers.screenshot.ClientScreenshotMetadata
 import gg.essential.network.connectionmanager.media.IScreenshotManager
-import kotlinx.coroutines.Dispatchers
-import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Manages states relating to the screenshot browser
@@ -25,58 +30,36 @@ import kotlin.coroutines.EmptyCoroutineContext
 class ScreenshotStateManager(
     private val screenshotManager: IScreenshotManager,
 ) {
-
-    private val favoriteMap = mutableMapOf<ScreenshotProperties, State<Boolean>>()
-    private val aspectMap = mutableMapOf<ScreenshotProperties, State<Float>>()
-
-    /**
-     * Creates a State<Boolean> that stores whether the screenshot in [properties] is favorite.
-     * Updates to the state will be automatically forwarded to the screenshot manager
-     */
-    private fun registerFavoriteState(properties: ScreenshotProperties, state: State<Boolean>) {
-        state.onSetValue {
-            Dispatchers.IO.dispatch(EmptyCoroutineContext) {
-                properties.metadata =
-                    when (val id = properties.id) {
-                        is LocalScreenshot ->
-                            screenshotManager.setFavorite(id.path, it)
-                        is RemoteScreenshot ->
-                            screenshotManager.setFavorite(id.media, it)
-                    }
-            }
+    private val metadataStateCache: MutableMap<ScreenshotId, StateV2<ClientScreenshotMetadata?>> = MapMaker().weakValues().makeMap()
+    fun metadata(id: ScreenshotId): StateV2<ClientScreenshotMetadata?> =
+        metadataStateCache.getOrPut(id) {
+            memo { screenshotManager.screenshots().find { it.id == id }?.metadata }
         }
-    }
 
     /**
-     * Gets the cached aspect ratio of this screenshot.
-     * This method will NOT load the aspect ratio if it's not already loaded.
-     * That behavior is done in the callbacks from [ScreenshotProviderManager] in [FocusListComponent] and [ListViewComponent]
-     */
-    fun getAspectRatio(properties: ScreenshotProperties): State<Float> {
-        return aspectMap.computeIfAbsent(properties) {
-            BasicState(16 / 9f)
-        }
-    }
-
-    /**
-     * Gets the current favorite state for the screenshot in [properties].
+     * Gets the current favorite state for the screenshot identified by [id].
      * Updates to this state will be automatically forwarded to the [gg.essential.network.connectionmanager.media.ScreenshotManager]
      * to be persisted
      */
-    fun getFavoriteState(properties: ScreenshotProperties): State<Boolean> {
-        return favoriteMap.computeIfAbsent(properties) {
-            BasicState(it.metadata?.favorite ?: false).also { state ->
-                registerFavoriteState(it, state)
+    fun getFavoriteState(id: ScreenshotId): MutableState<Boolean> =
+        metadata(id)
+            .map { it?.favorite ?: false }
+            .withSetter { update ->
+                val oldValue = getUntracked()
+                val newValue = update(oldValue)
+                if (oldValue == newValue) return@withSetter
+                when (id) {
+                    is LocalScreenshot -> screenshotManager.setFavorite(id.path, newValue)
+                    is RemoteScreenshot -> screenshotManager.setFavorite(id.media, newValue)
+                }
             }
-        }
-    }
 
     /**
      * Gets a text state that is returns the string that should be displayed
      * for the favorite action
      */
-    fun getFavoriteTextState(properties: ScreenshotProperties): State<String> {
-        return mapFavoriteText(getFavoriteState(properties))
+    fun getFavoriteTextState(id: ScreenshotId): State<String> {
+        return mapFavoriteText(getFavoriteState(id))
     }
 
     fun mapFavoriteText(favorite: State<Boolean>): State<String> {
@@ -88,11 +71,4 @@ class ScreenshotStateManager(
             }
         }
     }
-
-    fun handleDelete(properties: ScreenshotProperties) {
-        aspectMap.remove(properties)
-        favoriteMap.remove(properties)
-    }
-
-
 }

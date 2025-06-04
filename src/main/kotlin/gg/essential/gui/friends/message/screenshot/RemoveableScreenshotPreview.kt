@@ -13,11 +13,9 @@ package gg.essential.gui.friends.message.screenshot
 
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.IconButton
+import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.remove
-import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.layoutdsl.Alignment
-import gg.essential.gui.layoutdsl.BasicHeightModifier
-import gg.essential.gui.layoutdsl.BasicWidthModifier
 import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.alignBoth
 import gg.essential.gui.layoutdsl.alignHorizontal
@@ -29,26 +27,23 @@ import gg.essential.gui.layoutdsl.height
 import gg.essential.gui.layoutdsl.layout
 import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.screenshot.ScreenshotId
-import gg.essential.gui.screenshot.constraints.AspectPreservingFillConstraint
+import gg.essential.gui.screenshot.components.ScreenshotPreview
+import gg.essential.gui.screenshot.components.screenshotImage
 import gg.essential.vigilance.utils.onLeftClick
 
 class RemoveableScreenshotPreview(
     screenshotId: ScreenshotId,
-    simpleScreenshotProvider: SimpleScreenshotProvider,
+    desiredImageSize: MutableState<Pair<Int, Int>>,
     private val screenshotAttachmentManager: ScreenshotAttachmentManager,
 ) : ScreenshotPreview(
     screenshotId,
-    simpleScreenshotProvider,
+    desiredImageSize,
 ) {
 
     init {
         this.layout {
             box(Modifier.fillParent().color(EssentialPalette.GUI_BACKGROUND)) {
-                img(
-                    Modifier.alignBoth(Alignment.TrueCenter)
-                        .then(BasicWidthModifier { AspectPreservingFillConstraint(imageAspectState.toV1(this@RemoveableScreenshotPreview)) })
-                        .then(BasicHeightModifier { AspectPreservingFillConstraint(imageAspectState.toV1(this@RemoveableScreenshotPreview)) })
-                )
+                screenshotImage(imgTexture, Modifier.alignBoth(Alignment.TrueCenter))
                 box(Modifier.width(16f).height(16f).alignHorizontal(Alignment.End).alignVertical(Alignment.Start)) {
                     IconButton(
                         EssentialPalette.CANCEL_5X,

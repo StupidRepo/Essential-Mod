@@ -12,7 +12,7 @@
 package gg.essential.gui.screenshot.components
 
 import gg.essential.elementa.components.*
-import gg.essential.elementa.state.State
+import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.screenshot.ScreenshotId
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
 import gg.essential.sps.SPS_TLD
@@ -43,48 +43,39 @@ data class ScreenshotProperties(val id: ScreenshotId, var metadata: ClientScreen
             it.contains(textSearch, ignoreCase = true)
         }
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (other !is ScreenshotProperties) return false
-
-        return id == other.id
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
-    }
 }
 
 fun ClientScreenshotMetadata.cloneWithNewChecksum(checksum: String): ClientScreenshotMetadata {
     return copy(checksum = checksum)
 }
 
-abstract class ScreenshotView(private val view: View, currentView: State<View>) : UIContainer() {
+abstract class ScreenshotView(val active: State<Boolean>) : UIContainer() {
+    val titleBar: UIContainer = UIContainer()
 
-    open val active: State<Boolean> = currentView.map {
-        it == view
+    companion object {
+        val buttonSize = 17f
+    }
+}
+
+sealed interface View {
+    val back: View
+
+    data object List : View {
+        override val back: View
+            get() = this
     }
 
-}
+    data class Focus(val screenshot: ScreenshotId) : View {
+        override val back: View
+            get() = List
+    }
 
-enum class View {
-    LIST,
-    FOCUS
-}
-
-enum class FocusType {
-    VIEW,
-    EDIT
+    data class Edit(val screenshot: ScreenshotId, override val back: View) : View
 }
 
 // Magic constants are put here and named instead of being inlined
-const val screenshotListNavigationHeight = 28
-const val contentMargin = 11
-const val tabSpacing = 12f
-const val horizontalScreenshotPadding = 10f
-const val verticalScreenshotPadding = 30f
+const val screenshotPadding = 10f
+const val screenshotGroupHeaderHeight = 30f
 const val hoverOutlineWidth = 2f
-const val minItemsPerRow = 2
-const val maxItemsPerRow = 7
 const val focusImageWidthPercent = 67
-const val focusImageVerticalPadding = 20
+const val focusImageVerticalPadding = 20f

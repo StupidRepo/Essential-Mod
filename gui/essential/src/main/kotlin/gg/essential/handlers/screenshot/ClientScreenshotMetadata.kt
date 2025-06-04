@@ -12,11 +12,16 @@
 package gg.essential.handlers.screenshot
 
 import com.sparkuniverse.toolbox.util.DateTime
+import gg.essential.gui.screenshot.ScreenshotId
+import gg.essential.gui.screenshot.components.ScreenshotProperties
+import gg.essential.gui.screenshot.getImageTime
 import gg.essential.lib.gson.annotations.SerializedName
 import gg.essential.media.model.Media
 import gg.essential.media.model.MediaLocationMetadata
 import gg.essential.media.model.MediaLocationType
 import gg.essential.sps.SPS_TLD
+import gg.essential.util.USession
+import java.nio.file.Path
 import java.util.*
 
 data class ClientScreenshotMetadata(
@@ -31,10 +36,10 @@ data class ClientScreenshotMetadata(
     @SerializedName("locationMetadata", alternate = ["d"])
     val locationMetadata: Location,
     @SerializedName("favorite", alternate = ["e"])
-    var favorite: Boolean,
+    val favorite: Boolean,
     @SerializedName("edited", alternate = ["f"])
-    var edited: Boolean,
-    var mediaId: String? = null,
+    val edited: Boolean,
+    val mediaId: String? = null,
 ) {
     constructor(media: Media) : this(
         media.metadata.authorId,
@@ -48,6 +53,7 @@ data class ClientScreenshotMetadata(
     )
 
     fun withMediaId(mediaId: String?) = copy(mediaId = mediaId)
+    fun withFavorite(favorite: Boolean) = copy(favorite = favorite)
 
     data class Location(
         @SerializedName("type", alternate = ["a"])
@@ -90,5 +96,24 @@ data class ClientScreenshotMetadata(
                 }
             }
         }
+    }
+
+    companion object {
+        fun createUnknown(path: Path, checksum: String) =
+            createUnknown(getImageTime(path, null, false), checksum)
+
+        fun createUnknown(id: ScreenshotId, checksum: String) =
+            createUnknown(getImageTime(ScreenshotProperties(id, null), false), checksum)
+
+        fun createUnknown(time: DateTime, checksum: String) =
+            ClientScreenshotMetadata(
+                USession.activeNow().uuid,
+                time,
+                checksum,
+                null,
+                Location(ClientScreenshotMetadata.Location.Type.UNKNOWN, "Unknown"),
+                favorite = false,
+                edited = false,
+            )
     }
 }

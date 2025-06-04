@@ -52,27 +52,20 @@ import java.util.UUID;
 import static gg.essential.elementa.utils.ExtensionsKt.withAlpha;
 
 public class OnlineIndicator {
-    //#if MC!=11202
-    //$$ public static final ThreadLocal<Boolean> currentlyDrawingEntityName = ThreadLocal.withInitial(() -> false);
-    //#else
-    /**
-     * Set while {@link #currentlyDrawingEntityName()}.
-     * Only useful for 1.12.2, all other versions get the entity via regular method arguments.
-     */
-    public static Entity nametagEntity;
+
+    public static final ThreadLocal<Boolean> currentlyDrawingPlayerEntityName = ThreadLocal.withInitial(() -> false);
+    //#if MC==11202
+    public static Entity nametagEntity = null;
     //#endif
+
 
     /**
      * When called from a {@code drawNameplate} mixin, returns whether this nameplate is the primary name nameplate, as
      * opposed to e.g. the scoreboard score line.
      * @return {@code true} if this is the primary name nameplate
      */
-    public static boolean currentlyDrawingEntityName() {
-        //#if MC!=11202
-        //$$ return currentlyDrawingEntityName.get();
-        //#else
-        return nametagEntity != null;
-        //#endif
+    public static boolean currentlyDrawingPlayerEntityName() {
+        return currentlyDrawingPlayerEntityName.get();
     }
 
     //#if MC<11600
@@ -225,6 +218,7 @@ public class OnlineIndicator {
         int x, int y
     ) {
 
+        // draw the essential user indicator
         drawTabIndicator(
             matrixStack,
             //#if MC>=11600

@@ -11,16 +11,21 @@
  */
 package gg.essential.gui.screenshot.handler
 
+import com.google.common.collect.MapMaker
 import com.google.common.collect.Sets
 import com.sparkuniverse.toolbox.serialization.DateTimeTypeAdapter
 import com.sparkuniverse.toolbox.serialization.UUIDTypeAdapter
 import com.sparkuniverse.toolbox.util.DateTime
-import gg.essential.gui.screenshot.getImageTime
+import gg.essential.gui.elementa.state.v2.MutableState
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
 import gg.essential.lib.gson.GsonBuilder
 import gg.essential.lib.gson.JsonSyntaxException
 import gg.essential.network.connectionmanager.media.IScreenshotMetadataManager
-import gg.essential.util.USession
+import gg.essential.util.Client
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException
@@ -46,6 +51,7 @@ class ScreenshotMetadataManager(
     fun updateMetadata(screenshotMetadata: ClientScreenshotMetadata) {
         metadataCache[screenshotMetadata.checksum] = screenshotMetadata
         writeMetadata(screenshotMetadata)
+        updateState(screenshotMetadata.checksum, screenshotMetadata)
     }
 
     private fun readMetadata(imageChecksum: String): ClientScreenshotMetadata? {
@@ -66,7 +72,7 @@ class ScreenshotMetadataManager(
      */
     private fun tryRecoverMetadata(checksum: String): ClientScreenshotMetadata? {
         val metadata = screenshotChecksumManager.getPathsForChecksum(checksum).firstOrNull()?.let {
-            createMetadata(getImageTime(it, null, false), checksum)
+            ClientScreenshotMetadata.createUnknown(it, checksum)
         }
         metadata?.let { writeMetadata(it) }
         return metadata
@@ -76,7 +82,11 @@ class ScreenshotMetadataManager(
         if (negativeChecksumCache.contains(checksum)) {
             return null
         }
-        val metadata = metadataCache.compute(checksum) { _, it -> it ?: readMetadata(checksum) }
+        val metadata = metadataCache[checksum]
+            ?: readMetadata(checksum)?.also { metadata ->
+                metadataCache[checksum] = metadata
+                updateState(metadata.checksum, metadata)
+            }
         if (metadata == null) {
             negativeChecksumCache.add(checksum)
         }
@@ -124,6 +134,7 @@ class ScreenshotMetadataManager(
     private fun deleteMetadata(metadata: ClientScreenshotMetadata) {
         val metadataFile = File(metadataFolder, metadata.checksum)
         metadataCache.remove(metadata.checksum)
+        updateState(metadata.checksum, null)
         metadataFile.delete()
     }
 
@@ -133,18 +144,6 @@ class ScreenshotMetadataManager(
             deleteMetadata(metadata)
             screenshotChecksumManager.delete(file)
         }
-    }
-
-    fun createMetadata(time: DateTime, checksum: String): ClientScreenshotMetadata {
-        return ClientScreenshotMetadata(
-            USession.activeNow().uuid,
-            time,
-            checksum,
-            null,
-            ClientScreenshotMetadata.Location(ClientScreenshotMetadata.Location.Type.UNKNOWN, "Unknown"),
-            favorite = false,
-            edited = false
-        )
     }
 
     @Synchronized
@@ -158,9 +157,21 @@ class ScreenshotMetadataManager(
 
         val checksum = screenshotChecksumManager[file] ?: throw IllegalStateException("No checksum for file $file. Was the file deleted?")
 
-        return createMetadata(getImageTime(path, null, false), checksum).also {
+        return ClientScreenshotMetadata.createUnknown(path, checksum).also {
             updateMetadata(it)
         }
+    }
+
+    private val stateByChecksum: MutableMap<String, MutableState<ClientScreenshotMetadata?>> = MapMaker().weakValues().makeMap()
+
+    private fun updateState(checksum: String, newMetadata: ClientScreenshotMetadata?) {
+        runBlocking(Dispatchers.Client) {
+            stateByChecksum[checksum]?.set(newMetadata)
+        }
+    }
+
+    fun metadata(checksum: String): State<ClientScreenshotMetadata?> {
+        return stateByChecksum.getOrPut(checksum) { mutableStateOf(getMetadata(checksum)) }
     }
 
     companion object {

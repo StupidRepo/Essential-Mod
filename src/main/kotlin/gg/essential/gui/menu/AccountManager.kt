@@ -22,10 +22,7 @@ import gg.essential.gui.common.modal.DangerConfirmationEssentialModal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.common.onSetValueAndNow
 import gg.essential.gui.elementa.state.v2.ListState
-import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl
-import gg.essential.gui.elementa.state.v2.await
-import gg.essential.gui.elementa.state.v2.awaitValue
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.toListState
 import gg.essential.gui.menu.compact.CompactAccountSwitcher
@@ -35,23 +32,17 @@ import gg.essential.gui.notification.error
 import gg.essential.gui.notification.iconAndMarkdownBody
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.handlers.account.WebAccountManager
-import gg.essential.network.connectionmanager.ConnectionManager
 import gg.essential.universal.UMinecraft
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.GuiUtil
 import gg.essential.util.USession
 import gg.essential.util.colored
 import gg.essential.util.executor
-import gg.essential.util.raceOf
 import gg.essential.util.setSession
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import kotlin.time.Duration.Companion.seconds
 
 class AccountManager {
 
@@ -100,7 +91,6 @@ class AccountManager {
             val isSwitching = mutableStateOf(true)
             val modalManager = platform.createModalManager().also { it.coroutineScope.cancel() }
             refreshSession(uuid) { session, error ->
-                monitorSwitching(modalManager.coroutineScope, isSwitching)
                 if (error == null) {
                     Notifications.push("", "", 1f) {
                         iconAndMarkdownBody(
@@ -115,22 +105,6 @@ class AccountManager {
                 }
                 refreshAccounts()
             }
-        }
-    }
-
-    private fun monitorSwitching(coroutineScope: CoroutineScope, isSwitching: MutableState<Boolean>) {
-        coroutineScope.launch {
-            val connectionStatus = Essential.getInstance().connectionManager.connectionStatus
-            // Stop switching if there is a connection error, cosmetics have finished loading or after a 10-second delay
-            raceOf(
-                { connectionStatus.await { it != null && it != ConnectionManager.Status.SUCCESS } },
-                {
-                    connectionStatus.awaitValue(ConnectionManager.Status.SUCCESS)
-                    Essential.getInstance().connectionManager.cosmeticsManager.cosmeticsLoaded.awaitValue(true)
-                },
-                { delay(10.seconds) }
-            )
-            isSwitching.set(false)
         }
     }
 

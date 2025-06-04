@@ -11,10 +11,4 @@
  */
 package gg.essential.gui.screenshot.editor.change
 
-import gg.essential.gui.screenshot.editor.ScreenshotCanvas
-
-interface Change {
-    fun undo(canvas: ScreenshotCanvas)
-
-    fun redo(canvas: ScreenshotCanvas)
-}
+sealed interface Change

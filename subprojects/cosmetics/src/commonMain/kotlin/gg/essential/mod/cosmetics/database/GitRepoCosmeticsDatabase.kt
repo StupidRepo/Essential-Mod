@@ -697,9 +697,9 @@ class GitRepoCosmeticsDatabase(
         }
 
         val settingsFile = folder / (override?.settings ?: "$fileId.settings.json")
-        if (cosmetic?.properties != originalCosmetic?.properties) {
+        if (cosmetic?.allProperties != originalCosmetic?.allProperties) {
             changes[settingsFile] =
-                cosmetic?.properties?.takeUnless { it.isEmpty() }?.let { json.encodeToString(it).encodeToByteArray() }
+                cosmetic?.allProperties?.takeUnless { it.isEmpty() }?.let { json.encodeToString(it).encodeToByteArray() }
         }
 
         if (cosmetic == null) {

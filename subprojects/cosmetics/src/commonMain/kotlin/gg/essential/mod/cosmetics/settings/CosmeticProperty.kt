@@ -29,6 +29,7 @@ import kotlinx.serialization.modules.polymorphic
 sealed class CosmeticProperty {
 
     abstract val id: String?
+    @Deprecated(ENABLED_DEPRECATION_MESSAGE)
     abstract val enabled: Boolean
     abstract val type: CosmeticPropertyType?
 
@@ -36,6 +37,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class Unknown(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         @SerialName("__type") // see CosmeticProperty.TheSerializer
         val typeStr: String,
@@ -49,6 +51,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class ArmorHandling(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -69,6 +72,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class ArmorHandlingV2(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -86,6 +90,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class CosmeticBoneHiding(
         override val id: String,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -106,6 +111,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class PositionRange(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -128,6 +134,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class ExternalHiddenBone(
         override val id: String,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -169,6 +176,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class InterruptsEmote(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -194,6 +202,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class HidesAllOtherCosmeticsOrItems(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -225,6 +234,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class LocksPlayerRotation(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -243,6 +253,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class RequiresUnlockAction(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -288,6 +299,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class PreviewResetTime(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -305,6 +317,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class Localization(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -322,6 +335,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class TransitionDelay(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -339,6 +353,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class Variants(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -363,6 +378,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class DefaultSide(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -380,6 +396,7 @@ sealed class CosmeticProperty {
     @Serializable
     data class MutuallyExclusive(
         override val id: String?,
+        @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
     ) : CosmeticProperty() {
@@ -417,6 +434,7 @@ sealed class CosmeticProperty {
     }
 
     companion object {
+        private const val ENABLED_DEPRECATION_MESSAGE = "Use [Cosmetic.properties]/[Cosmetic.disabledProperties] instead of explicitly checking this property. It will be removed eventually."
 
         val json by lazy { // lazy to prevent initialization cycle in serializers
             Json {

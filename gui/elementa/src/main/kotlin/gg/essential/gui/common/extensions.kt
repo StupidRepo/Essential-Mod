@@ -26,9 +26,6 @@ import gg.essential.elementa.utils.ObservableRemoveEvent
 import gg.essential.gui.elementa.state.v2.toV1
 import kotlin.reflect.KProperty
 
-@Deprecated("Using StateV1 is discouraged, use StateV2 instead")
-fun <T> State<T>.weak() = WeakState(this)
-
 fun <T : UIComponent, S> T.bindConstraints(state: State<S>, config: UIConstraints.(S) -> Unit) = apply {
     state.onSetValueAndNow {
         constraints.config(it)

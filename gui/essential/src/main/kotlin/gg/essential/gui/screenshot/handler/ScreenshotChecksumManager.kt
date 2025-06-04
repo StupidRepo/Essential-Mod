@@ -131,7 +131,7 @@ class ScreenshotChecksumManager(
      */
     private fun readFileChecksum(file: File): String? {
         return try {
-            DigestUtils.md5Hex(file.readText())
+            DigestUtils.md5Hex(file.readBytes())
         } catch (e: IOException) {
             e.printStackTrace()
             null

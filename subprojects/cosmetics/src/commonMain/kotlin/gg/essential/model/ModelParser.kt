@@ -144,6 +144,9 @@ class ModelParser(
                 CosmeticSlot.BACK,
             ),
             setOf(
+                CosmeticSlot.SKIRT,
+            ),
+            setOf(
                 CosmeticSlot.HAT,
                 CosmeticSlot.FULL_BODY,
             ),

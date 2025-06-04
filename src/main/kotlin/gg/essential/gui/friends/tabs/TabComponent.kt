@@ -51,6 +51,8 @@ abstract class TabComponent(
 
     abstract fun populate()
 
+    abstract fun sortUserLists()
+
     fun search(username: String?) {
         val lowerCase = username?.lowercase()
         for (list in userLists) {
@@ -58,5 +60,6 @@ abstract class TabComponent(
                 lowerCase == null || it !is SearchableItem || lowerCase in it.getSearchTag().lowercase()
             }
         }
+        sortUserLists()
     }
 }

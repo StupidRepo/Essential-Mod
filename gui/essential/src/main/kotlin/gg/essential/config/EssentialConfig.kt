@@ -508,7 +508,8 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                 }
                 switch(showQuickActionBarState) {
                     name = "Quick actions"
-                    description = "Shows the quick action bar in the main and pause menu. Quickly toggle notifications, cosmetics, and fullscreen."
+                    description =
+                        "Shows the quick action bar in the main and pause menu. Quickly toggle notifications, cosmetics, and fullscreen."
                     visible = essentialMenuLayoutState.map { it == 0 }
                 }
                 switch(closerMenuSidebarState) {

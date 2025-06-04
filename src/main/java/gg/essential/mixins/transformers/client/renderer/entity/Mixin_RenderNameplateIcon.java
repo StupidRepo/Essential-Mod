@@ -27,11 +27,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class Mixin_RenderNameplateIcon {
     @Inject(method = "drawNameplate", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;enableLighting()V"))
     private static void addEssentialIndicator(FontRenderer fontRendererIn, String str, float x, float y, float z, int verticalShift, float viewerYaw, float viewerPitch, boolean isThirdPersonFrontal, boolean isSneaking, CallbackInfo ci) {
-        Entity entity = OnlineIndicator.nametagEntity;
-        if (OnlineIndicator.currentlyDrawingEntityName() && entity instanceof AbstractClientPlayer) {
-            CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) entity);
-            OnlineIndicator.drawNametagIndicator(new UMatrixStack(), cState, str, entity.getBrightnessForRender());
+        if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
+            Entity entity = OnlineIndicator.nametagEntity;
+            if (entity instanceof AbstractClientPlayer) {
+                CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) entity);
+                OnlineIndicator.drawNametagIndicator(new UMatrixStack(), cState, str, entity.getBrightnessForRender());
+                return;
+            }
         }
+
     }
 
     @Inject(method = "drawNameplate", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/FontRenderer;getStringWidth(Ljava/lang/String;)I", ordinal = 0))

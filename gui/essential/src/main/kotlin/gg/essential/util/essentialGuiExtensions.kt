@@ -375,6 +375,8 @@ fun createScrollbarRelativeTo(
         x = CenterConstraint() boundTo xPositionAndWidth
         width = ChildBasedSizeConstraint()
         height = 100.percent boundTo yPositionAndHeight
+    }.apply {
+        isFloating = true
     } childOf parent
 
     val scrollbar by UIContainer().constrain {

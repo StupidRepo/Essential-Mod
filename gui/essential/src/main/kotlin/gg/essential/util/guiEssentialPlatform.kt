@@ -25,6 +25,8 @@ import gg.essential.gui.notification.NotificationsManager
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.overlay.OverlayManager
 import gg.essential.gui.screenshot.bytebuf.LimitedAllocator
+import gg.essential.gui.screenshot.providers.WindowedImageProvider
+import gg.essential.gui.screenshot.providers.WindowedTextureProvider
 import gg.essential.gui.wardrobe.ItemId
 import gg.essential.handlers.MojangSkinManager
 import gg.essential.mod.Skin
@@ -138,6 +140,8 @@ interface GuiEssentialPlatform {
 
     val mcFrameBufferColorTexture: GpuTexture
     val mcFrameBufferDepthTexture: GpuTexture?
+
+    fun newWindowedTextureProvider(inner: WindowedImageProvider): WindowedTextureProvider
 
     fun newUIPlayer(
         camera: State<PerspectiveCamera?>,

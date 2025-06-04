@@ -25,6 +25,7 @@ import gg.essential.gui.common.shadow.ShadowIcon
 import gg.essential.gui.common.state
 import gg.essential.gui.elementa.state.v2.effect
 import gg.essential.gui.elementa.state.v2.memo
+import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.friends.state.IStatusStates
 import gg.essential.gui.friends.state.PlayerActivity
@@ -46,16 +47,15 @@ class FriendStatus(
         }.apply {
             effect(ScissorEffect())
         }
-
         effect(this) {
             val activity = statusStates.getActivityState(uuid)()
             clearChildren()
             when (activity) {
                 is PlayerActivity.Offline -> {
-                    val lastSeenText = "Offline"
-                    EssentialUIText(lastSeenText, shadowColor = EssentialPalette.BLACK, truncateIfTooSmall = true).constrain {
+                    val lastOnlineText = stateOf("Offline")
+                    EssentialUIText(lastOnlineText.getUntracked(), shadowColor = EssentialPalette.BLACK, truncateIfTooSmall = true).constrain {
                         color = EssentialPalette.TEXT_DISABLED.toConstraint()
-                    }
+                    }.bindText(lastOnlineText.toV1(this@FriendStatus))
                 }
                 is PlayerActivity.Online -> {
                     EssentialUIText("Online", truncateIfTooSmall = true).constrain {

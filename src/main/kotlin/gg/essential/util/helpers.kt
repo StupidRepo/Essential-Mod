@@ -19,8 +19,21 @@ import gg.essential.elementa.components.UIImage
 import gg.essential.elementa.components.Window
 import gg.essential.gui.common.ImageLoadCallback
 import gg.essential.gui.elementa.essentialmarkdown.EssentialMarkdown
+import gg.essential.gui.elementa.state.v2.ListState
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.mapEach
+import gg.essential.gui.elementa.state.v2.memo
+import gg.essential.gui.elementa.state.v2.toListState
 import gg.essential.gui.friends.SocialMenu
-import gg.essential.universal.UDesktop
+import gg.essential.gui.screenshot.LocalScreenshot
+import gg.essential.gui.screenshot.RemoteScreenshot
+import gg.essential.gui.screenshot.ScreenshotId
+import gg.essential.gui.screenshot.ScreenshotInfo
+import gg.essential.gui.screenshot.components.ScreenshotProperties
+import gg.essential.gui.screenshot.getImageTime
+import gg.essential.gui.screenshot.handler.ScreenshotMetadataManager
+import gg.essential.handlers.screenshot.ClientScreenshotMetadata
+import gg.essential.media.model.Media
 import gg.essential.universal.UMinecraft
 import gg.essential.util.resource.EssentialAssetResourcePack
 import net.minecraft.client.gui.GuiOptions
@@ -30,12 +43,9 @@ import net.minecraft.client.resources.IResourcePack
 import net.minecraft.util.ResourceLocation
 import net.minecraft.util.Session
 import org.apache.logging.log4j.LogManager
-import java.awt.Desktop
-import java.awt.HeadlessException
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
-import java.lang.reflect.InvocationTargetException
 import java.net.URI
 import java.net.URL
 import java.nio.file.FileSystems
@@ -332,34 +342,6 @@ fun setPerspective(perspective: Int) {
     UMinecraft.getMinecraft().renderGlobal.setDisplayListEntitiesDirty()
 }
 
-fun openFileInDirectory(path: Path) {
-    {
-        val declaredMethod = Desktop::class.java.getDeclaredMethod("browseFileDirectory", File::class.java)
-        declaredMethod.invoke(Desktop.getDesktop(), path.toFile())
-        Unit
-    }.catch(NoSuchMethodException::class, InvocationTargetException::class, HeadlessException::class) { throwable ->
-        if (throwable is InvocationTargetException && throwable.cause !is UnsupportedOperationException) {
-            throwable.printStackTrace()
-        }
-        fun command(vararg command: String): Boolean {
-            return try {
-                Runtime.getRuntime().exec(command).let {
-                    it != null && it.isAlive
-                }
-            } catch (e: IOException) {
-                false
-            }
-        }
-        //On Windows and Mac we can implement browseFileDirectory on older java versions using commands
-        //Adding quotes to the Windows command causes it to fail to work. The , after select is required
-        if (!((UDesktop.isWindows && command("explorer.exe", "/select,", path.toAbsolutePath().toString()))
-                || (UDesktop.isMac && command("open", "-R", "${path.toAbsolutePath()}")))
-        ) {
-            UDesktop.open(path.toFile().parentFile)
-        }
-    }
-}
-
 val screenshotFolder: File by lazy {
     var folder = File(UMinecraft.getMinecraft().mcDataDir, "screenshots")
 
@@ -445,6 +427,35 @@ fun getOrderedPaths(files: Set<String>, rootPath: Path, timeExtractor: (Path) ->
     return files.map { rootPath.resolve(it) }.sortedWith(
         compareByDescending<Path> { memoized(it) }.thenBy { it.fileName.toString() }
     )
+}
+
+fun combinedOrderedScreenshotsState(
+    metadataManager: ScreenshotMetadataManager,
+    rootPath: Path,
+    localScreenshots: ListState<Pair<String, String>>,
+    remoteScreenshots: ListState<Media>,
+): ListState<ScreenshotInfo> {
+    data class UnresolvedScreenshotInfo(val id: ScreenshotId, val checksumOrUid: String, val time: State<DateTime>, val metadata: State<ClientScreenshotMetadata?>)
+    val localWithTime = localScreenshots.mapEach { (name, checksum) ->
+        val id = LocalScreenshot(rootPath.resolve(name))
+        val metadata = metadataManager.metadata(checksum)
+        val time = memo { getImageTime(ScreenshotProperties(id, metadata()), true) }
+        UnresolvedScreenshotInfo(id, checksum, time, metadata)
+    }
+    val remoteWithTime = remoteScreenshots.mapEach { media ->
+        val id = RemoteScreenshot(media)
+        val metadata = ClientScreenshotMetadata(media)
+        val time = getImageTime(ScreenshotProperties(id, metadata), true)
+        ScreenshotInfo(id, media.id, time, metadata)
+    }
+    return State {
+        val result = mutableListOf<ScreenshotInfo>()
+        localWithTime().mapTo(result) { ScreenshotInfo(it.id, it.checksumOrUid, it.time(), it.metadata()) }
+        val localMediaIds = result.mapNotNullTo(mutableSetOf()) { it.metadata?.mediaId }
+        remoteWithTime().filterTo(result) { (it.id as RemoteScreenshot).media.id !in localMediaIds }
+        result.sortWith(compareByDescending<ScreenshotInfo> { it.time }.thenBy { it.id.name })
+        result
+    }.toListState()
 }
 
 /**

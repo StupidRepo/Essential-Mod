@@ -134,6 +134,8 @@ class ContextOptionMenu(
                 close()
             }
         }
+
+        isFloating = true
     }
 
     fun close() {

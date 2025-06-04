@@ -43,6 +43,7 @@ import gg.essential.mod.cosmetics.featured.FeaturedPage
 import gg.essential.mod.cosmetics.featured.FeaturedPageCollection
 import gg.essential.mod.cosmetics.featured.TextDivider
 import gg.essential.mod.cosmetics.settings.CosmeticSettingType
+import gg.essential.network.connectionmanager.cosmetics.registerFeaturedPageCollection
 import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.universal.USound
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
@@ -110,6 +111,30 @@ class FeaturedPageCollectionConfiguration(
         }
         spacer(height = 5f)
         submenuSelection(pageCollection)
+        navButton("Clone") {
+            USound.playButtonPress()
+            platform.pushModal {
+                CancelableInputModal(it, "Featured page collection id").configure {
+                    titleText = "Clone ${pageCollection.id}"
+                    contentText = "Enter the id for the new featured page."
+                }.apply {
+                    primaryButtonAction = {
+                        val id = inputTextState.getUntracked()
+                        if (cosmeticsDataWithChanges.getFeaturedPageCollection(id) != null) {
+                            setError("That id already exists!")
+                        } else {
+                            cosmeticsDataWithChanges.registerFeaturedPageCollection(
+                                id,
+                                pageCollection.availability,
+                                pageCollection.pages
+                            )
+                            state.currentlyEditingFeaturedPageCollectionId.set(id)
+                            close()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun getSubmenus(editing: FeaturedPageCollection): Set<AbstractConfigurationSubmenu<FeaturedPageCollection>> {

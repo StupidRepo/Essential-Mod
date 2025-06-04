@@ -419,10 +419,6 @@ object InviteFriendsModal {
                 }
             }
 
-            if (justStarted) {
-                fadeTime = 0f
-            }
-
             selectTooltip = "Invite"
             deselectTooltip = "Cancel"
 

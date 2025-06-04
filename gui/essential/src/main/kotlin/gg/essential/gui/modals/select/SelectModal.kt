@@ -31,7 +31,6 @@ import gg.essential.gui.EssentialPalette
 import gg.essential.gui.about.components.ColoredDivider
 import gg.essential.gui.common.effect.HorizontalScissorEffect
 import gg.essential.gui.common.modal.SearchableConfirmDenyModal
-import gg.essential.gui.common.modal.defaultEssentialModalFadeTime
 import gg.essential.gui.common.onSetValueAndNow
 import gg.essential.gui.elementa.GuiScaleOffsetConstraint
 import gg.essential.gui.elementa.state.v2.MutableState
@@ -58,12 +57,11 @@ class SelectModal<T>(
     private val sections: List<Section<T, *>>,
     requiresButtonPress: Boolean,
     requiresSelection: Boolean,
-    fadeTime: Float = defaultEssentialModalFadeTime,
     private val shadowsOnEntries: Boolean = true,
     private val initiallySelected: Set<T> = setOf(),
     whenEmpty: (LayoutScope.() -> Unit)? = null,
     extraContent: (LayoutScope.() -> Unit)? = null,
-) : SearchableConfirmDenyModal(modalManager, requiresButtonPress, fadeTime) {
+) : SearchableConfirmDenyModal(modalManager, requiresButtonPress) {
     private val selectedStates = mutableMapOf<T, MutableState<Boolean>>()
     private val filteredStates = mutableMapOf<T, State<Boolean>>()
 

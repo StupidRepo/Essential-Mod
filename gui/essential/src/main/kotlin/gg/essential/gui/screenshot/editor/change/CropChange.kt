@@ -16,12 +16,4 @@ import gg.essential.gui.screenshot.editor.ScreenshotCanvas
 class CropChange(
     val old: ScreenshotCanvas.Crop,
     val new: ScreenshotCanvas.Crop
-) : Change {
-    override fun undo(canvas: ScreenshotCanvas) {
-        canvas.cropSettings.copyFrom(old)
-    }
-
-    override fun redo(canvas: ScreenshotCanvas) {
-        canvas.cropSettings.copyFrom(new)
-    }
-}
+) : Change

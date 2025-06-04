@@ -303,7 +303,7 @@ public class PlayerMolangQuery implements MolangQueryEntity, ParticleSystem.Loca
 
     @Override
     public boolean isVisible() {
-        return true;
+        return !player.isInvisible();
     }
 
     public interface RealYawAccess {

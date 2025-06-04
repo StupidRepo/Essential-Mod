@@ -105,7 +105,6 @@ class CosmeticsState(
     private val hiddenPropertySettingsCombined: CosmeticProperty.HidesAllOtherCosmeticsOrItems.Data = cosmetics.values
         .fold(CosmeticProperty.HidesAllOtherCosmeticsOrItems.Data()) { acc, equipped ->
             val property = equipped.cosmetic.property<CosmeticProperty.HidesAllOtherCosmeticsOrItems>()
-                ?.takeIf { it.enabled }
                 ?.data
                 ?: return@fold acc
 
@@ -171,7 +170,7 @@ class CosmeticsState(
     private val partsHiddenDueToArmor: Map<CosmeticId, Set<EnumPart>> = cosmetics.values
         .flatMap {
             // Ignore old property if newer v2 is present
-            if (it.cosmetic.property<CosmeticProperty.ArmorHandlingV2>() != null) {
+            if (it.cosmetic.property<CosmeticProperty.ArmorHandlingV2>() == null) {
                 it.cosmetic.properties.filterIsInstance<CosmeticProperty.ArmorHandling>()
             } else {
                 emptyList()

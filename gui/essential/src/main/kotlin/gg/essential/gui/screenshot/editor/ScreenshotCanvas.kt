@@ -17,17 +17,17 @@ import gg.essential.elementa.components.Window
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
 import gg.essential.elementa.effects.ScissorEffect
-import gg.essential.elementa.state.BasicState
-import gg.essential.elementa.state.State
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.UINanoVG
-import gg.essential.gui.common.or
-import gg.essential.gui.common.weak
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.memo
+import gg.essential.gui.elementa.state.v2.mutableStateOf
+import gg.essential.gui.elementa.state.v2.onChange
 import gg.essential.gui.screenshot.LocalScreenshot
 import gg.essential.gui.screenshot.RemoteScreenshot
 import gg.essential.gui.screenshot.ScreenshotId
-import gg.essential.gui.screenshot.editor.change.Change
 import gg.essential.gui.screenshot.editor.change.CropChange
+import gg.essential.gui.screenshot.editor.change.EditHistory
 import gg.essential.gui.screenshot.editor.change.VectorStroke
 import gg.essential.gui.screenshot.image.ScreenshotImage
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
@@ -53,7 +53,10 @@ import kotlin.coroutines.EmptyCoroutineContext
 /**
  * Can be improved by abstracting cropping functions to a cropping [Tool] class
  */
-class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
+class ScreenshotCanvas(
+    val screenshot: State<UIdentifier?>,
+    val editHistory: EditHistory,
+) : UIContainer() {
     var onDraw: UIContainer.(Float, Float, Int) -> Unit = { _, _, _ -> }
 
     var mouseButton = -1
@@ -95,14 +98,20 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
         width = 100.percent()
     } childOf screenshotDisplay
 
-    val cropSettings: Crop = Crop()
+    val draggingCrop = mutableStateOf<Crop?>(null)
+    val cropSettings: State<Crop> = memo {
+        draggingCrop()?.let { return@memo it }
+        editHistory.history()
+            .asReversed()
+            .firstNotNullOfOrNull { (it as? CropChange)?.new }
+            ?: Crop.DEFAULT
+    }
 
     val retainedImage by UIContainer().constrain {
-        x = RelativeConstraint(1f).bindValue(cropSettings.left)
-        y = RelativeConstraint(1f).bindValue(cropSettings.top)
-        width = RelativeConstraint(1f).bindValue(cropSettings.right.zip(cropSettings.left).map { it.first - it.second })
-        height =
-            RelativeConstraint(1f).bindValue(cropSettings.bottom.zip(cropSettings.top).map { it.first - it.second })
+        x = basicXConstraint { it.parent.getLeft() + it.parent.getWidth() * cropSettings.getUntracked().left }
+        y = basicYConstraint { it.parent.getTop() + it.parent.getHeight() * cropSettings.getUntracked().top }
+        width = basicWidthConstraint { it.parent.getWidth() * cropSettings.getUntracked().width }
+        height = basicHeightConstraint { it.parent.getHeight() * cropSettings.getUntracked().height }
     } childOf screenshotDisplay effect ScissorEffect()
 
 
@@ -116,9 +125,6 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
     } childOf retainedImage
 
 
-    val undoEnabled by vectorEditingOverlay::undoEnabled
-    val redoEnabled by vectorEditingOverlay::redoEnabled
-
     init {
         CropAlignment.values().forEach { alignment ->
             ImageCropItem(alignment) childOf this
@@ -130,36 +136,15 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
      * NanoVG based editing overlay which handles drawing all edits as well as drawing the parts of the screenshot retained from cropping. [UINanoVG]
      */
     open inner class VectorEditingOverlay(val image: State<UIdentifier?>) : UINanoVG() {
-        private val history: Stack<Change> = Stack()
-        private val future: Stack<Change> = Stack()
         private val screenshotImage = ScreenshotImage(image)
         var scale = 1f
 
-        val undoEnabled = BasicState(false)
-        val redoEnabled = BasicState(false)
-
-        private val weakImage = image.weak()
         init {
-            weakImage.onSetValue { markDirty() }
+            image.onChange(this) { markDirty() }
+            editHistory.history.onChange(this) { markDirty() }
         }
 
-        /**
-         * Resets the state of the editor back to default
-         */
-        fun reset() {
-            undoEnabled.set(false)
-            redoEnabled.set(false)
-            history.clear()
-            future.clear()
-            markDirty()
-        }
-
-        constructor(veo: VectorEditingOverlay) : this(veo.image) {
-            this.history.addAll(veo.history)
-            this.future.addAll(veo.future)
-            undoEnabled.set(veo.undoEnabled.get())
-            redoEnabled.set(veo.redoEnabled.get())
-        }
+        constructor(veo: VectorEditingOverlay) : this(veo.image)
 
         override fun draw(matrixStack: UMatrixStack) {
             matrixStack.push()
@@ -170,56 +155,10 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
         }
 
         override fun renderVG(matrixStack: UMatrixStack, vg: NanoVG, width: Float, height: Float) {
-            history.filterIsInstance<VectorStroke>().forEach { vs ->
+            editHistory.history.getUntracked().filterIsInstance<VectorStroke>().forEach { vs ->
                 vs.render(vg, width, height, scale)
             }
         }
-
-        /**
-         * Adds a new change to the history stack
-         *
-         * This removes all "future" changes!
-         * @param change Change to add
-         * @return this
-         */
-        fun pushChange(change: Change) = apply {
-            future.clear()
-            history.push(change)
-            markDirty()
-            undoEnabled.set(true)
-            redoEnabled.set(false)
-        }
-
-        /**
-         * Tries to undo the last stroke
-         * @return this
-         */
-        fun undo() = apply {
-            if (history.empty()) return@apply
-            redoEnabled.set(true)
-            future.push(history.pop().also { it.undo(this@ScreenshotCanvas) })
-            undoEnabled.set(!history.isEmpty())
-        }
-
-        /**
-         * Tries to redo the "next" stroke
-         * @return this
-         */
-        fun redo() = apply {
-            if (future.empty()) return@apply
-            history.push(future.pop().also { it.redo(this@ScreenshotCanvas) })
-            undoEnabled.set(true)
-            redoEnabled.set(!future.isEmpty())
-        }
-    }
-
-    /**
-     * Returns a state that is true if and only if the user has made any changes
-     * to the screenshot currently being edited. Changes can include adjusting
-     * crop settings or drawing.
-     */
-    fun getHasChanges(): State<Boolean> {
-        return undoEnabled
     }
 
     /**
@@ -235,8 +174,8 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
         favorite: Boolean = false,
     ): CompletableFuture<File> {
 
-        // Cloned because the values are accessed on another thread and may have been reset
-        val cropSettings = cropSettings.clone()
+        // Accessed early because it's needed on another thread and may have been reset by then
+        val cropSettings = cropSettings.getUntracked()
 
         val completableFuture = CompletableFuture<File>()
 
@@ -294,10 +233,10 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
             screenshot.graphics.drawImage(image, 0, 0, null)
 
 
-            val left = (fullWidth * cropSettings.left.get()).toInt()
-            val right = (fullWidth * cropSettings.right.get()).toInt()
-            val top = (fullHeight * cropSettings.top.get()).toInt()
-            val bottom = (fullHeight * cropSettings.bottom.get()).toInt()
+            val left = (fullWidth * cropSettings.left).toInt()
+            val right = (fullWidth * cropSettings.right).toInt()
+            val top = (fullHeight * cropSettings.top).toInt()
+            val bottom = (fullHeight * cropSettings.bottom).toInt()
 
             val croppedImage = screenshot.getSubimage(left, top, right - left, bottom - top)
             if (temp) {
@@ -323,8 +262,6 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
     }
 
     inner class ImageCropItem(val alignment: CropAlignment) : UIContainer() {
-
-        var dragging = false
 
         //Accounts for position inside the element that we are dragging from
         var xDragOffset = 0f
@@ -380,26 +317,24 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
             onMouseLeave {
                 children.forEach { it.animateColor(EssentialPalette.TEXT) }
             }
-            var oldCrop: Crop? = null
+            var currDragStart: Crop? = null
             onMouseClick {
-                dragging = true
+                currDragStart = cropSettings.getUntracked()
+                draggingCrop.set(currDragStart)
                 xDragOffset = it.relativeX + if (alignment.alignOpX) padding else -padding
                 yDragOffset = it.relativeY + if (alignment.alignOpY) padding else -padding
-                oldCrop = cropSettings.clone()
             }
             onMouseRelease {
-                val wasDragging = dragging
-                dragging = false
-                if (oldCrop == cropSettings || !wasDragging) return@onMouseRelease
-                vectorEditingOverlay.pushChange(
-                    CropChange(oldCrop ?: return@onMouseRelease, cropSettings.clone())
-                )
+                val oldCrop = currDragStart ?: return@onMouseRelease
+                val newCrop = draggingCrop.getUntracked() ?: return@onMouseRelease
+                if (oldCrop != newCrop) {
+                    editHistory.pushChange(CropChange(oldCrop, newCrop))
+                }
+                draggingCrop.set(null)
+                currDragStart = null
             }
             onMouseDrag { _, _, _ ->
-
-
-                if (dragging) {
-
+                if (currDragStart != null) {
                     //When dragging the position items, we want to take the position inside the item into account
                     val (mouseX, mouseY) = getMousePosition()
                     val relativeX = mouseX - screenshotDisplay.getLeft()
@@ -413,36 +348,17 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
                     val (x, y) = getRelativeMousePosition(adjustedMouseX, adjustedMouseY)
 
                     val minSize = .1f
-                    when (alignment) {
-                        CropAlignment.TOP_LEFT -> {
-                            cropSettings.top.set(y.coerceAtMost(cropSettings.bottom.get() - minSize))
-                            cropSettings.left.set(x.coerceAtMost(cropSettings.right.get() - minSize))
-                        }
-                        CropAlignment.TOP_CENTER -> {
-                            cropSettings.top.set(y.coerceAtMost(cropSettings.bottom.get() - minSize))
-                        }
-                        CropAlignment.TOP_RIGHT -> {
-                            cropSettings.top.set(y.coerceAtMost(cropSettings.bottom.get() - minSize))
-                            cropSettings.right.set(x.coerceAtLeast(cropSettings.left.get() + minSize))
-                        }
-                        CropAlignment.RIGHT_CENTER -> {
-                            cropSettings.right.set(x.coerceAtLeast(cropSettings.left.get() + minSize))
-                        }
-                        CropAlignment.BOTTOM_RIGHT -> {
-                            cropSettings.bottom.set(y.coerceAtLeast(cropSettings.top.get() + minSize))
-                            cropSettings.right.set(x.coerceAtLeast(cropSettings.left.get() + minSize))
-                        }
-                        CropAlignment.BOTTOM_CENTER -> {
-                            cropSettings.bottom.set(y.coerceAtLeast(cropSettings.top.get() + minSize))
-                        }
-                        CropAlignment.BOTTOM_LEFT -> {
-                            cropSettings.bottom.set(y.coerceAtLeast(cropSettings.top.get() + minSize))
-                            cropSettings.left.set(x.coerceAtMost(cropSettings.right.get() - minSize))
-                        }
-                        CropAlignment.LEFT_CENTER -> {
-                            cropSettings.left.set(x.coerceAtMost(cropSettings.right.get() - minSize))
+                    var crop = draggingCrop.getUntracked()!!
+                    for (side in alignment.sides) {
+                        crop = when (side) {
+                            CropAlignment.TOP_CENTER -> crop.copy(top = y.coerceAtMost(crop.bottom - minSize))
+                            CropAlignment.RIGHT_CENTER -> crop.copy(right = x.coerceAtLeast(crop.left + minSize))
+                            CropAlignment.BOTTOM_CENTER -> crop.copy(bottom = y.coerceAtLeast(crop.top + minSize))
+                            CropAlignment.LEFT_CENTER -> crop.copy(left = x.coerceAtMost(crop.right - minSize))
+                            else -> throw AssertionError("unreachable")
                         }
                     }
+                    draggingCrop.set(crop)
                     //We changed a state that can change the position of this item,
                     //Therefore, we want to call animationFrame to invalidate the cached
                     //x and y
@@ -461,15 +377,6 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
         return (mouseX / width).coerceIn(0f..1f) to (mouseY / height).coerceIn(0f..1f)
     }
 
-    /**
-     * Called to reset the state of the editor and clear changes
-     */
-    fun reset() {
-        cropSettings.reset()
-        vectorEditingOverlay.reset()
-    }
-
-
     enum class CropAlignment(
         val alignOpX: Boolean,
         val alignOpY: Boolean,
@@ -485,49 +392,23 @@ class ScreenshotCanvas(val screenshot: State<UIdentifier?>) : UIContainer() {
         BOTTOM_CENTER(alignOpX = false, alignOpY = true, centerX = true, corner = false),
         BOTTOM_LEFT(alignOpX = false, alignOpY = true, corner = true),
         LEFT_CENTER(alignOpX = false, alignOpY = false, centerY = true, corner = false);
+
+        val sides: List<CropAlignment>
+            get() = when (this) {
+                TOP_LEFT -> listOf(TOP_CENTER, LEFT_CENTER)
+                TOP_RIGHT -> listOf(TOP_CENTER, RIGHT_CENTER)
+                BOTTOM_LEFT -> listOf(BOTTOM_CENTER, LEFT_CENTER)
+                BOTTOM_RIGHT -> listOf(BOTTOM_CENTER, RIGHT_CENTER)
+                else -> listOf(this)
+            }
     }
 
-    data class Crop(
-        var left: State<Float> = BasicState(0f),
-        var right: State<Float> = BasicState(1f),
-        var top: State<Float> = BasicState(0f),
-        var bottom: State<Float> = BasicState(1f),
-    ) {
-        override fun toString(): String {
-            return "Crop[left=${left.get()},right=${right.get()},top=${top.get()},bottom=${bottom.get()}]"
-        }
+    data class Crop(val left: Float, val right: Float, val top: Float, val bottom: Float) {
+        val width = right - left
+        val height = bottom - top
 
-        override fun equals(other: Any?): Boolean {
-            if (other !is Crop) return false
-            return other.left.get() == left.get() &&
-                    other.right.get() == right.get() &&
-                    other.top.get() == top.get() &&
-                    other.bottom.get() == bottom.get()
-        }
-
-        /**
-         * Resets to default
-         */
-        fun reset() {
-            left.set(0f)
-            right.set(1f)
-            top.set(0f)
-            bottom.set(1f)
-        }
-
-        fun clone(): Crop {
-            return Crop(BasicState(left.get()), BasicState(right.get()), BasicState(top.get()), BasicState(bottom.get()))
-        }
-
-        /**
-         * Applies the values from another crop instance
-         * @param other
-         */
-        fun copyFrom(other: Crop) {
-            left.set(other.left.get())
-            right.set(other.right.get())
-            top.set(other.top.get())
-            bottom.set(other.bottom.get())
+        companion object {
+            val DEFAULT = Crop(0f, 1f, 0f, 1f)
         }
     }
 }

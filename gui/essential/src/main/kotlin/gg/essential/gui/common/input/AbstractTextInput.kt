@@ -443,7 +443,6 @@ abstract class AbstractTextInput(
             posY,
             *options.toTypedArray()
         ) childOf Window.of(this)
-        menu.isFloating = true
         menu.init()
         menu.onClose {
             setActive(false)

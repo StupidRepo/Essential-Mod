@@ -11,8 +11,10 @@
  */
 package gg.essential.mixins.transformers.client.renderer.entity;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import gg.essential.handlers.OnlineIndicator;
 import net.minecraft.client.renderer.entity.Render;
+import net.minecraft.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,10 +24,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MixinRender {
     @Inject(method = "renderLivingLabel", at = @At("RETURN"))
     private void setNametagEntity(CallbackInfo ci) {
-        //#if MC!=11202
-        //$$ OnlineIndicator.currentlyDrawingEntityName.set(false);
-        //#else
-        OnlineIndicator.nametagEntity = null;
-        //#endif
+        OnlineIndicator.currentlyDrawingPlayerEntityName.set(false);
     }
+
+    //#if MC==11202
+    @Inject(method = "renderLivingLabel", at = @At(value = "HEAD"))
+    private <T extends Entity> void setNametagEntity(CallbackInfo ci, @Local(argsOnly = true) T entityIn) {
+        OnlineIndicator.nametagEntity = entityIn;
+    }
+
+    @Inject(method = "renderLivingLabel", at = @At(value = "RETURN"))
+    private void resetNametagEntity(CallbackInfo ci) {
+        OnlineIndicator.nametagEntity = null;
+    }
+    //#endif
 }

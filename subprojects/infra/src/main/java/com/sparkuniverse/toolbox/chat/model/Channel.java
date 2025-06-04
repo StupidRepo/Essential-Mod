@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 import java.util.UUID;
 
-public class Channel {
+public final class Channel {
 
     @SerializedName("a")
     private final long id;

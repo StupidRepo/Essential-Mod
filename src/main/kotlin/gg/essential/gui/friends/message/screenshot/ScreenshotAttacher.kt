@@ -15,7 +15,7 @@ import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.ScrollComponent
 import gg.essential.elementa.components.UIContainer
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.onSetValueAndNow
+import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.layoutdsl.Alignment
 import gg.essential.gui.layoutdsl.Arrangement
 import gg.essential.gui.layoutdsl.Modifier
@@ -34,21 +34,27 @@ import gg.essential.gui.layoutdsl.layout
 import gg.essential.gui.layoutdsl.row
 import gg.essential.gui.layoutdsl.scrollable
 import gg.essential.gui.layoutdsl.widthAspect
-import gg.essential.universal.UMatrixStack
+import gg.essential.gui.screenshot.components.ScreenshotPreview
+import gg.essential.gui.screenshot.components.ScreenshotProviderManager
+import gg.essential.gui.screenshot.providers.WindowedProvider
 import gg.essential.universal.USound
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
+import gg.essential.util.findChildrenOfType
 import gg.essential.util.onLeftClick
 
 class ScreenshotAttacher(
     private val screenshotAttachmentManager: ScreenshotAttachmentManager
 ) : UIContainer() {
 
-    val screenshotProvider = SimpleScreenshotProvider()
+    private val desiredImageSize = mutableStateOf(ScreenshotProviderManager.minResolutionTargetResolution)
+    val screenshotProvider = ScreenshotProviderManager(
+        platform.screenshotManager,
+        screenshotAttachmentManager.isScreenOpen,
+        screenshotAttachmentManager.selectedImages,
+        desiredImageSize,
+    )
 
     init {
-        screenshotAttachmentManager.selectedImages.onSetValueAndNow(this) {
-            screenshotProvider.currentPaths = it
-        }
-
         val screenshotPadding = 10f
         layout(Modifier.fillWidth().childBasedHeight()) {
             box(Modifier.fillWidth().height(83f).color(EssentialPalette.COMPONENT_BACKGROUND_HIGHLIGHT)) {
@@ -61,7 +67,7 @@ class ScreenshotAttacher(
                             forEach(screenshotAttachmentManager.selectedImages) { screenshotId ->
                                 RemoveableScreenshotPreview(
                                     screenshotId,
-                                    screenshotProvider,
+                                    desiredImageSize,
                                     screenshotAttachmentManager
                                 )(Modifier.widthAspect(16f / 9f).fillHeight()).onLeftClick {
                                     it.stopPropagation()
@@ -84,12 +90,15 @@ class ScreenshotAttacher(
             }
         }
 
-        screenshotAttachmentManager.addCleanupHandler { screenshotProvider.cleanup() }
-    }
+        addUpdateFunc { _, _ ->
+            // This component will usually not contain many screenshots, so we can simply request all
+            val window = WindowedProvider.Window(screenshotProvider.currentPaths.indices, false)
+            val textures = screenshotProvider.provide(window)
 
-    override fun draw(matrixStack: UMatrixStack) {
-        screenshotProvider.frameUpdate(this)
-        super.draw(matrixStack)
+            for (component in findChildrenOfType<ScreenshotPreview>(recursive = true)) {
+                component.imgTexture.set(textures[component.screenshotId])
+            }
+        }
     }
 
 }

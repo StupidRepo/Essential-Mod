@@ -14,6 +14,7 @@ package gg.essential.mixins.transformers.client.gui;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalIntRef;
 import gg.essential.event.gui.GuiDrawScreenEvent;
+import gg.essential.mixins.impl.client.gui.EssentialGuiScreenBeforeClose;
 import gg.essential.mixins.impl.client.gui.EssentialPostScreenDrawHook;
 import gg.essential.universal.UMatrixStack;
 import gg.essential.util.UDrawContext;
@@ -33,7 +34,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //#endif
 
 @Mixin(GuiScreen.class)
-public class MixinGuiScreen implements EssentialPostScreenDrawHook {
+public class MixinGuiScreen implements EssentialPostScreenDrawHook, EssentialGuiScreenBeforeClose {
     private final GuiScreenHook guiScreenHook = new GuiScreenHook((GuiScreen) (Object) this);
 
     //#if MC>=11400
@@ -99,5 +100,14 @@ public class MixinGuiScreen implements EssentialPostScreenDrawHook {
 
     @Override
     public void essential$afterDraw(UMatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+    }
+
+    @Inject(method = "onGuiClosed", at = @At("HEAD"))
+    protected void onGuiClosed(final CallbackInfo ci) {
+        essential$beforeClose();
+    }
+
+    @Override
+    public void essential$beforeClose() {
     }
 }

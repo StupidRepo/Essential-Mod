@@ -12,8 +12,8 @@
 package gg.essential.gui.screenshot.image
 
 import gg.essential.elementa.UIComponent
-import gg.essential.elementa.state.BasicState
-import gg.essential.elementa.state.State
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.render.URenderPipeline
@@ -25,11 +25,11 @@ import java.awt.Color
 
 open class ScreenshotImage(val texture: State<UIdentifier?>) : UIComponent() {
 
-    constructor(texture: UIdentifier? = null) : this(BasicState(texture))
+    constructor(texture: UIdentifier? = null) : this(stateOf(texture))
 
     override fun draw(matrixStack: UMatrixStack) {
         beforeDrawCompat(matrixStack)
-        val textureInstance = texture.get()
+        val textureInstance = texture.getUntracked()
         if (textureInstance != null) {
             val x = this.getLeft().toDouble()
             val y = this.getTop().toDouble()
@@ -56,7 +56,7 @@ open class ScreenshotImage(val texture: State<UIdentifier?>) : UIComponent() {
         width: Double,
         height: Double
     ) {
-        val textureInstance = texture.get() ?: return
+        val textureInstance = texture.getUntracked() ?: return
         val textureId = platform.getGlId(textureInstance)
 
         val red = color.red.toFloat() / 255f

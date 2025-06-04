@@ -60,6 +60,8 @@ class SocialMenu @JvmOverloads constructor(
     private val connectionManager = Essential.getInstance().connectionManager
     private val spsManager = connectionManager.spsManager
 
+    val isScreenOpen = screenOpen
+
     val socialStateManager = SocialStateManager(connectionManager)
 
     var selectedTab = mutableStateOf(Tab.CHAT)

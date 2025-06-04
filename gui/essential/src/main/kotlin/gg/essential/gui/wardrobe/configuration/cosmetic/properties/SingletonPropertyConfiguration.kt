@@ -28,7 +28,7 @@ abstract class SingletonPropertyConfiguration<P : CosmeticProperty>(
     protected val cosmetic: Cosmetic,
 ) : LayoutDslComponent {
 
-    private val property = cosmetic.properties.firstNotNullOfOrNull { if (clazz.isInstance(it)) clazz.cast(it) else null }
+    private val property = cosmetic.allProperties.firstNotNullOfOrNull { if (clazz.isInstance(it)) clazz.cast(it) else null }
 
     override fun LayoutScope.layout(modifier: Modifier) {
         box(Modifier.fillWidth().then(modifier)) {
@@ -43,7 +43,7 @@ abstract class SingletonPropertyConfiguration<P : CosmeticProperty>(
                             { input ->
                                 if (input.isBlank())
                                     null
-                                else (cosmeticsDataWithChanges.getCosmetic(input)?.properties?.firstNotNullOfOrNull {
+                                else (cosmeticsDataWithChanges.getCosmetic(input)?.allProperties?.firstNotNullOfOrNull {
                                     if (clazz.isInstance(it)) clazz.cast(it) else null
                                 } ?: throw StateTextInput.ParseException())
                             }

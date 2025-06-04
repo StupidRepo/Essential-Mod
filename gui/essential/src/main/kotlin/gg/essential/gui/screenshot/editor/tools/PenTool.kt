@@ -13,6 +13,7 @@ package gg.essential.gui.screenshot.editor.tools
 
 import gg.essential.elementa.utils.ObservableList
 import gg.essential.gui.screenshot.editor.ScreenshotCanvas
+import gg.essential.gui.screenshot.editor.change.EditHistory
 import gg.essential.gui.screenshot.editor.change.VectorStroke
 import gg.essential.util.lwjgl3.api.nanovg.NanoVG
 import java.awt.Color
@@ -21,7 +22,7 @@ import java.awt.Color
  * This tool works by storing points of where the cursor has been dragged on the canvas
  * then drawing a line between those points.
  */
-class PenTool(editableScreenshot: ScreenshotCanvas) : Tool(editableScreenshot) {
+class PenTool(private val editHistory: EditHistory, editableScreenshot: ScreenshotCanvas) : Tool(editableScreenshot) {
     var color: Color = Color.WHITE
     var width: Float = 1f
 
@@ -64,7 +65,7 @@ class PenTool(editableScreenshot: ScreenshotCanvas) : Tool(editableScreenshot) {
             if (it.mouseButton != 0) {
                 return@onMouseClick
             }
-            currentVectorStroke = PenVectorStroke(color, width).also { editableScreenshot.vectorEditingOverlay.pushChange(it) }
+            currentVectorStroke = PenVectorStroke(color, width).also { editHistory.pushChange(it) }
         }
         editableScreenshot.screenshotDisplay.onMouseRelease {
             previousMouseX = -1f

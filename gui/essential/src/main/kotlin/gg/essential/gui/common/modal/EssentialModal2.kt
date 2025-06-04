@@ -217,6 +217,7 @@ abstract class EssentialModal2(
         text: String,
         modifier: Modifier = Modifier,
         style: StyledButton.Style = StyledButton.Style.BLUE,
+        disabled: State<Boolean> = stateOf(false),
         action: suspend () -> Unit,
     ) {
         styledButton(
@@ -224,7 +225,8 @@ abstract class EssentialModal2(
                 .width(91f)
                 .tag(PrimaryAction)
                 .then(modifier),
-            style = style,
+            style = { style },
+            disabled = disabled,
             action = action,
         ) { currentStyle ->
             text(text, Modifier.textStyle(currentStyle))

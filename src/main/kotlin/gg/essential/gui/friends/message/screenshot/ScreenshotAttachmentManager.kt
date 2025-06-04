@@ -17,6 +17,7 @@ import gg.essential.connectionmanager.common.packet.Packet
 import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket
 import gg.essential.elementa.components.Window
 import gg.essential.gui.elementa.state.v2.MutableListState
+import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.clear
 import gg.essential.gui.elementa.state.v2.combinators.and
 import gg.essential.gui.elementa.state.v2.combinators.map
@@ -33,7 +34,10 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
-class ScreenshotAttachmentManager(val channel: Channel) {
+class ScreenshotAttachmentManager(
+    val channel: Channel,
+    val isScreenOpen: State<Boolean>,
+) {
 
     val maxSelectAmount = 10
 
@@ -42,8 +46,6 @@ class ScreenshotAttachmentManager(val channel: Channel) {
     val hasSelectedImages = selectedImages.map { it.isNotEmpty() }
     val isConfirmingScreenshots = hasSelectedImages and !isPickingScreenshots
     val isUploading = mutableStateOf(false)
-
-    private val cleanupHandlers = mutableListOf<() -> Unit>()
 
     val totalProgressPercentage = mutableStateOf(0)
     private val initialProgress: ToastProgress = ToastProgress.Step(0)
@@ -131,16 +133,6 @@ class ScreenshotAttachmentManager(val channel: Channel) {
 
         if (!isUploading.get()) {
             clearProgress()
-        }
-    }
-
-    fun addCleanupHandler(handler: () -> Unit) {
-        cleanupHandlers.add(handler)
-    }
-
-    fun cleanup() {
-        cleanupHandlers.forEach {
-            it()
         }
     }
 

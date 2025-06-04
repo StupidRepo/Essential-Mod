@@ -17,19 +17,22 @@ class ScopePreservingWindowedProvider<T>(
     private val innerProvider: WindowedProvider<T>,
 ) : WindowedProvider<T> {
 
+    var itemsToBePreserved: List<ScreenshotId> = emptyList()
+        set(value) {
+            field = value
+            updateInnerItems()
+        }
 
     override var items: List<ScreenshotId> = emptyList()
         set(value) {
             field = value
-            innerProvider.items = value + (innerProvider.items - value.toSet())
+            updateInnerItems()
         }
 
-    /**
-     * Indicates that the provided path has been deleted and should
-     * not be preserved in the scope.
-     */
-    fun handleDelete(path: ScreenshotId) {
-        innerProvider.items = innerProvider.items - setOf(path)
+    private fun updateInnerItems() {
+        // The requested items must always be first, so their indices match up with the windows passed to [provide]
+        // we'll add all other items afterwards, so that inner providers do not drop their cached values for those.
+        innerProvider.items = items + (itemsToBePreserved - items.toSet())
     }
 
     override fun provide(windows: List<WindowedProvider.Window>, optional: Set<ScreenshotId>): Map<ScreenshotId, T> {

@@ -133,6 +133,12 @@ class FriendsTab(
         }
     }
 
+    override fun sortUserLists() {
+        friendSection.scrollList.sortChildren(friendSorter)
+        blockedSection.scrollList.sortChildren(blockedSorter)
+        pendingSection.scrollList.sortChildren(pendingSorter)
+    }
+
     private inner class Section(private val type: UserEntryType) : UIContainer(), SortListener {
         private val text by EssentialUIText(type.sectionTitle).constrain {
             x = CenterConstraint()

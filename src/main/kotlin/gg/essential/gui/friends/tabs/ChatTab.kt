@@ -149,6 +149,9 @@ class ChatTab(
     operator fun get(uuid: UUID): ChannelPreview? = previews.firstOrNull { it.otherUser == uuid }
     operator fun get(channelId: Long): ChannelPreview? = previews.firstOrNull { it.channel.id == channelId }
 
+    override fun sortUserLists() {
+        channelListScroller.sortChildren(channelSorter)
+    }
 
     fun openMessage(preview: ChannelPreview) {
 

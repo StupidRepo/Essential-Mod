@@ -70,10 +70,10 @@ class CosmeticBoneHidingConfiguration(
                 input
             }.state.onSetValue(stateScope) { propertyList ->
                 if (propertyList != null) {
-                    val newPropertyList = cosmetic.properties.toMutableList()
+                    val newPropertyList = cosmetic.allProperties.toMutableList()
                     newPropertyList.removeAll(boneHidingProperties)
                     newPropertyList.addAll(propertyList)
-                    cosmeticsDataWithChanges.updateCosmetic(cosmetic.id, cosmetic.copy(properties = newPropertyList))
+                    cosmeticsDataWithChanges.updateCosmetic(cosmetic.id, cosmetic.copy(allProperties = newPropertyList))
                 }
             }
         }

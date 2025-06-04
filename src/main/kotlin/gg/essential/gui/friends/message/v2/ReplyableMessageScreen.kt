@@ -68,6 +68,8 @@ class ReplyableMessageScreen(
     private val active =
         gui.chatTab.currentMessageView.map { it == this@ReplyableMessageScreen } and gui.selectedTab.map { it == Tab.CHAT }
 
+    val isScreenOpen = memo { gui.isScreenOpen() && active() }
+
     private val standardBar by MessageTitleBar(this, gui).bindParent(gui.titleBar, active)
 
     private val scroller by ScrollComponent(
@@ -478,7 +480,6 @@ class ReplyableMessageScreen(
     override fun onClose() {
         standardBar.hide(instantly = true)
         scrollCleanup()
-        messageInput?.cleanup()
     }
 
     override fun scrollToMessage(message: ClientMessage) {

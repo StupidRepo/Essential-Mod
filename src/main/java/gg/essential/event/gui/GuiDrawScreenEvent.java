@@ -110,6 +110,10 @@ public class GuiDrawScreenEvent {
         return partialTicks;
     }
 
+    public boolean isPost() {
+        return post;
+    }
+
     public boolean isPre() {
         return !post;
     }

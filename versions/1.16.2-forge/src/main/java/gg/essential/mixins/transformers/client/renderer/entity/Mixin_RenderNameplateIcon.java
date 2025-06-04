@@ -70,15 +70,18 @@ public class Mixin_RenderNameplateIcon<T extends Entity> {
         //#endif
         CallbackInfo ci
     ) {
-        //#if MC>=12102
-        //$$ if (!(state instanceof PlayerEntityRenderStateExt)) return;
-        //$$ CosmeticsRenderState cState = ((PlayerEntityRenderStateExt) state).essential$getCosmetics();
-        //#else
-        if (!(entity instanceof AbstractClientPlayerEntity)) return;
-        CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayerEntity) entity);
-        //#endif
-       if (OnlineIndicator.currentlyDrawingEntityName()) {
-           OnlineIndicator.drawNametagIndicator(new UMatrixStack(vMatrixStack), bufferIn, cState, toFormattedString(name), packedLightIn);
-       }
+        if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
+            //#if MC>=12102
+            //$$ if (state instanceof PlayerEntityRenderStateExt) {
+            //$$     CosmeticsRenderState cState = ((PlayerEntityRenderStateExt) state).essential$getCosmetics();
+            //#else
+            if (entity instanceof AbstractClientPlayerEntity) {
+                CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayerEntity) entity);
+            //#endif
+                OnlineIndicator.drawNametagIndicator(new UMatrixStack(vMatrixStack), bufferIn, cState, toFormattedString(name), packedLightIn);
+                return;
+            }
+        }
+
     }
 }

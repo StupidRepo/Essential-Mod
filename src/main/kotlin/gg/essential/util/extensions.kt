@@ -61,7 +61,6 @@ import java.util.concurrent.Executor
 import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
-import kotlin.reflect.KClass
 
 //#if MC>=11400
 //$$ import gg.essential.mixins.impl.util.math.Matrix3fExt
@@ -212,14 +211,6 @@ fun GuiScreen.findButtonByLabel(vararg label: String): () -> GuiButton? = {
     //#else
     (this as GuiScreenAccessor).buttonList.lastOrNull { button -> label.any { button.displayString.trim() == I18n.format(it) } }
     //#endif
-}
-
-inline fun (() -> Unit).catch(vararg exceptions: KClass<out Throwable>, catchBlock: (Throwable) -> Unit) {
-    try {
-        this()
-    } catch (e: Throwable) {
-        if (exceptions.any { it.isInstance(e) }) catchBlock(e) else throw e
-    }
 }
 
 fun UImage.Companion.read(stream: InputStream): UImage {

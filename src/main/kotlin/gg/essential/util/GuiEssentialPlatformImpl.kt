@@ -48,6 +48,9 @@ import gg.essential.gui.overlay.ModalManagerImpl
 import gg.essential.gui.overlay.OverlayManager
 import gg.essential.gui.overlay.OverlayManagerImpl
 import gg.essential.gui.screenshot.bytebuf.LimitedAllocator
+import gg.essential.gui.screenshot.providers.MinecraftWindowedTextureProvider
+import gg.essential.gui.screenshot.providers.WindowedImageProvider
+import gg.essential.gui.screenshot.providers.WindowedTextureProvider
 import gg.essential.gui.wardrobe.ItemId
 import gg.essential.gui.wardrobe.Wardrobe
 import gg.essential.gui.wardrobe.WardrobeCategory
@@ -347,6 +350,9 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         //#else
         get() = null
         //#endif
+
+    override fun newWindowedTextureProvider(inner: WindowedImageProvider): WindowedTextureProvider =
+        MinecraftWindowedTextureProvider(inner)
 
     override fun newUIPlayer(
         camera: State<PerspectiveCamera?>,

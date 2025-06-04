@@ -23,12 +23,4 @@ abstract class VectorStroke(val editableScreenshot: ScreenshotCanvas, val color:
      * Renders this VectorStroke
      */
     abstract fun render(vg: NanoVG, width: Float, height: Float, scale: Float)
-
-    override fun undo(canvas: ScreenshotCanvas) {
-        canvas.vectorEditingOverlay.markDirty()
-    }
-
-    override fun redo(canvas: ScreenshotCanvas) {
-        canvas.vectorEditingOverlay.markDirty()
-    }
 }

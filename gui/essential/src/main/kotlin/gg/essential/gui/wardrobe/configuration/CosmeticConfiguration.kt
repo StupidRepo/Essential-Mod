@@ -88,14 +88,14 @@ class CosmeticConfiguration(
 
     // Settings that can only be applied once (ie Armor Handling)
     private fun LayoutScope.singletonSettingsButton(cosmetic: Cosmetic, type: CosmeticPropertyType) {
-        val enabledState = mutableStateOf(cosmetic.properties.any { it.type == type && it.enabled })
+        val enabledState = mutableStateOf(cosmetic.properties.any { it.type == type })
 
         enabledState.onSetValue(stateScope) { cosmeticsDataWithChanges.setCosmeticSingletonPropertyEnabled(cosmetic.id, type, it) }
 
         row(Modifier.fillWidth(padding = 10f).height(20f)) {
             navButton(type.displayName, Modifier.fillRemainingWidth()) {
                 // Create the setting if it does not already exist
-                if (cosmetic.properties.none { it.type == type }) {
+                if (cosmetic.allProperties.none { it.type == type }) {
                     cosmeticsDataWithChanges.setCosmeticSingletonPropertyEnabled(cosmetic.id, type, true)
                 }
                 managingSetting.set(type)

@@ -16,7 +16,6 @@ import com.sparkuniverse.toolbox.chat.model.Channel
 import gg.essential.elementa.state.toConstraint
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.IconButton
-import gg.essential.gui.common.modal.defaultEssentialModalFadeTime
 import gg.essential.gui.elementa.essentialmarkdown.EssentialMarkdown
 import gg.essential.gui.elementa.essentialmarkdown.MarkdownConfig
 import gg.essential.gui.elementa.essentialmarkdown.ParagraphConfig
@@ -142,11 +141,6 @@ class SelectModalBuilder<T>(
      * If you want to force the user to select at least one entry before clicking continue
      */
     var requiresSelection: Boolean = true
-
-    /**
-     * How long the modal should fade in and out for, see [defaultEssentialModalFadeTime]
-     */
-    var fadeTime: Float = defaultEssentialModalFadeTime
 
     /**
      * Adds shadows all entries
@@ -347,7 +341,6 @@ class SelectModalBuilder<T>(
         sections,
         requiresButtonPress,
         requiresSelection,
-        fadeTime,
         shadowsOnEntries,
         initiallySelected,
         whenEmpty,

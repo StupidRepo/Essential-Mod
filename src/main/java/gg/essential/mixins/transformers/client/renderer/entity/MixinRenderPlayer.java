@@ -11,7 +11,6 @@
  */
 package gg.essential.mixins.transformers.client.renderer.entity;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import dev.folomeev.kotgl.matrix.matrices.Mat4;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.EssentialModelRenderer;
@@ -226,15 +225,9 @@ public abstract class MixinRenderPlayer
     //#else
     //$$ @Inject(method = "renderOffsetLivingLabel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RendererLivingEntity;renderOffsetLivingLabel(Lnet/minecraft/entity/Entity;DDDLjava/lang/String;FD)V"))
     //#endif
-    //#if MC!=11202
-    //$$ private void setNametagEntity(CallbackInfo ci) {
-    //$$     OnlineIndicator.currentlyDrawingEntityName.set(true);
-    //$$ }
-    //#else
-    private void setNametagEntity(CallbackInfo ci, @Local(argsOnly = true) AbstractClientPlayer entityIn) {
-        OnlineIndicator.nametagEntity = entityIn;
+    private void setNametagEntity(CallbackInfo ci) {
+        OnlineIndicator.currentlyDrawingPlayerEntityName.set(true);
     }
-    //#endif
 
     @Override
     public Mat4 essential$getTransform(AbstractClientPlayer player, float yaw, float partialTicks) {

@@ -350,11 +350,6 @@ class ScreenshotPreviewToast(val file: File) : ScreenshotToast() {
                     imageColor.rebind(hovered.map { if (it) EssentialPalette.TEXT_RED else EssentialPalette.TEXT })
                 }.onLeftClick {
                     Essential.getInstance().connectionManager.screenshotManager.handleDelete(file, false)
-
-                    val screen = GuiUtil.openedScreen()
-                    if (screen is ScreenshotBrowser) {
-                        screen.externalDelete(setOf(file.toPath()))
-                    }
                 }
             }
 

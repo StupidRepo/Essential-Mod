@@ -115,7 +115,7 @@ class MessageInput(
 
     private var cachedCursorRelativeYPosition = 0f
 
-    val screenshotAttachmentManager = ScreenshotAttachmentManager(replyableMessageScreen.preview.channel)
+    val screenshotAttachmentManager = ScreenshotAttachmentManager(replyableMessageScreen.preview.channel, replyableMessageScreen.isScreenOpen)
 
     init {
 
@@ -149,14 +149,6 @@ class MessageInput(
                     screenshotPicker?.releaseWindowFocus()
                     grabFocus()
                 }
-            }
-        }
-
-        var screenshotAttacher: ScreenshotAttacher? = null
-
-        screenshotAttachmentManager.isConfirmingScreenshots.onSetValue(this) {
-            if (it) {
-                screenshotAttacher?.screenshotProvider?.reloadItems()
             }
         }
 
@@ -246,7 +238,7 @@ class MessageInput(
                     // Extra content/banners go here?
 
                     if_(screenshotAttachmentManager.isConfirmingScreenshots) {
-                        screenshotAttacher = ScreenshotAttacher(screenshotAttachmentManager)()
+                        ScreenshotAttacher(screenshotAttachmentManager)()
                     }
 
                     // Main input field
@@ -323,10 +315,6 @@ class MessageInput(
 
     fun grabFocus() {
         input.grabWindowFocus()
-    }
-
-    fun cleanup() {
-        screenshotAttachmentManager.cleanup()
     }
 
     private fun handleSendMessage() {

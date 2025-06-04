@@ -30,6 +30,7 @@ net.minecraft.client.gui.widget.list.AbstractList headerHeight net.minecraft.cli
 net.minecraft.client.gui.widget.list.AbstractList itemHeight net.minecraft.client.gui.GuiSlot slotHeight
 net.minecraft.client.gui.widget.list.AbstractList getMaxPosition() net.minecraft.client.gui.GuiSlot getContentHeight()
 net.minecraft.client.gui.widget.list.AbstractList getEntryAtPosition() net.minecraft.client.gui.GuiSlot getSlotIndexFromScreenCoords()
+net.minecraft.client.gui.widget.list.AbstractList getScrollAmount() net.minecraft.client.gui.GuiSlot getAmountScrolled()
 net.minecraft.client.gui.widget.list.AbstractList net.minecraft.client.gui.GuiSlot
 net.minecraft.client.renderer.FirstPersonRenderer net.minecraft.client.renderer.ItemRenderer
 net.minecraft.client.renderer.culling.ClippingHelper net.minecraft.client.renderer.culling.ICamera
@@ -78,4 +79,8 @@ net.minecraftforge.eventbus.api.IEventBus net.minecraftforge.fml.common.eventhan
 net.minecraftforge.fml.client.gui.screen.ModListScreen net.minecraftforge.fml.client.GuiModList
 net.minecraftforge.versions.forge.ForgeVersion net.minecraftforge.common.ForgeVersion
 net.minecraft.util.concurrent.ThreadTaskExecutor isOnExecutionThread() net.minecraft.util.IThreadListener isCallingFromMinecraftThread()
+net.minecraft.client.gui.widget.list.ResourcePackList.ResourcePackEntry net.minecraft.client.resources.ResourcePackListEntry
+net.minecraft.client.gui.widget.list.ResourcePackList net.minecraft.client.gui.GuiResourcePackList
+net.minecraft.client.gui.screen.Screen hasShiftDown() isShiftKeyDown()
+net.minecraft.client.gui.widget.list.ResourcePackList.ResourcePackEntry func_238920_a_() showHoverOverlay()
 net.minecraft.client.renderer.entity.layers.HeldItemLayer net.minecraft.client.renderer.entity.layers.LayerHeldItem

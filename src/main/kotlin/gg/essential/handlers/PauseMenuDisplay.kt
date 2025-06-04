@@ -348,13 +348,12 @@ class PauseMenuDisplay {
     }
 
     private fun getRightSideMenuX(topButton: UIContainer, width: WidthConstraint): XConstraint {
-        // This maintains the appropriate distance from both the accessibility button and edges of the screen as much as possible
         return ((SiblingConstraint() boundTo topButton) +
-            (((0.pixels(alignOpposite = true) boundTo window) - (0.pixels(alignOpposite = true) boundTo topButton)) / 2f - (width / 2)))
-            .coerceIn(
-                SiblingConstraint(28f) boundTo topButton,
-                SiblingConstraint(65f) boundTo topButton
-            )
+                    (((0.pixels(alignOpposite = true) boundTo window) - (0.pixels(alignOpposite = true) boundTo topButton)) / 2f - (width / 2)))
+                .coerceIn(
+                    SiblingConstraint(28f) boundTo topButton,
+                    SiblingConstraint(65f) boundTo topButton
+                )
     }
 
     companion object {

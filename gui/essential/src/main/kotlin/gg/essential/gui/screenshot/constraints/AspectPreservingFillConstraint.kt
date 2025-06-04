@@ -16,11 +16,15 @@ import gg.essential.elementa.constraints.ConstraintType
 import gg.essential.elementa.constraints.HeightConstraint
 import gg.essential.elementa.constraints.WidthConstraint
 import gg.essential.elementa.constraints.resolution.ConstraintVisitor
-import gg.essential.elementa.state.State
+import gg.essential.gui.elementa.state.v2.State
+import gg.essential.gui.elementa.state.v2.toV2
+import gg.essential.elementa.state.State as StateV1
 
 class AspectPreservingFillConstraint(
     private val aspect: State<Float>
 ) : WidthConstraint, HeightConstraint {
+
+    constructor(aspect: StateV1<Float>) : this(aspect.toV2())
 
     override var cachedValue = 0f
     override var recalculate = true
@@ -33,7 +37,7 @@ class AspectPreservingFillConstraint(
 
     private fun getSize(component: UIComponent): Pair<Float, Float> {
         val target = (constrainTo ?: component.parent)
-        val inverseAspectRatio = 1 / aspect.get()
+        val inverseAspectRatio = 1 / aspect.getUntracked()
 
         val containerWidth = target.getWidth()
         val containerHeight = target.getHeight()

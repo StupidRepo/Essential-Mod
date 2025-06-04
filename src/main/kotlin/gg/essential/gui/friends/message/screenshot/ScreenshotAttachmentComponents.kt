@@ -20,6 +20,7 @@ import gg.essential.elementa.dsl.pixels
 import gg.essential.elementa.effects.ScissorEffect
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.MenuButton
+import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.layoutdsl.Alignment
@@ -103,7 +104,7 @@ fun LayoutScope.screenshotDateGroup(
     startTime: Long,
     numberOfItemsPerRow: State<Int>,
     screenshotIds: List<ScreenshotId>,
-    screenshotProvider: SimpleScreenshotProvider,
+    desiredImageSize: MutableState<Pair<Int, Int>>,
     screenshotAttachmentManager: ScreenshotAttachmentManager,
     navigation: UIComponent,
     contentBox: UIComponent
@@ -143,7 +144,7 @@ fun LayoutScope.screenshotDateGroup(
                                 if (i < list.size) {
                                     SelectableScreenshotPreview(
                                         list[i],
-                                        screenshotProvider,
+                                        desiredImageSize,
                                         screenshotAttachmentManager
                                     )(imageModifier)
                                 } else {

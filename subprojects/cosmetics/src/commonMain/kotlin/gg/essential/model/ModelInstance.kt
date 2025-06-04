@@ -32,7 +32,7 @@ class ModelInstance(
     state: CosmeticsState,
     val onAnimation: (String) -> Unit,
 ) {
-    var locator = WearableLocator(entity.locator, isVisible = !state.propertyHidesEntireCosmetic(model.cosmetic.id))
+    var locator = WearableLocator(entity.locator, wearableVisible = !state.propertyHidesEntireCosmetic(model.cosmetic.id))
     var animationState = ModelAnimationState(entity, locator)
     var textureAnimationSync = TextureAnimationSync(model.textureFrameCount)
     private var animationVariantSetting: CosmeticSetting.AnimationVariant? = state.getAnimationVariantSettingOf(model.cosmetic.id)
@@ -44,7 +44,7 @@ class ModelInstance(
     }
 
     fun switchModel(newModel: BedrockModel, newState: CosmeticsState) {
-        locator.isVisible = !newState.propertyHidesEntireCosmetic(newModel.cosmetic.id)
+        locator.wearableVisible = !newState.propertyHidesEntireCosmetic(newModel.cosmetic.id)
 
         val newTextureAnimation = model.textureFrameCount != newModel.textureFrameCount
         val newAnimations = model.animations != newModel.animations || model.animationEvents != newModel.animationEvents
@@ -59,7 +59,7 @@ class ModelInstance(
         }
         if (newAnimations) {
             locator.isValid = false
-            locator = WearableLocator(entity.locator)
+            locator = WearableLocator(entity.locator, locator.wearableVisible)
             animationState = ModelAnimationState(entity, locator)
         }
         if (newAnimationVariant) {

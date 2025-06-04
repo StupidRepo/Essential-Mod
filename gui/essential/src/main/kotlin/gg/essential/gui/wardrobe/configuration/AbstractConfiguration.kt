@@ -11,14 +11,12 @@
  */
 package gg.essential.gui.wardrobe.configuration
 
-import gg.essential.elementa.components.ScrollComponent
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.modal.DangerConfirmationEssentialModal
 import gg.essential.gui.common.modal.Modal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.elementa.state.v2.*
 import gg.essential.gui.elementa.state.v2.combinators.*
-import gg.essential.gui.elementa.state.v2.stateBy
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.wardrobe.WardrobeState
@@ -26,7 +24,6 @@ import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.divider
 import gg.essential.gui.wardrobe.configuration.ConfigurationUtils.navButton
 import gg.essential.util.*
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
-import org.slf4j.LoggerFactory
 
 sealed class AbstractConfiguration<I, T>(
     private val configurationType: ConfigurationType<I, T>,
@@ -40,68 +37,51 @@ sealed class AbstractConfiguration<I, T>(
     private val editingState = stateTriple.second
     private val submenuMapState = editingState.map { editing -> if (editing != null) getSubmenus(editing).associateBy { it.id } else mapOf() }
     private val currentSubmenuId = mutableStateOf<String?>(null)
-    private val editingItemAndSubmenu = stateBy {
-        val currentlyEditing = editingState()
-        val submenuMap = submenuMapState()
-        val submenuId = currentSubmenuId()
-        currentlyEditing to if (submenuId != null) submenuMap[submenuId] else null
-    }
-
-    private var savedScrollState: Pair<I, Float>? = null
-    private var currentScrollComponent: ScrollComponent? = null
 
     override fun LayoutScope.layout(modifier: Modifier) {
         column(Modifier.fillParent().alignBoth(Alignment.Center), Arrangement.spacedBy(0f, FloatPosition.CENTER)) {
-            bind(editingItemAndSubmenu) { (currentlyEditing, submenu) ->
-                if (currentlyEditing != null) {
-                    val (id, name) = currentlyEditing.idAndName()
+            bind({ editingState()?.id() to currentSubmenuId() }) { (id, submenuId) ->
+                val submenuState = memo { submenuMapState()[submenuId] }
+                if (id != null) {
                     column(Modifier.fillWidth().childBasedHeight(3f), Arrangement.spacedBy(3f, FloatPosition.CENTER)) {
                         text("Editing ${configurationType.displaySingular}")
-                        text(name)
+                        text({ editingState()?.name() ?: "" })
                         text("($id)")
-                        if (submenu != null) {
+                        ifNotNull(submenuState) { submenu ->
                             text("Submenu: ${submenu.name}")
                         }
                     }
                     divider()
-                    val savedScroll = savedScrollState
                     row(Modifier.fillWidth().fillRemainingHeight()) {
                         val scrollComponent = scrollable(Modifier.fillRemainingWidth().fillHeight(), vertical = true) {
                             column(Modifier.fillWidth(padding = 10f), Arrangement.spacedBy(3f)) {
                                 spacer(height = 5f)
-                                if (submenu != null) {
+                                ifNotNull(submenuState) { submenu ->
                                     submenu()
-                                } else {
-                                    columnLayout(currentlyEditing)
+                                } `else` {
+                                    ifNotNull(editingState) { currentlyEditing ->
+                                        columnLayout(currentlyEditing)
+                                    }
                                 }
                                 spacer(height = 5f)
                             }
                         }
                         val scrollbar = box(Modifier.width(2f).fillHeight().color(EssentialPalette.LIGHTEST_BACKGROUND).hoverColor(EssentialPalette.SCROLLBAR).hoverScope())
                         scrollComponent.setVerticalScrollBarComponent(scrollbar, true)
-                        currentScrollComponent = scrollComponent
-                        if (savedScroll != null && savedScroll.first == currentlyEditing.id()) {
-                            try {
-                                scrollComponent.scrollTo(verticalOffset = savedScroll.second, smoothScroll = false)
-                            } catch (e: Exception) {
-                                LoggerFactory.getLogger(AbstractConfiguration::class.java)
-                                    .info("Prevented crash in AbstractConfiguration. (See EM-2304)", e)
-                            }
-                        }
                     }
                     divider()
                     row(Modifier.fillWidth().childBasedMaxHeight(3f), Arrangement.spacedBy(5f, FloatPosition.CENTER)) {
                         navButton("Reset", Modifier.fillWidth(0.3f)) {
-                            platform.pushModal { manager -> getResetModal(manager, currentlyEditing) }
+                            platform.pushModal { manager -> getResetModal(manager, id) }
                         }
                         navButton("Delete", Modifier.fillWidth(0.3f)) {
-                            platform.pushModal { manager -> getDeleteModal(manager, currentlyEditing) }
+                            platform.pushModal { manager -> getDeleteModal(manager, id) }
                         }
-                        if (submenu != null) {
+                        if_({ submenuState() != null }) {
                             navButton("Back", Modifier.fillWidth(0.3f)) {
                                 currentSubmenuId.set(null)
                             }
-                        } else {
+                        } `else` {
                             navButton("Close", Modifier.fillWidth(0.3f)) {
                                 editingIdState.set(null)
                             }
@@ -135,18 +115,18 @@ sealed class AbstractConfiguration<I, T>(
         }
     }
 
-    protected open fun getDeleteModal(modalManager: ModalManager, toDelete: T): Modal {
+    protected open fun getDeleteModal(modalManager: ModalManager, toDelete: I): Modal {
         return DangerConfirmationEssentialModal(modalManager, "Delete", false).configure {
-            titleText = "Are you sure you want to delete ${configurationType.displaySingular} with id ${toDelete.id()}?"
+            titleText = "Are you sure you want to delete ${configurationType.displaySingular} with id $toDelete?"
         }.onPrimaryAction {
             toDelete.update(null)
             editingIdState.set(null)
         }
     }
 
-    protected open fun getResetModal(modalManager: ModalManager, toReset: T): Modal {
+    protected open fun getResetModal(modalManager: ModalManager, toReset: I): Modal {
         return DangerConfirmationEssentialModal(modalManager, "Reset", false).configure {
-            titleText = "Are you sure you want to reset ${configurationType.displaySingular} with id ${toReset.id()} back to initial loaded state?"
+            titleText = "Are you sure you want to reset ${configurationType.displaySingular} with id $toReset back to initial loaded state?"
         }.onPrimaryAction {
             toReset.reset()
         }
@@ -154,15 +134,13 @@ sealed class AbstractConfiguration<I, T>(
 
     protected open fun getSubmenus(editing: T): Set<AbstractConfigurationSubmenu<T>> = setOf()
 
-    protected fun T.update(newItem: T?) {
-        val scrollComponent = currentScrollComponent
-        if (scrollComponent != null) {
-            savedScrollState = this.id() to scrollComponent.verticalOffset
-        }
-        configurationType.updateHandler(cosmeticsDataWithChanges, id(), newItem)
-    }
+    protected fun T.update(newItem: T?) = id().update(newItem)
+    @JvmName("updateById")
+    protected fun I.update(newItem: T?) = configurationType.updateHandler(cosmeticsDataWithChanges, this, newItem)
 
-    protected fun T.reset() = configurationType.resetHandler(cosmeticsDataWithChanges, id())
+    protected fun T.reset() = id().reset()
+    @JvmName("resetById")
+    protected fun I.reset() = configurationType.resetHandler(cosmeticsDataWithChanges, this)
 
     protected fun T.idAndName() = configurationType.idAndNameMapper(this)
 

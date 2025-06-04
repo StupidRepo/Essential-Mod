@@ -39,7 +39,7 @@ data class Cosmetic(
     val tier: CosmeticTier,
     val displayNames: Map<String, String>,
     val files: Map<String, EssentialAsset>,
-    val properties: List<CosmeticProperty>,
+    val allProperties: List<CosmeticProperty>,
     val storePackageId: Int,
     val prices: Map<String, Double>,
     val tags: Set<String>,
@@ -75,6 +75,9 @@ data class Cosmetic(
 
     fun assets(variant: String): CosmeticAssets = assetVariants[variant] ?: baseAssets
     fun assets(settings: CosmeticSettings) = assets(settings.variant ?: defaultVariantName)
+
+    val properties: List<CosmeticProperty> = allProperties.filter { @Suppress("DEPRECATION") it.enabled }
+    val disabledProperties: List<CosmeticProperty> = allProperties.filterNot { @Suppress("DEPRECATION") it.enabled }
 
     val displayName: String
         get() = displayNames["en_us"] ?: id

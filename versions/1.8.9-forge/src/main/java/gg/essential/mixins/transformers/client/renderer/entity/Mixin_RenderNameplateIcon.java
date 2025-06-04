@@ -32,10 +32,15 @@ public class Mixin_RenderNameplateIcon<T extends Entity> {
 
     @Inject(method = "renderLivingLabel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;enableLighting()V"))
     private void renderEssentialIndicator(T entityIn, String str, double x, double y, double z, int maxDistance, CallbackInfo ci) {
-       if (OnlineIndicator.currentlyDrawingEntityName() && entityIn instanceof AbstractClientPlayer) {
-           CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) entityIn);
-           int light = (((int) OpenGlHelper.lastBrightnessY) << 16) + (int) OpenGlHelper.lastBrightnessX;
-           OnlineIndicator.drawNametagIndicator(new UMatrixStack(), cState, str, light);
-       }
+
+        int light = (((int) OpenGlHelper.lastBrightnessY) << 16) + (int) OpenGlHelper.lastBrightnessX;
+        if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
+            if (entityIn instanceof AbstractClientPlayer) {
+                CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) entityIn);
+                OnlineIndicator.drawNametagIndicator(new UMatrixStack(), cState, str, light);
+                return;
+            }
+        }
+
     }
 }
