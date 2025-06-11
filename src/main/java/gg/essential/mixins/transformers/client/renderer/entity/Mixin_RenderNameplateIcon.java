@@ -12,11 +12,13 @@
 package gg.essential.mixins.transformers.client.renderer.entity;
 
 import gg.essential.cosmetics.CosmeticsRenderState;
+import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.handlers.OnlineIndicator;
 import gg.essential.universal.UMatrixStack;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.EntityRenderer;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,9 +38,18 @@ public class Mixin_RenderNameplateIcon {
             }
         }
 
+        // runs for non players and non-primary nameplates e.g. scoreboard
+        Entity entity = OnlineIndicator.nametagEntity;
+        if (entity != null) {
+            IconCosmeticRenderer.INSTANCE.drawStandaloneVersionConsistentPadding(
+                    new UMatrixStack(), entity.isSneaking(), str, entity.getBrightnessForRender());
+        }
     }
 
     @Inject(method = "drawNameplate", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/FontRenderer;getStringWidth(Ljava/lang/String;)I", ordinal = 0))
     private static void essential$translateNameplate(CallbackInfo ci) {
+        if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
+            GlStateManager.translate(IconCosmeticRenderer.INSTANCE.getNameplateXOffset(OnlineIndicator.nametagEntity), 0f, 0f);
+        }
     }
 }

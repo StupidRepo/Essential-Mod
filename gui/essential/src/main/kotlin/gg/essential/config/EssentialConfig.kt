@@ -262,6 +262,8 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
 
     val hideCosmeticParticlesInFirstPerson = property("Cosmetics.General.Hide cosmetic particles in first person", false)
 
+    val showOwnNametag = property("Quality of Life.Nameplate.Show my nameplate in third-person", true)
+
     override val migrations = listOf(
         Migration { config ->
             val overrideGuiScale = config.remove("general.general.gui_scale") as Boolean? ?: return@Migration
@@ -529,6 +531,10 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
             }
 
             subcategory("Nameplates") {
+                switch(showOwnNametag) {
+                    name = "Nameplate in third-person"
+                    description = "Shows your own nameplate when in third-person perspective."
+                }
                 switch(showEssentialIndicatorOnNametagState) {
                     name = "Essential icon on nameplates"
                     description = "Shows the Essential icon on Essential players’ nameplates."

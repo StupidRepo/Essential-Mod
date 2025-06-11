@@ -113,6 +113,7 @@
     "client.renderer.entity.Mixin_RenderExtraClientCosmeticGeometryInFirstPerson",
     "client.renderer.entity.Mixin_RenderNameplateIcon",
     "client.renderer.entity.Mixin_RenderNameplateIcon_Sneaking",
+    "client.renderer.entity.Mixin_SyncLocalPlayerNameplateCrouchHeight",
     "client.renderer.entity.MixinRender",
     "client.renderer.entity.MixinRendererLivingEntity",
     "client.renderer.entity.MixinRenderPlayer",

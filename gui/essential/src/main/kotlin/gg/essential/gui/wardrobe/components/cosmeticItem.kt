@@ -508,36 +508,36 @@ private fun LayoutScope.lockedIcons(item: Item, owned: State<Boolean>) {
             Modifier.width(13f).height(13f).color(EssentialPalette.LOCKED_ORANGE).hoverTooltip(data.actionDescription).hoverScope(),
             Modifier.shadow(EssentialPalette.BLACK_SHADOW),
         )
+    }
 
-        val actionModifier = Modifier.width(13f).height(13f).color(EssentialPalette.BANNER_BLUE).hoverScope()
+    val actionModifier = Modifier.width(13f).height(13f).color(EssentialPalette.BANNER_BLUE).hoverScope()
 
-        when (data) {
-            is CosmeticProperty.RequiresUnlockAction.Data.JoinServer -> {
-                iconButton(
-                    EssentialPalette.JOIN_ARROW_5X,
-                    actionModifier.hoverTooltip("Join ${data.serverAddress}"),
-                    Modifier.shadow(EssentialPalette.BLACK_SHADOW),
-                    onLeftClick = {
-                        platform.connectToServer(data.serverAddress, data.serverAddress)
-                        it.stopPropagation()
-                    }
-                )
-            }
-
-            is CosmeticProperty.RequiresUnlockAction.Data.OpenLink -> {
-                iconButton(
-                    EssentialPalette.JOIN_ARROW_5X,
-                    actionModifier.hoverTooltip(data.linkShort),
-                    Modifier.shadow(EssentialPalette.BLACK_SHADOW),
-                    onLeftClick = {
-                        OpenLinkModal.openUrl(URI(data.linkAddress))
-                        it.stopPropagation()
-                    }
-                )
-            }
-
-            else -> {}
+    when (data) {
+        is CosmeticProperty.RequiresUnlockAction.Data.JoinServer -> {
+            iconButton(
+                EssentialPalette.JOIN_ARROW_5X,
+                actionModifier.hoverTooltip("Join ${data.serverAddress}"),
+                Modifier.shadow(EssentialPalette.BLACK_SHADOW),
+                onLeftClick = {
+                    platform.connectToServer(data.serverAddress, data.serverAddress)
+                    it.stopPropagation()
+                }
+            )
         }
+
+        is CosmeticProperty.RequiresUnlockAction.Data.OpenLink -> {
+            iconButton(
+                EssentialPalette.JOIN_ARROW_5X,
+                actionModifier.hoverTooltip(data.linkShort),
+                Modifier.shadow(EssentialPalette.BLACK_SHADOW),
+                onLeftClick = {
+                    OpenLinkModal.openUrl(URI(data.linkAddress))
+                    it.stopPropagation()
+                }
+            )
+        }
+
+        else -> {}
     }
 }
 

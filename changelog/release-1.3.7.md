@@ -1,5 +1,5 @@
 Title: Drag & Drop Update
-Description: Drag and drop resource packs and servers
+Summary: Drag and drop resource packs and servers
 
 ## Improvements
 - Added drag and drop functionality to the resource packs, data packs and server list screens

@@ -14,6 +14,7 @@ package gg.essential.mixins.transformers.client.renderer.entity;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import gg.essential.cosmetics.CosmeticsRenderState;
+import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.handlers.OnlineIndicator;
 import gg.essential.universal.UMatrixStack;
 import net.minecraft.client.entity.player.AbstractClientPlayerEntity;
@@ -52,6 +53,9 @@ public class Mixin_RenderNameplateIcon<T extends Entity> {
         if (!(entity instanceof AbstractClientPlayerEntity)) return;
         CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayerEntity) entity);
         //#endif
+        if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
+            matrixStack.translate(IconCosmeticRenderer.INSTANCE.getNameplateXOffset(cState), 0f, 0f);
+        }
     }
 
     @Inject(method = "renderName", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/matrix/MatrixStack;pop()V"))
@@ -83,5 +87,14 @@ public class Mixin_RenderNameplateIcon<T extends Entity> {
             }
         }
 
+        //#if MC>=12102
+        //$$ boolean isSneaking = state.sneaking;
+        //#else
+        boolean isSneaking = entity.isSneaking();
+        //#endif
+
+        // runs for non players and non-primary nameplates e.g. scoreboard
+        IconCosmeticRenderer.INSTANCE.drawStandaloneVersionConsistentPadding(
+                new UMatrixStack(vMatrixStack), bufferIn, isSneaking, toFormattedString(name), packedLightIn);
     }
 }

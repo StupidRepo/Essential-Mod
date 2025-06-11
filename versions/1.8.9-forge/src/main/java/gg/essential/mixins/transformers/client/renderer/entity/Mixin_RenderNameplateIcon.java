@@ -13,9 +13,11 @@ package gg.essential.mixins.transformers.client.renderer.entity;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import gg.essential.cosmetics.CosmeticsRenderState;
+import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.handlers.OnlineIndicator;
 import gg.essential.universal.UMatrixStack;
 import net.minecraft.client.entity.AbstractClientPlayer;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
@@ -28,6 +30,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class Mixin_RenderNameplateIcon<T extends Entity> {
     @Inject(method = "renderLivingLabel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;scale(FFF)V", shift = At.Shift.AFTER, ordinal = 0))
     private void essential$translateNameplate(CallbackInfo ci, @Local(argsOnly = true) T entity) {
+        if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
+            GlStateManager.translate(IconCosmeticRenderer.INSTANCE.getNameplateXOffset(entity), 0f, 0f);
+        }
     }
 
     @Inject(method = "renderLivingLabel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;enableLighting()V"))
@@ -42,5 +47,7 @@ public class Mixin_RenderNameplateIcon<T extends Entity> {
             }
         }
 
+        // runs for non players and non-primary nameplates e.g. scoreboard
+        IconCosmeticRenderer.INSTANCE.drawStandaloneVersionConsistentPadding(new UMatrixStack(), entityIn.isSneaking(), str, light);
     }
 }

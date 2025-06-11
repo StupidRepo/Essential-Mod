@@ -13,9 +13,11 @@ package gg.essential.mixins.transformers.client.renderer.entity;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import gg.essential.cosmetics.CosmeticsRenderState;
+import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.handlers.OnlineIndicator;
 import gg.essential.universal.UMatrixStack;
 import net.minecraft.client.entity.AbstractClientPlayer;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.entity.RendererLivingEntity;
 import net.minecraft.entity.EntityLivingBase;
@@ -29,6 +31,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class Mixin_RenderNameplateIcon_Sneaking<T extends EntityLivingBase> {
     @Inject(method = "renderName(Lnet/minecraft/entity/EntityLivingBase;DDD)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;scale(FFF)V", shift = At.Shift.AFTER))
     private void essential$translateNameplate(CallbackInfo ci, @Local(argsOnly = true) T entity) {
+        GlStateManager.translate(IconCosmeticRenderer.INSTANCE.getNameplateXOffset(entity), 0f, 0f);
     }
 
     @Inject(method = "renderName(Lnet/minecraft/entity/EntityLivingBase;DDD)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;enableLighting()V"))

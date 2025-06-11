@@ -16,18 +16,15 @@ import gg.essential.Essential;
 import gg.essential.config.EssentialConfig;
 import gg.essential.connectionmanager.common.enums.ProfileStatus;
 import gg.essential.cosmetics.CosmeticsRenderState;
+import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.data.OnboardingData;
-import gg.essential.gui.EssentialPalette;
 import gg.essential.mixins.ext.client.network.NetHandlerPlayClientExt;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.profile.ProfileManager;
-import gg.essential.render.TextRenderTypeVertexConsumer;
-import gg.essential.universal.UGraphics;
 import gg.essential.universal.UMatrixStack;
 import gg.essential.universal.UMinecraft;
-import gg.essential.universal.shader.BlendState;
-import gg.essential.util.Diamond;
-import net.minecraft.client.Minecraft;
+import gg.essential.universal.UResolution;
+import gg.essential.util.UDrawContext;
 import net.minecraft.client.network.NetHandlerPlayClient;
 import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.entity.Entity;
@@ -49,7 +46,7 @@ import java.awt.*;
 import java.util.Map;
 import java.util.UUID;
 
-import static gg.essential.elementa.utils.ExtensionsKt.withAlpha;
+import static gg.essential.util.HelpersKt.identifier;
 
 public class OnlineIndicator {
 
@@ -81,113 +78,12 @@ public class OnlineIndicator {
         String str,
         int light
     ) {
-
-        if (!cState.onlineIndicator()) {
-            return;
-        }
-
-        boolean alwaysOnTop = !cState.isSneaking();
-
-        int stringWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(str);
-        //#if MC>=12102
-        //$$ float vanillaX = (float)(-stringWidth) / 2f;
-        //#else
-        float vanillaX = -(float)(stringWidth / 2);
-        //#endif
-        Color color = EssentialPalette.ESSENTIAL_BLUE;
-        //#if MC<11600
-        UGraphics.enableAlpha();
-        UGraphics.disableLighting();
-        //noinspection deprecation
-        UGraphics.depthMask(false);
-        //#endif
-        float x1 = vanillaX - 11;
-        float y1 = -1;
-        float x2 = vanillaX - 1;
-        float y2 = getDiamondBackgroundYMin();
-
-        //#if MC<11600
-        if (alwaysOnTop) {
-            //noinspection deprecation
-            UGraphics.disableDepth();
-        }
-        //#endif
-
-        //#if MC<12105
-        //noinspection deprecation
-        UGraphics.enableBlend();
-        //noinspection deprecation
-        UGraphics.tryBlendFuncSeparate(770, 771, 1,0);
-        //#endif
-
-        int backgroundOpacity = getTextBackgroundOpacity();
-        //#if MC>=12102
-        //$$ double z = -0.01;
-        //#elseif MC>=11600
-        //$$ double z = 0.01;
-        //#else
-        double z = 0;
-        //#endif
-
-        //#if MC>=11600
-        //$$ TextRenderTypeVertexConsumer vertexConsumer = TextRenderTypeVertexConsumer.create(vertexConsumerProvider, alwaysOnTop);
-        //#else
-        UGraphics buffer = UGraphics.getFromTessellator();
-
-        // use createWithTexture() for under 1.16 to allow for the light map to apply, we also pass in a blank white texture
-        // @see createWithTexture() doc for details
-        TextRenderTypeVertexConsumer vertexConsumer = TextRenderTypeVertexConsumer.createWithTexture(buffer, whiteTexture);
-        //#endif
-
-        vertexConsumer.pos(matrixStack, x1, y1, z).color(0, 0, 0, backgroundOpacity).tex(0, 0).light(light).endVertex();
-        vertexConsumer.pos(matrixStack, x1, y2, z).color(0, 0, 0, backgroundOpacity).tex(0, 0).light(light).endVertex();
-        vertexConsumer.pos(matrixStack, x2, y2, z).color(0, 0, 0, backgroundOpacity).tex(0, 0).light(light).endVertex();
-        vertexConsumer.pos(matrixStack, x2, y1, z).color(0, 0, 0, backgroundOpacity).tex(0, 0).light(light).endVertex();
-
-        float diamondCenter = (y1 + y2) / 2 + getDiamondYOffset();
-        Diamond.drawDiamond(matrixStack, vertexConsumer, 6, vanillaX - 6, diamondCenter, withAlpha(color,32).getRGB(), light);
-
-        // On 1.16+, we get a vertex provider from the entity rendering pipeline, so we don't need to draw anything
-        // manually like we do on older versions.
-        //#if MC<11600
-        buffer.drawDirect();
-        //#endif
-
-        //#if MC<11600
-        if (alwaysOnTop) {
-            //noinspection deprecation
-            UGraphics.enableDepth();
-        }
-
-        //noinspection deprecation
-        UGraphics.depthMask(true);
-        //#endif
-
-        if (alwaysOnTop) {
+        IconCosmeticRenderer.INSTANCE.drawNameTagIconAndVersionConsistentPadding(
+            matrixStack,
             //#if MC>=11600
-            //$$ vertexConsumer = TextRenderTypeVertexConsumer.create(vertexConsumerProvider, false);
-            //#else
-            // use createWithTexture() for under 1.16 same reason as above
-            vertexConsumer = TextRenderTypeVertexConsumer.createWithTexture(buffer, whiteTexture);
+            //$$ vertexConsumerProvider,
             //#endif
-            Diamond.drawDiamond(matrixStack, vertexConsumer, 6, vanillaX - 6, diamondCenter, color.getRGB(), light);
-
-            //#if MC<11600
-            buffer.drawDirect();
-            //#endif
-        }
-
-        //#if MC<11600
-        UGraphics.enableLighting();
-        //#endif
-    }
-
-    public static float getDiamondBackgroundYMin() {
-        //#if MC>=11600
-        //$$ return 9;
-        //#else
-        return 8;
-        //#endif
+            cState, str, light);
     }
 
     // Patcher mixins into this at HEAD to cancel it if the background is disabled.
@@ -200,41 +96,23 @@ public class OnlineIndicator {
         //#endif
     }
 
-    private static float getDiamondYOffset() {
-        //#if MC>=11600
-        //$$ return -0.5f;
-        //#else
-        return 0;
-        //#endif
-    }
-
     // Different name to avoid the OldAnimations mixin to `drawTabIndicator`.
     public static void drawTabIndicatorOuter(
-        UMatrixStack matrixStack,
-        //#if MC>=11600
-        //$$ IRenderTypeBuffer.Impl provider,
-        //#endif
+        UDrawContext drawContext,
         NetworkPlayerInfo networkPlayerInfo,
         int x, int y
     ) {
 
         // draw the essential user indicator
-        drawTabIndicator(
-            matrixStack,
-            //#if MC>=11600
-            //$$ provider,
-            //#endif
-            networkPlayerInfo, x, y
-        );
+        drawTabIndicator(drawContext, networkPlayerInfo, x, y);
     }
+
+    private static final ResourceLocation TAB_LIST_ICON = identifier("essential", "textures/tab_list_icon.png");
 
     // this is modified in OldAnimations, don't remove or rename
     @SuppressWarnings("ConstantConditions")
     private static void drawTabIndicator(
-        UMatrixStack matrixStack,
-        //#if MC>=11600
-        //$$ IRenderTypeBuffer.Impl provider,
-        //#endif
+        UDrawContext drawContext,
         NetworkPlayerInfo networkPlayerInfo,
         int x, int y
     ) {
@@ -256,42 +134,20 @@ public class OnlineIndicator {
         ProfileStatus status = profileManager.getStatus(playerUuid);
         if (status == ProfileStatus.OFFLINE) return;
 
-        beforeTabDraw();
+        float centreX, centreY, size;
+        if (UResolution.getScaleFactor() < 4) {
+            // use 1:1 scale
+            centreX = x - 7.5F;
+            centreY = y + 1.5F;
+            size = 5;
+        } else {
+            // use 3:4 scale
+            centreX = x - 7.5F - 0.375F; // offset centre pos by 3 eighths of a pixel
+            centreY = y + 1.5F - 0.375F;
+            size = 5 * 0.75F;
+        }
 
-        //#if MC<12105
-        BlendState prevBlendState = BlendState.active();
-        //noinspection deprecation
-        BlendState.NORMAL.activate();
-        //#endif
-
-        matrixStack.push();
-
-        //#if MC>=11600
-        //$$ TextRenderTypeVertexConsumer vertexConsumer = TextRenderTypeVertexConsumer.create(provider);
-        //#else
-        UGraphics buffer = UGraphics.getFromTessellator();
-        TextRenderTypeVertexConsumer vertexConsumer = TextRenderTypeVertexConsumer.create(buffer);
-        //#endif
-
-        // Draw indicator
-        matrixStack.translate(0, 0, 5);
-
-        Diamond.drawDiamond(matrixStack, vertexConsumer, 4, x - 9, y + 1.5f, EssentialPalette.ESSENTIAL_BLUE.getRGB());
-
-        //#if MC>=11600
-        //$$ provider.finish();
-        //#else
-        buffer.drawDirect();
-        //#endif
-
-        matrixStack.pop();
-
-        //#if MC<12105
-        //noinspection deprecation
-        prevBlendState.activate();
-        //#endif
-
-        afterTabDraw();
+        IconCosmeticRenderer.INSTANCE.drawTextureInTabList(drawContext, centreX, centreY, TAB_LIST_ICON, size, false);
     }
 
     /**

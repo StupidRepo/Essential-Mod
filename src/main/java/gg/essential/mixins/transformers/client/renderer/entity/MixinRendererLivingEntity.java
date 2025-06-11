@@ -13,13 +13,17 @@ package gg.essential.mixins.transformers.client.renderer.entity;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalFloatRef;
+import gg.essential.config.EssentialConfig;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.WearablesManager;
 import gg.essential.gui.common.UI3DPlayer;
+import gg.essential.mixins.impl.client.gui.GuiInventoryExt;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.scoreboard.Team;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -69,6 +73,23 @@ public abstract class MixinRendererLivingEntity<T extends EntityLivingBase> exte
             return;
         }
 
+        if (EssentialConfig.INSTANCE.getEssentialEnabled()
+                && EssentialConfig.INSTANCE.getShowOwnNametag().getUntracked()
+                //#if MC>=11600
+                //$$ && entity == this.renderManager.info.getRenderViewEntity()
+                //#else
+                && entity == this.renderManager.renderViewEntity
+                //#endif
+                && Minecraft.isGuiEnabled()
+                && !GuiInventoryExt.isInventoryEntityRendering.getUntracked()
+        ) {
+            // return if we have a team that hides their own nametag
+            Team team = entity.getTeam();
+            if (team != null && (team.getNameTagVisibility() == Team.EnumVisible.HIDE_FOR_OWN_TEAM
+                    || team.getNameTagVisibility() == Team.EnumVisible.NEVER)) return;
+
+            ci.setReturnValue(true);
+        }
     }
 
     //#if MC>=11600

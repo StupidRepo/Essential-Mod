@@ -113,7 +113,7 @@ fun handleCosmeticOrEmoteLeftClick(item: Item.CosmeticOrEmote, category: Wardrob
     }
 
     if (wardrobeState.equippedCosmeticsState.get()[slot] == cosmetic.id) {
-        if ((!startedInEmoteWheel && !bundleWasSelected && !emoteWasSelected)) {
+        if (!(slot == CosmeticSlot.ICON) && (!startedInEmoteWheel && !bundleWasSelected && !emoteWasSelected)) {
             // Only unequip the cosmetic if the emote wheel preview was not open when the cosmetic was clicked and a bundle was not selected
             outfitManager.updateEquippedCosmetic(selectedOutfitId, slot, null)
             wardrobeState.selectedItem.set(null)

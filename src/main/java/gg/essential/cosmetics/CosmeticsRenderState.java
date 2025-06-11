@@ -17,6 +17,8 @@ import gg.essential.connectionmanager.common.enums.ProfileStatus;
 import gg.essential.gui.common.EmulatedUI3DPlayer;
 import gg.essential.mixins.impl.client.entity.AbstractClientPlayerExt;
 import gg.essential.mixins.impl.client.renderer.entity.ArmorRenderingUtil;
+import gg.essential.mod.cosmetics.CosmeticSlot;
+import gg.essential.model.ModelInstance;
 import gg.essential.model.backend.PlayerPose;
 import gg.essential.model.util.PlayerPoseManager;
 import gg.essential.network.connectionmanager.profile.ProfileManager;
@@ -43,6 +45,7 @@ public interface CosmeticsRenderState {
     ResourceLocation emissiveCapeTexture();
 
     boolean onlineIndicator();
+    ModelInstance nametagIcon();
 
     boolean isSneaking();
 
@@ -125,6 +128,14 @@ public interface CosmeticsRenderState {
         }
 
         @Override
+        public ModelInstance nametagIcon() {
+            if (!EssentialConfig.INSTANCE.getShowEssentialIndicatorOnNametag()) return null;
+            EquippedCosmetic cosmetic = playerExt().getCosmeticsState().getCosmetics().get(CosmeticSlot.ICON);
+            if (cosmetic == null) return null;
+            return playerExt().getWearablesManager().getModels().get(cosmetic.getCosmetic());
+        }
+
+        @Override
         public boolean isSneaking() {
             return player.isSneaking();
         }
@@ -167,6 +178,7 @@ public interface CosmeticsRenderState {
         private ResourceLocation skinTexture;
         private ResourceLocation emissiveCapeTexture;
         private boolean onlineIndicator;
+        private ModelInstance nametagIcon;
         private boolean isSneaking;
         private float cosmeticFrozenYaw;
 
@@ -201,6 +213,11 @@ public interface CosmeticsRenderState {
         }
 
         @Override
+        public ModelInstance nametagIcon() {
+            return nametagIcon;
+        }
+
+        @Override
         public float cosmeticFrozenYaw() {
             return cosmeticFrozenYaw;
         }
@@ -219,6 +236,7 @@ public interface CosmeticsRenderState {
             skinTexture = live.skinTexture();
             emissiveCapeTexture = live.emissiveCapeTexture();
             onlineIndicator = live.onlineIndicator();
+            nametagIcon = live.nametagIcon();
             isSneaking = live.isSneaking();
             cosmeticFrozenYaw = live.cosmeticFrozenYaw();
         }
