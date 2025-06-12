@@ -350,7 +350,9 @@ class MessageWrapperImpl(
             hoveredColor = EssentialPalette.TEXT_WARNING
         ) {
             UUIDUtil.getName(sender).thenAcceptOnMainThread { name ->
-                GuiUtil.pushModal { manager -> ReportMessageModal(manager, message.getInfraInstance(), name) }
+                GuiUtil.pushModal { manager ->
+                    ReportMessageModal(manager, message.getInfraInstance(), name)
+                }
             }
         }
 

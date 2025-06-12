@@ -229,7 +229,7 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             when (renderPass.material) {
     //$$                 Cutout -> {} // blending is disabled by default
     //$$                 Add -> BlendState(BlendState.Equation.ADD, BlendState.Param.SRC_ALPHA, BlendState.Param.ONE).activate()
-    //$$                 Blend -> BlendState.NORMAL.activate()
+    //$$                 Blend -> BlendState.ALPHA.activate()
     //$$             }
     //$$         },
     //$$         {
@@ -621,7 +621,7 @@ object MinecraftRenderBackend : RenderBackend {
             when (renderPass.material) {
                 Add -> BlendState(BlendState.Equation.ADD, BlendState.Param.SRC_ALPHA, BlendState.Param.ONE)
                 Cutout -> BlendState.DISABLED
-                Blend -> BlendState.NORMAL
+                Blend -> BlendState.ALPHA
             }.activate()
             //#if MC<11700
             if (renderPass.material == Cutout) {

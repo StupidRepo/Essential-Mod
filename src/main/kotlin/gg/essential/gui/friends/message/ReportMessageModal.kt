@@ -15,8 +15,16 @@ import com.sparkuniverse.toolbox.chat.model.Message
 import gg.essential.Essential
 import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.components.UIContainer
-import gg.essential.elementa.constraints.*
-import gg.essential.elementa.dsl.*
+import gg.essential.elementa.constraints.AspectConstraint
+import gg.essential.elementa.constraints.CenterConstraint
+import gg.essential.elementa.constraints.ChildBasedMaxSizeConstraint
+import gg.essential.elementa.constraints.ChildBasedSizeConstraint
+import gg.essential.elementa.constraints.SiblingConstraint
+import gg.essential.elementa.dsl.childOf
+import gg.essential.elementa.dsl.constrain
+import gg.essential.elementa.dsl.pixels
+import gg.essential.elementa.dsl.provideDelegate
+import gg.essential.elementa.dsl.toConstraint
 import gg.essential.elementa.state.BasicState
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.Spacer
@@ -24,11 +32,15 @@ import gg.essential.gui.common.bindParent
 import gg.essential.gui.common.modal.DangerConfirmationEssentialModal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.common.shadow.EssentialUIText
+import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.layoutdsl.color
+import gg.essential.gui.layoutdsl.shadow
+import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.universal.UMinecraft
 import gg.essential.universal.USound
 import gg.essential.util.centered
-import gg.essential.vigilance.utils.onLeftClick
+import gg.essential.util.onLeftClick
 
 class ReportMessageModal(modalManager: ModalManager, val message: Message, username: String) :
     DangerConfirmationEssentialModal(modalManager, confirmText = "Report", requiresButtonPress = false) {
@@ -95,3 +107,4 @@ class ReportMessageModal(modalManager: ModalManager, val message: Message, usern
         }
     }
 }
+

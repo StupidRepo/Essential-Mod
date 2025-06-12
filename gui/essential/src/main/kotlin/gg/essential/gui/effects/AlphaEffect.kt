@@ -11,6 +11,7 @@
  */
 package gg.essential.gui.effects
 
+import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.effects.Effect
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.toV2
@@ -22,6 +23,7 @@ import gg.essential.universal.shader.BlendState
 import gg.essential.universal.vertex.UBufferBuilder
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.image.GpuTexture
+import java.awt.Color
 import java.io.Closeable
 import java.lang.ref.PhantomReference
 import java.lang.ref.ReferenceQueue
@@ -68,6 +70,25 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
         resources.texture.copyFrom(listOf(GpuTexture.CopyOp(
             platform.mcFrameBufferColorTexture, x, y, 0, 0, width, height
         )))
+
+        // Clear the render target before we draw our content
+        clear(matrixStack)
+    }
+
+    private fun clear(matrixStack: UMatrixStack) {
+        UBufferBuilder.create(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_COLOR).also { buffer ->
+            UIBlock.drawBlock(
+                buffer,
+                matrixStack,
+                // Note: The BlendState of CLEAR_PIPELINE will ignore this value, but MC's fragment shader will discard
+                //       pixels with alpha 0, so we must use a non-0 value here.
+                Color(0, 0, 0, 255),
+                boundComponent.getLeft().toDouble(),
+                boundComponent.getTop().toDouble(),
+                boundComponent.getRight().toDouble(),
+                boundComponent.getBottom().toDouble(),
+            )
+        }.build()?.drawAndClose(CLEAR_PIPELINE)
     }
 
     override fun afterDraw(matrixStack: UMatrixStack) {
@@ -86,18 +107,25 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
             return
         }
 
-        val red = 1f
-        val green = 1f
-        val blue = 1f
-        val alpha = 1f - alphaState.get()
+        // Make the thing we just rendered translucent (i.e. multiply it by the configured alpha factor)
+        // Need a special case for 0 here because MC will discard fragments with alpha 0, but they are important for us
+        val alpha = (alphaState.getUntracked() * 255).toInt()
+        if (alpha != 0) {
+            UBufferBuilder.create(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_COLOR).also { buffer ->
+                UIBlock.drawBlock(buffer, matrixStack, Color(0, 0, 0, alpha), left, top, right, bottom)
+            }.build()?.drawAndClose(MULTIPLY_PIPELINE)
+        } else {
+            clear(matrixStack)
+        }
 
-        val worldRenderer = UBufferBuilder.create(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_TEXTURE_COLOR)
-        worldRenderer.pos(matrixStack, x, y + height, 0.0).tex(0.0, 0.0).color(red, green, blue, alpha).endVertex()
-        worldRenderer.pos(matrixStack, x + width, y + height, 0.0).tex(1.0, 0.0).color(red, green, blue, alpha).endVertex()
-        worldRenderer.pos(matrixStack, x + width, y, 0.0).tex(1.0, 1.0).color(red, green, blue, alpha).endVertex()
-        worldRenderer.pos(matrixStack, x, y, 0.0).tex(0.0, 1.0).color(red, green, blue, alpha).endVertex()
-        worldRenderer.build()?.drawAndClose(PIPELINE) {
-            texture("u_Texture", resources.texture.glId)
+        // Composite the background behind the content
+        UBufferBuilder.create(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_TEXTURE).also { buffer ->
+            buffer.pos(matrixStack, x, y + height, 0.0).tex(0.0, 0.0).endVertex()
+            buffer.pos(matrixStack, x + width, y + height, 0.0).tex(1.0, 0.0).endVertex()
+            buffer.pos(matrixStack, x + width, y, 0.0).tex(1.0, 1.0).endVertex()
+            buffer.pos(matrixStack, x, y, 0.0).tex(0.0, 1.0).endVertex()
+        }.build()?.drawAndClose(COMPOSITE_PIPELINE) {
+            texture(0, resources.texture.glId)
         }
     }
 
@@ -136,43 +164,39 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
     }
 
     companion object {
-        private val PIPELINE: URenderPipeline
-        init {
-            val vertexShaderSource = """
-                #version 110
-    
-                varying vec2 f_Position;
-                varying vec2 f_TexCoord;
-    
-                void main() {
-                    f_Position = gl_Vertex.xy;
-                    f_TexCoord = gl_MultiTexCoord0.st;
-    
-                    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-                    gl_FrontColor = gl_Color;
-                }
-            """.trimIndent()
-            val fragmentShaderSource = """
-                #version 110
-    
-                uniform sampler2D u_Texture;
-    
-                varying vec2 f_Position;
-                varying vec2 f_TexCoord;
-    
-                void main() {
-                    gl_FragColor = gl_Color * vec4(texture2D(u_Texture, f_TexCoord).rgb, 1.0);
-                }
-            """.trimIndent()
-            PIPELINE = URenderPipeline.builderWithLegacyShader(
-                "elementa:alpha_effect",
-                UGraphics.DrawMode.QUADS,
-                UGraphics.CommonVertexFormats.POSITION_TEXTURE_COLOR,
-                vertexShaderSource,
-                fragmentShaderSource,
-            ).apply {
-                blendState = BlendState.NORMAL
-            }.build()
-        }
+        private val CLEAR_PIPELINE: URenderPipeline = URenderPipeline.builderWithDefaultShader(
+            "elementa:alpha_effect/clear",
+            UGraphics.DrawMode.QUADS,
+            UGraphics.CommonVertexFormats.POSITION_COLOR,
+        ).apply {
+            blendState = BlendState(BlendState.Equation.ADD, BlendState.Param.ZERO, BlendState.Param.ZERO)
+        }.build()
+
+        private val MULTIPLY_PIPELINE: URenderPipeline = URenderPipeline.builderWithDefaultShader(
+            "elementa:alpha_effect/multiply",
+            UGraphics.DrawMode.QUADS,
+            UGraphics.CommonVertexFormats.POSITION_COLOR,
+        ).apply {
+            blendState = BlendState(
+                BlendState.Equation.ADD,
+                BlendState.Param.ZERO,
+                BlendState.Param.SRC_ALPHA,
+            )
+        }.build()
+
+        private val COMPOSITE_PIPELINE: URenderPipeline = URenderPipeline.builderWithDefaultShader(
+            "elementa:alpha_effect/composite",
+            UGraphics.DrawMode.QUADS,
+            UGraphics.CommonVertexFormats.POSITION_TEXTURE,
+        ).apply {
+            // This is BlendState.PREMULTIPLIED_ALPHA but with the role of source and destination flipped because
+            // it's the background which we have captured as a texture while the foreground was rendered into the
+            // render target.
+            blendState = BlendState(
+                BlendState.Equation.ADD,
+                BlendState.Param.ONE_MINUS_DST_ALPHA,
+                BlendState.Param.ONE,
+            )
+        }.build()
     }
 }

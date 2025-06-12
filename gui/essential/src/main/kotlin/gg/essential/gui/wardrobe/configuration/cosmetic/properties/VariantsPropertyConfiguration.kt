@@ -398,7 +398,7 @@ class VariantsPropertyConfiguration(
             UGraphics.DrawMode.QUADS,
             UGraphics.CommonVertexFormats.POSITION_COLOR,
         ).apply {
-            blendState = BlendState.NORMAL
+            blendState = BlendState.ALPHA
         }.build()
     }
 }

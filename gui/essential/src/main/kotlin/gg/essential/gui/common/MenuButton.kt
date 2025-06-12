@@ -456,7 +456,7 @@ class MenuButton @JvmOverloads constructor(
             UGraphics.DrawMode.QUADS,
             UGraphics.CommonVertexFormats.POSITION_COLOR,
         ).apply {
-            blendState = BlendState.NORMAL
+            blendState = BlendState.ALPHA
             depthTest = URenderPipeline.DepthTest.Always
         }.build()
 
@@ -465,7 +465,7 @@ class MenuButton @JvmOverloads constructor(
             UGraphics.DrawMode.QUADS,
             UGraphics.CommonVertexFormats.POSITION_TEXTURE_COLOR,
         ).apply {
-            blendState = BlendState.NORMAL
+            blendState = BlendState.ALPHA
             depthTest = URenderPipeline.DepthTest.Always
         }.build()
 

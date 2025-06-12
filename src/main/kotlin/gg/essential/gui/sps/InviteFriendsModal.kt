@@ -339,7 +339,8 @@ object InviteFriendsModal {
             return true
         }
 
-        return selectModal(modalManager, "Invite Friends") {
+        val title = "Invite Friends"
+        return selectModal(modalManager, title) {
             fun LayoutScope.customPlayerEntry(selected: MutableState<Boolean>, uuid: UUID) {
                 val onlineState = connectionManager.spsManager.getOnlineState(uuid)
                 val reInviteEnabled = getReInviteEnabledState(uuid)

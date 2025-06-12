@@ -82,7 +82,7 @@ open class ScreenshotImage(val texture: State<UIdentifier?>) : UIComponent() {
             UGraphics.DrawMode.QUADS,
             UGraphics.CommonVertexFormats.POSITION_TEXTURE_COLOR,
         ).apply {
-            blendState = BlendState.NORMAL
+            blendState = BlendState.ALPHA
         }.build()
     }
 }
