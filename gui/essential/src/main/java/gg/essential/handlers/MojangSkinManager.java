@@ -61,7 +61,6 @@ public abstract class MojangSkinManager {
 
     protected abstract void onReAuth(Runnable callback);
     protected abstract CompletableFuture<Skin> getSkinFromMinecraft();
-    protected abstract void applySkinToGame(Skin skin);
 
     @NotNull
     public CompletableFuture<Skin> getActiveSkin() {
@@ -124,7 +123,6 @@ public abstract class MojangSkinManager {
             .map(ApiSkinKt::toMod);
         if (maybeSkin.isPresent()) {
             Skin skin = maybeSkin.get();
-            applySkinToGame(skin);
             activeSkin = CompletableFuture.completedFuture(skin);
             if (notification) {
                 Notifications.INSTANCE.push("Skin", "Skin updated successfully");

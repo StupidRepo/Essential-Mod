@@ -69,7 +69,11 @@ public class PlayerMolangQuery implements MolangQueryEntity, ParticleSystem.Loca
         if (isValid()) {
             return getLifeTime();
         } else {
+            //#if MC>=12106
+            //$$ World world = player.getWorld();
+            //#else
             World world = player.getEntityWorld();
+            //#endif
             if (world == null) { // shouldn't happen but better be safe than sorry, it is technically possible
                 return getLifeTime();
             }

@@ -42,6 +42,10 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.apache.commons.io.IOUtils
 import javax.imageio.ImageIO
 
+//#if MC>=12106
+//$$ import net.minecraft.client.world.ClientWorld
+//#endif
+
 //#if MC>=12002
 //$$ import net.minecraft.SharedConstants
 //#endif
@@ -242,8 +246,12 @@ object MinecraftUtils : MinecraftUtils {
             return
         }
 
+        //#if MC>=12106
+        //$$ mc.world?.disconnect(ClientWorld.QUITTING_MULTIPLAYER_TEXT)
+        //#else
         @Suppress("UNNECESSARY_SAFE_CALL")
         mc.world?.sendQuittingDisconnectingPacket()
+        //#endif
 
         //#if MC>=11700
         //$$ ConnectScreen.connect(previousScreen ?: TitleScreen(), mc, ServerAddress.parse(serverData.address), serverData,

@@ -63,7 +63,7 @@ class EmoteEventListeners {
     private fun onEmoteRenderTick(event: RenderTickEvent) {
         if (!event.isPre) return
         val player = UPlayer.getPlayer()
-        val emote = Essential.getInstance().connectionManager.cosmeticsManager.equippedCosmetics[CosmeticSlot.EMOTE]
+        val emote = Essential.getInstance().connectionManager.cosmeticsManager.equippedCosmetics[CosmeticSlot.EMOTE]?.id
         if (emote != null && mostRecentEmote != emote) {
             mostRecentEmote = emote
         }

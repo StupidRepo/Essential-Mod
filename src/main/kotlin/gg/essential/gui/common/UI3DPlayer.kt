@@ -37,6 +37,7 @@ import gg.essential.elementa.state.State
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.handlers.EssentialSoundManager
+import gg.essential.handlers.GameProfileManager
 import gg.essential.gui.elementa.state.v2.State as StateV2
 import gg.essential.mixins.ext.client.ParticleSystemHolder
 import gg.essential.mixins.impl.client.entity.AbstractClientPlayerExt
@@ -98,6 +99,13 @@ import kotlin.math.min
 import kotlin.math.PI
 import kotlin.random.Random
 import java.util.*
+
+//#if MC>=12106
+//$$ import com.mojang.blaze3d.buffers.GpuBuffer
+//$$ import com.mojang.blaze3d.buffers.Std140Builder
+//$$ import gg.essential.model.light.Light
+//$$ import org.lwjgl.system.MemoryStack
+//#endif
 
 //#if MC>=12102
 //$$ import com.mojang.blaze3d.systems.ProjectionType
@@ -272,8 +280,12 @@ open class UI3DPlayer(
         fallbackPlayer.orNull?.close()
     }
 
+    private val mc12106ScissorHandler = Mc12106ScissorHandler()
+
     override fun draw(matrixStack: UMatrixStack) {
         beforeDraw(matrixStack)
+
+        mc12106ScissorHandler.beforeDraw(matrixStack)
 
         val camera = perspectiveCamera
         if (camera != null) {
@@ -281,6 +293,8 @@ open class UI3DPlayer(
         } else {
             drawWithOrthographicProjection(matrixStack.fork())
         }
+
+        mc12106ScissorHandler.afterDraw(matrixStack)
 
         super.draw(matrixStack)
     }
@@ -324,7 +338,13 @@ open class UI3DPlayer(
         // so they will naturally always end up behind anything which was already rendered there and therefore won't be
         // visible if we do not clear the depth buffer first.
         //#if MC>=12105
-        //$$ MinecraftClient.getInstance().framebuffer.depthAttachment?.let { depthTexture ->
+        //$$ val mcDepthTexture = MinecraftClient.getInstance().framebuffer.depthAttachment
+        //#if MC>=12106
+        //$$ val depthTexture = RenderSystem.outputDepthTextureOverride?.texture() ?: mcDepthTexture
+        //#else
+        //$$ val depthTexture = mcDepthTexture
+        //#endif
+        //$$ if (depthTexture != null) {
         //$$     RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, 1.0)
         //$$ }
         //#else
@@ -338,8 +358,8 @@ open class UI3DPlayer(
         val width = right - left
         val height = bottom - top
 
-        val windowWidth = UResolution.viewportWidth / UResolution.scaleFactor.toFloat()
-        val windowHeight = UResolution.viewportHeight / UResolution.scaleFactor.toFloat()
+        val windowWidth = mc12106ScissorHandler.viewportWidth / UResolution.scaleFactor.toFloat()
+        val windowHeight = mc12106ScissorHandler.viewportHeight / UResolution.scaleFactor.toFloat()
         val scaleX = width / windowWidth
         val scaleY = height / windowHeight
 
@@ -358,7 +378,20 @@ open class UI3DPlayer(
         //$$ projectionMatrix.peek().model.mul(Matrix4f.perspective(camera.fov.toDouble(), getWidth() / getHeight(), 0.5f, 20f))
         //#endif
 
-        //#if MC>=12102
+        //#if MC>=12106
+        //$$ val orgProjectionMatrixBuffer = RenderSystem.getProjectionMatrixBuffer()
+        //$$ val orgProjectionType = RenderSystem.getProjectionType()
+        //$$ val projectionMatrixBuffer = MemoryStack.stackPush().use { memoryStack ->
+        //$$     RenderSystem.getDevice().createBuffer(
+        //$$         { "Projection matrix UBO UI3DPlayer" },
+        //$$         GpuBuffer.USAGE_UNIFORM,
+        //$$         Std140Builder.onStack(memoryStack, RenderSystem.PROJECTION_MATRIX_UBO_SIZE)
+        //$$             .putMat4f(projectionMatrix.peek().model)
+        //$$             .get(),
+        //$$     )
+        //$$ }.slice(0, RenderSystem.PROJECTION_MATRIX_UBO_SIZE)
+        //$$ RenderSystem.setProjectionMatrix(projectionMatrixBuffer, ProjectionType.PERSPECTIVE)
+        //#elseif MC>=12102
         //$$ val orgProjectionMatrix = RenderSystem.getProjectionMatrix()
         //$$ val orgProjectionType = RenderSystem.getProjectionType()
         //$$ RenderSystem.setProjectionMatrix(projectionMatrix.peek().model, ProjectionType.PERSPECTIVE)
@@ -386,7 +419,11 @@ open class UI3DPlayer(
         }
         isRenderingPerspective = false
 
-        //#if MC>=12102
+        //#if MC>=12106
+        //$$ @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") // missing Nullable annotation
+        //$$ RenderSystem.setProjectionMatrix(orgProjectionMatrixBuffer, orgProjectionType)
+        //$$ RenderSystem.queueFencedTask { projectionMatrixBuffer.buffer.close() }
+        //#elseif MC>=12102
         //$$ RenderSystem.setProjectionMatrix(orgProjectionMatrix, orgProjectionType);
         //#elseif MC>=12000
         //$$ RenderSystem.setProjectionMatrix(orgProjectionMatrix, orgVertexSorting);
@@ -491,6 +528,7 @@ open class UI3DPlayer(
         UGraphics.directColor3f(1f, 1f, 1f)
         UGraphics.enableDepth()
 
+        //#if MC<12106
         val stack = CMatrixStack()
         // Undo parts of the flipping/rotating which GuiInventory.drawEntityOnScreen applies
         // (specifically the parts that apply to the global matrix stack)
@@ -502,8 +540,11 @@ open class UI3DPlayer(
         //#endif
         // Undo the Z offset from GuiInventory.drawEntityOnScreen
         stack.translate(0f, 0f, -50f)
+        //#endif
 
-        //#if MC>=12000
+        //#if MC>=12106
+        //$$ run {
+        //#elseif MC>=12000
         //$$ val context =
         //$$     MinecraftClient.getInstance().let { mc -> DrawContext(mc, mc.bufferBuilders.entityVertexConsumers) }
         //$$ context.matrices.multiplyPositionMatrix(stack.toUC().peek().model)
@@ -529,8 +570,28 @@ open class UI3DPlayer(
             //$$ p.bodyYaw = 180f
             //$$ p.headYaw = 180f
             //$$ p.prevHeadYaw = 180f
+            //$$
+            //#if MC>=12106
+            //$$ val dispatcher = MinecraftClient.getInstance().entityRenderDispatcher
+            //$$ val renderer = dispatcher.getRenderer(p)
+            //$$ val state = renderer.getAndUpdateRenderState(p, 1f)
+            //$$ state.hitbox = null
+            //$$
+            //$$ val restoreLighting = setupPlayerLight()
+            //$$ val stack = applyCamera(dispatcher)
+            //$$
+            //$$ val vertexConsumers = MinecraftClient.getInstance().bufferBuilders.entityVertexConsumers
+            //$$ dispatcher.setRenderShadows(false)
+            //$$ dispatcher.render(state, 0.0, 0.0, 0.0, stack.toMC(), vertexConsumers, Light.MAX_VALUE.value.toInt())
+            //$$ dispatcher.setRenderShadows(true)
+            //$$ vertexConsumers.draw()
+            //$$
+            //$$ restoreLighting()
+            //#else
             //$$ val rotation = Quaternionf().rotateZ(Math.PI.toFloat())
             //$$ InventoryScreen.drawEntity(context, 0f, 0f, scale, Vector3f(), rotation, Quaternionf(), p)
+            //#endif
+            //$$
             //$$ p.pitch = orgPitch
             //$$ p.yaw = orgYaw
             //$$ p.bodyYaw = orgBodyYaw
@@ -554,7 +615,11 @@ open class UI3DPlayer(
     }
 
     fun applyCamera(renderManager: RenderManager): UMatrixStack {
+        //#if MC>=12106
+        //$$ // Handled near call site in `doDrawPlayer`
+        //#else
         setupPlayerLight()
+        //#endif
 
         //#if MC>=11400
         //$$ renderManager.cameraOrientation = renderManager.info.rotation
@@ -566,7 +631,7 @@ open class UI3DPlayer(
         val stack = CMatrixStack()
 
         // Undo remainder of the rotating which GuiInventory.drawEntityOnScreen applies
-        //#if MC>=11400
+        //#if MC>=11400 && MC<12106
         //$$ stack.scale(-1f, -1f, 1f)
         //#endif
 
@@ -582,7 +647,7 @@ open class UI3DPlayer(
         return stack.toUC()
     }
 
-    private fun setupPlayerLight() {
+    private fun setupPlayerLight(): () -> Unit {
         val stack = CMatrixStack()
 
         //#if MC==11602
@@ -605,7 +670,20 @@ open class UI3DPlayer(
 
         //#if MC>=11400
         //$$ val matrix = stack.toUC().peek().model
-        //#if MC>=12005
+        //#if MC>=12106
+        //$$ val shaderLights = MemoryStack.stackPush().use { memoryStack ->
+        //$$     RenderSystem.getDevice().createBuffer(
+        //$$         { "Lighting UBO" },
+        //$$         GpuBuffer.USAGE_UNIFORM,
+        //$$         Std140Builder.onStack(memoryStack, DiffuseLighting.UBO_SIZE)
+        //$$             .putVec3(Vector3f(0.2f, 1.0f, -0.7f).normalize().mulDirection(matrix))
+        //$$             .putVec3(Vector3f(-0.2f, 1.0f, 0.7f).normalize().mulDirection(matrix))
+        //$$             .get(),
+        //$$     )
+        //$$ }.slice(0, DiffuseLighting.UBO_SIZE)
+        //$$ val orgShaderLights = RenderSystem.getShaderLights()
+        //$$ RenderSystem.setShaderLights(shaderLights)
+        //#elseif MC>=12005
         //$$ RenderSystem.setupLevelDiffuseLighting(
         //$$     Vector3f(0.2f, 1.0f, -0.7f).normalize().mulDirection(matrix),
         //$$     Vector3f(-0.2f, 1.0f, 0.7f).normalize().mulDirection(matrix)
@@ -621,6 +699,18 @@ open class UI3DPlayer(
             RenderHelper.enableStandardItemLighting()
         }
         //#endif
+
+        return {
+            //#if MC>=12106
+            //$$ @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") // missing Nullable annotation
+            //$$ RenderSystem.setShaderLights(orgShaderLights)
+            //$$ RenderSystem.queueFencedTask { shaderLights.buffer.close() }
+            //#elseif MC>=11400
+            //$$ RenderHelper.setupGui3DDiffuseLighting()
+            //#else
+            RenderHelper.disableStandardItemLighting()
+            //#endif
+        }
     }
 
     private fun doDrawFallbackPlayer() {
@@ -632,7 +722,7 @@ open class UI3DPlayer(
         UGraphics.enableDepth()
         //#endif
 
-        setupPlayerLight()
+        val restoreLighting = setupPlayerLight()
 
         val stack = camera.createModelViewMatrix()
 
@@ -650,12 +740,7 @@ open class UI3DPlayer(
         UGraphics.disableDepth()
         //#endif
 
-        // Restore lighting
-        //#if MC>=11400
-        //$$ RenderHelper.setupGui3DDiffuseLighting()
-        //#else
-        RenderHelper.disableStandardItemLighting()
-        //#endif
+        restoreLighting()
     }
 
     private fun doDrawParticles(particleSystem: ParticleSystem) {
@@ -711,7 +796,6 @@ open class UI3DPlayer(
 
     private inner class FallbackPlayer {
         private val essential = Essential.getInstance()
-        private val gameProfileManager = essential.gameProfileManager
         private val cosmeticsManager = essential.connectionManager.cosmeticsManager
 
         private val scope = CoroutineScope(SupervisorJob()) + Dispatchers.Client
@@ -817,15 +901,16 @@ open class UI3DPlayer(
                 currentProfile = null
 
                 // UUID may have changed, need to update live cosmetic source accordingly
-                liveCosmeticsSource = cosmeticsManager.equippedCosmeticsManager.getVisibleCosmeticsState(profileConfigured.id)
+                liveCosmeticsSource = cosmeticsManager.infraEquippedOutfitsManager.getVisibleCosmeticsState(profileConfigured.id)
 
                 entity.uuid = profileConfigured.id
             }
 
             // Check if there are any new overwrites for the current profile
             // (this will return null if the profile is fine as is)
+            val skinOverride = cosmeticsManager.infraEquippedOutfitsManager.getSkin(profileConfigured.id)
             val newOverwrites =
-                gameProfileManager.handleGameProfile(currentProfile ?: profileConfigured.profile)
+                GameProfileManager.handleGameProfile(currentProfile ?: profileConfigured.profile, skinOverride)
             // We need to set a new profile if none is set, or if a new overwrite is available
             val newProfile =
                 if (currentProfile == null) newOverwrites ?: profileConfigured.profile else newOverwrites

@@ -11,10 +11,14 @@
  */
 package gg.essential.cosmetics
 
+import gg.essential.config.EssentialConfig
+import gg.essential.data.OnboardingData
 import gg.essential.handlers.OnlineIndicator
+import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.model.ModelInstance
 import gg.essential.model.backend.minecraft.MinecraftRenderBackend
 import gg.essential.model.light.Light
+import gg.essential.network.connectionmanager.cosmetics.EquippedOutfitsManager
 import gg.essential.render.TextRenderTypeVertexConsumer
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
@@ -23,9 +27,16 @@ import gg.essential.util.UDrawContext
 import gg.essential.util.identifier
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.AbstractClientPlayer
+import net.minecraft.client.network.NetworkPlayerInfo
 import net.minecraft.entity.Entity
 import net.minecraft.util.ResourceLocation
 import org.lwjgl.opengl.GL11
+import java.util.UUID
+
+//#if MC>=12106
+//$$ import net.minecraft.client.gl.RenderPipelines
+//$$ import kotlin.math.roundToInt
+//#endif
 
 //#if MC>=11600
 //$$ import net.minecraft.client.renderer.IRenderTypeBuffer
@@ -49,6 +60,28 @@ object IconCosmeticRenderer {
     private const val TAB_SHADOW_COLOR = 0xFF555555u
 
     private val WHITE_TEXTURE = identifier("essential", "textures/white.png")
+
+    fun getIconCosmetic(equippedOutfitsManager: EquippedOutfitsManager, uuid: UUID): EquippedCosmetic? {
+        return equippedOutfitsManager.getVisibleCosmeticsState(uuid).getUntracked()[CosmeticSlot.ICON]
+    }
+
+    fun getIconCosmetic(networkPlayerInfo: NetworkPlayerInfo?): EquippedCosmetic? {
+        if (!OnboardingData.hasAcceptedTos() || !EssentialConfig.showEssentialIndicatorOnTab || networkPlayerInfo == null) {
+            return null
+        }
+
+        val gameProfile = networkPlayerInfo.gameProfile
+        var uuid = gameProfile.id ?: return null
+
+        if (uuid.version() == 2) {
+            val actualUuid = OnlineIndicator.findUUIDFromDisplayName(networkPlayerInfo.displayName)
+            if (actualUuid != null) {
+                uuid = actualUuid
+            }
+        }
+
+        return getIconCosmetic(networkPlayerInfo.equippedOutfitsManager, uuid)
+    }
 
     fun getNameplateXOffset(entity: Entity?): Float {
         return getNameplateXOffset(CosmeticsRenderState.Live(entity as? AbstractClientPlayer ?: return 0f))
@@ -371,6 +404,26 @@ object IconCosmeticRenderer {
         zOffset: Float,
         color: UInt,
     ) {
+        //#if MC>=12106
+        //$$ // [OnlineIndicator.drawTabIndicator] uses sub-MC pixel sizing down to eights, so we need to scale up
+        //$$ // the coordinates we pass while scaling down the matrix stack, since `drawTexture` only takes `Int`s
+        //$$ val scale = 8f
+        //$$ drawContext.mc.matrices.pushMatrix()
+        //$$ drawContext.mc.matrices.scale(1 / scale, 1 / scale)
+        //$$ drawContext.mc.drawTexture(
+        //$$     RenderPipelines.GUI_TEXTURED,
+        //$$     texture,
+        //$$     /* x */ ((centreX - size / 2) * scale).roundToInt(),
+        //$$     /* y */ ((centreY - size / 2) * scale).roundToInt(),
+        //$$     /* u */ 0f, /* v */ 0f,
+        //$$     /* width */ (size * scale).roundToInt(),
+        //$$     /* height */ (size * scale).roundToInt(),
+        //$$     /* uWidth */ 1, /* vHeight */ 1,
+        //$$     /* textureWidth */ 1, /* textureHeight */ 1,
+        //$$     color.toInt(),
+        //$$ )
+        //$$ drawContext.mc.matrices.popMatrix()
+        //#else
         //#if MC>=12102
         //$$ drawContext.mc.draw { buffer ->
         //#elseif MC>=12000
@@ -390,6 +443,7 @@ object IconCosmeticRenderer {
         //$$ buffer.finish()
         //#else
         buffer.drawDirect()
+        //#endif
         //#endif
     }
 

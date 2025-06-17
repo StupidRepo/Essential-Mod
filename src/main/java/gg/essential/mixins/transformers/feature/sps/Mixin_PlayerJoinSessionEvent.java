@@ -59,7 +59,11 @@ public class Mixin_PlayerJoinSessionEvent {
         //#endif
         CallbackInfo info) {
 
+        //#if MC>=12106
+        //$$ MinecraftServer server = player.getServer();
+        //#else
         MinecraftServer server = player.mcServer;
+        //#endif
         UUID uuid = player.getUniqueID();
         ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() -> {
             if (server instanceof IntegratedServerExt) {

@@ -11,16 +11,12 @@
  */
 package gg.essential.handlers;
 
-import com.mojang.authlib.GameProfile;
-import gg.essential.Essential;
 import gg.essential.config.EssentialConfig;
-import gg.essential.connectionmanager.common.enums.ProfileStatus;
 import gg.essential.cosmetics.CosmeticsRenderState;
+import gg.essential.cosmetics.EquippedCosmetic;
 import gg.essential.cosmetics.IconCosmeticRenderer;
 import gg.essential.data.OnboardingData;
 import gg.essential.mixins.ext.client.network.NetHandlerPlayClientExt;
-import gg.essential.network.connectionmanager.ConnectionManager;
-import gg.essential.network.connectionmanager.profile.ProfileManager;
 import gg.essential.universal.UMatrixStack;
 import gg.essential.universal.UMinecraft;
 import gg.essential.universal.UResolution;
@@ -119,20 +115,8 @@ public class OnlineIndicator {
         if (!OnboardingData.hasAcceptedTos() || !EssentialConfig.INSTANCE.getShowEssentialIndicatorOnTab() || networkPlayerInfo == null)
             return;
 
-        ConnectionManager connectionManager = Essential.getInstance().getConnectionManager();
-        ProfileManager profileManager = connectionManager.getProfileManager();
-        GameProfile gameProfile = networkPlayerInfo.getGameProfile();
-        if (gameProfile == null) return;
-        UUID playerUuid = gameProfile.getId();
-        if (playerUuid == null) return;
-
-        if (playerUuid.version() == 2) {
-            // Could be a fake tab entry, try to get their actual uuid
-            UUID actualUuid = OnlineIndicator.findUUIDFromDisplayName(networkPlayerInfo.getDisplayName());
-            if (actualUuid != null) playerUuid = actualUuid;
-        }
-        ProfileStatus status = profileManager.getStatus(playerUuid);
-        if (status == ProfileStatus.OFFLINE) return;
+        EquippedCosmetic cosmetic = IconCosmeticRenderer.INSTANCE.getIconCosmetic(networkPlayerInfo);
+        if (cosmetic == null) return;
 
         float centreX, centreY, size;
         if (UResolution.getScaleFactor() < 4) {

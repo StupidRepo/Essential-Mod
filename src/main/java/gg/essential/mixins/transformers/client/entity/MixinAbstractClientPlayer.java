@@ -52,6 +52,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.*;
 
+import static gg.essential.cosmetics.EquippedOutfitsManagerMcKt.getEquippedOutfitsManager;
 import static gg.essential.gui.elementa.state.v2.FlattenKt.flatten;
 import static gg.essential.gui.elementa.state.v2.StateKt.memo;
 import static gg.essential.gui.elementa.state.v2.StateKt.mutableStateOf;
@@ -79,7 +80,7 @@ public abstract class MixinAbstractClientPlayer implements AbstractClientPlayerE
     });
     @Unique
     private final MutableState<State<Map<CosmeticSlot, EquippedCosmetic>>> cosmeticsSourceState = mutableStateOf(
-        let(Essential.getInstance().getConnectionManager().getCosmeticsManager().getEquippedCosmeticsManager().getVisibleCosmeticsState(cosmeticsSourceUuid), cosmeticsSource -> {
+        let(getEquippedOutfitsManager(this).getVisibleCosmeticsState(cosmeticsSourceUuid), cosmeticsSource -> {
             if (!skinOverriddenByServer) {
                 return cosmeticsSource;
             } else {

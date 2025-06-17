@@ -19,11 +19,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC>=12106
+//$$ @Mixin(net.minecraft.client.gui.render.EntityGuiElementRenderer.class)
+//#else
 @Mixin(GuiInventory.class)
+//#endif
 public class Mixin_TrackInventoryPlayerRendering {
 
     private static final String DRAW_ENTITY =
-        //#if MC>=12005
+        //#if MC>=12106
+        //$$ "render(Lnet/minecraft/client/gui/render/state/special/EntityGuiElementRenderState;Lnet/minecraft/client/util/math/MatrixStack;)V";
+        //#elseif MC>=12005
         //$$ "drawEntity(Lnet/minecraft/client/gui/DrawContext;FFFLorg/joml/Vector3f;Lorg/joml/Quaternionf;Lorg/joml/Quaternionf;Lnet/minecraft/entity/LivingEntity;)V";
         //#elseif MC>=12002
         //$$ "drawEntity(Lnet/minecraft/client/gui/DrawContext;FFILorg/joml/Vector3f;Lorg/joml/Quaternionf;Lorg/joml/Quaternionf;Lnet/minecraft/entity/LivingEntity;)V";
@@ -36,13 +42,19 @@ public class Mixin_TrackInventoryPlayerRendering {
         //#endif
 
     @Inject(method = DRAW_ENTITY, at = @At("HEAD"))
-    private static void essential$disableCosmeticsInInventoryStart(CallbackInfo info) {
+    //#if MC<12106
+    static
+    //#endif
+    private void essential$disableCosmeticsInInventoryStart(CallbackInfo info) {
         // If UI3DPlayer.current is null then the method was not called while rendering a player display
         GuiInventoryExt.isInventoryEntityRendering.set(UI3DPlayer.current == null);
     }
 
     @Inject(method = DRAW_ENTITY, at = @At("RETURN"))
-    private static void essential$disableCosmeticsInInventoryCleanup(CallbackInfo info) {
+    //#if MC<12106
+    static
+    //#endif
+    private void essential$disableCosmeticsInInventoryCleanup(CallbackInfo info) {
         GuiInventoryExt.isInventoryEntityRendering.set(false);
     }
 }

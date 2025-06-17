@@ -18,7 +18,7 @@ open class Layer(val priority: LayerPriority) {
     /**
      * The [Window] powering this layer.
      */
-    val window = Window(ElementaVersion.V6)
+    val window = Window(ElementaVersion.V10)
 
     /**
      * Controls whether this layer is visible on the screen.

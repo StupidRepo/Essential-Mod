@@ -82,7 +82,11 @@ class DividerServerListEntry(
         partialTicks: Float
         //#endif
     ) {
-        //#if MC>=12000
+        //#if MC>=12106
+        //$$ // FIXME This is a bit wasteful, but there should only be at most two of these at any one time.
+        //$$ //       But once we have a more general DrawContext in UC/Elementa, we should get rid of this.
+        //$$ gg.essential.util.AdvancedDrawContext.drawImmediate(drawContext) { matrixStack ->
+        //#elseif MC>=12000
         //$$ val matrixStack = UMatrixStack(drawContext.matrices)
         //#elseif MC>=11600
         //$$ val matrixStack = UMatrixStack(mcMatrixStack)
@@ -133,6 +137,9 @@ class DividerServerListEntry(
             matrixStack, EssentialPalette.TEXT_DISABLED, (x + titleWidth + 5).toDouble(),
             (textY + 3).toDouble(), (x + entryWidth - rightPadding - 1).toDouble(), (textY + 4).toDouble()
         )
+        //#if MC>=12106
+        //$$ }
+        //#endif
     }
 
     //#if MC>=11900

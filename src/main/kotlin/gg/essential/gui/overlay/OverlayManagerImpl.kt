@@ -33,6 +33,10 @@ import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiScreen
 
+//#if MC>=12106
+//$$ import gg.essential.util.AdvancedDrawContext
+//#endif
+
 //#if MC>=11600
 //$$ import gg.essential.mixins.transformers.client.MouseHelperAccessor
 //$$ import net.minecraft.client.gui.widget.Widget
@@ -167,13 +171,13 @@ object OverlayManagerImpl : OverlayManager {
         }
     }
 
-    private fun handleDraw(matrixStack: UMatrixStack, priority: LayerPriority) =
-        handleDraw(matrixStack, priority..priority)
+    private fun handleDraw(drawContext: UDrawContext, priority: LayerPriority) =
+        handleDraw(drawContext, priority..priority)
 
-    private fun handleDraw(matrixStack: UMatrixStack, priority: ClosedRange<LayerPriority>) {
+    private fun handleDraw(drawContext: UDrawContext, priority: ClosedRange<LayerPriority>) {
         val hideGui = mc.gameSettings.hideGUI && mc.currentScreen == null
 
-        for (layer in layers.filter { it.priority in priority }) {
+        fun drawLayer(matrixStack: UMatrixStack, layer: Layer) {
             val layerMatrixStack =
                 if (hideGui && layer.respectsHideGuiSetting || !layer.rendered) {
                     matrixStack.fork().also {
@@ -190,6 +194,16 @@ object OverlayManagerImpl : OverlayManager {
                     layer.window.draw(layerMatrixStack)
                 }
             }
+        }
+
+        for (layer in layers.filter { it.priority in priority }) {
+            //#if MC>=12106
+            //$$ AdvancedDrawContext.drawImmediate(drawContext.mc) { matrixStack ->
+            //$$     drawLayer(matrixStack, layer)
+            //$$ }
+            //#else
+            drawLayer(drawContext.matrixStack, layer)
+            //#endif
         }
 
         propagateFocus()
@@ -295,7 +309,7 @@ object OverlayManagerImpl : OverlayManager {
             cleanupLayers()
             computeLayersWithTrueMousePos()
 
-            handleDraw(event.matrixStack, LayerPriority.BelowScreen)
+            handleDraw(event.drawContext, LayerPriority.BelowScreen)
 
             // We're about to draw parts of the screen, so now's the time to suppress the mouse position if we need to
             if (belowScreenContentLayer !in layersWithTrueMousePos) {
@@ -314,7 +328,7 @@ object OverlayManagerImpl : OverlayManager {
             originalMousePosEvent?.let { (x, y) -> event.mouseX = x; event.mouseY = y }
             originalMousePosEvent = null
 
-            handleDraw(event.matrixStack, LayerPriority.BelowScreenContent)
+            handleDraw(event.drawContext, LayerPriority.BelowScreenContent)
 
             // We're about to draw the screen content, so now's the time to suppress the mouse position if we need to
             if (screenLayer !in layersWithTrueMousePos) {
@@ -330,7 +344,7 @@ object OverlayManagerImpl : OverlayManager {
             originalMousePos?.let { (x, y) -> GlobalMouseOverride.set(x, y) }
             originalMousePos = null
 
-            handleDraw(event.matrixStack, LayerPriority.AboveScreenContent)
+            handleDraw(event.drawContext, LayerPriority.AboveScreenContent)
 
             // We're about to draw modded content, so now's the time to suppress the mouse position if we need to
             if (aboveScreenLayer !in layersWithTrueMousePos) {
@@ -344,15 +358,15 @@ object OverlayManagerImpl : OverlayManager {
             originalMousePos?.let { (x, y) -> GlobalMouseOverride.set(x, y) }
             originalMousePos = null
 
-            handleDraw(event.matrixStack, LayerPriority.AboveScreen..LayerPriority.Highest)
+            handleDraw(event.drawContext, LayerPriority.AboveScreen..LayerPriority.Highest)
         }
 
-        private fun nonScreenDraw(event: RenderTickEvent) {
+        private fun nonScreenDraw(drawContext: UDrawContext) {
             cleanupLayers()
             layersWithTrueMousePos = emptySet() // mouse is captured, no one gets to see it
 
             // TODO could add more specific events in the HUD rendering code, but we only use Modal and above atm anyway
-            handleDraw(event.matrixStack, LayerPriority.BelowScreen..LayerPriority.Highest)
+            handleDraw(drawContext, LayerPriority.BelowScreen..LayerPriority.Highest)
 
             unlockMouseIfRequired()
         }
@@ -367,7 +381,9 @@ object OverlayManagerImpl : OverlayManager {
             // that one. This is also required with ImmediatelyFast as of 1.21.2 because it uses a custom vertex
             // consumer provider separate from the vanilla global one.
 
-            //#if MC>=12000
+            //#if MC>=12106
+            //$$ // Minecraft's new gui renderer no longer uses immediate rendering
+            //#elseif MC>=12000
             //$$ drawContext.mc.draw()
             //#elseif MC>=11600
             //$$ Minecraft.getInstance().getRenderTypeBuffers().getBufferSource().finish()
@@ -419,13 +435,14 @@ object OverlayManagerImpl : OverlayManager {
             if (event.isPre) {
                 return
             }
+            val drawContext = event.drawContext!!
 
             if (event.isLoadingScreen) {
-                flushVanillaBuffers(event.drawContext!!)
+                flushVanillaBuffers(drawContext)
                 layersWithTrueMousePos = emptySet() // the loading screen isn't a real screen and can't handle input
                 // The loading screen is drawn on top of whatever screen is active, so the actual active screen isn't
                 // visible, so we don't want to render screen-related layers either.
-                handleDraw(event.matrixStack, LayerPriority.Modal..LayerPriority.Highest)
+                handleDraw(drawContext, LayerPriority.Modal..LayerPriority.Highest)
                 return
             }
 
@@ -433,8 +450,8 @@ object OverlayManagerImpl : OverlayManager {
                 return // more specific GuiDrawScreenEvents will be emitted
             }
 
-            flushVanillaBuffers(event.drawContext!!)
-            nonScreenDraw(event)
+            flushVanillaBuffers(drawContext)
+            nonScreenDraw(drawContext)
         }
 
         @Subscribe

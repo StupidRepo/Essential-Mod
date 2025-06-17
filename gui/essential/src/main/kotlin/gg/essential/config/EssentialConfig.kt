@@ -125,6 +125,7 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
     val ownCosmeticsHiddenStateWithSource = mutableStateOf(Pair(false, false))
     var ownCosmeticsHiddenState = ownCosmeticsHiddenStateWithSource.bimap({ it.first }, { it to false })
     var ownCosmeticsHidden by ownCosmeticsHiddenState
+    var ownCosmeticsVisible by !ownCosmeticsHiddenState
 
     val hideCosmeticsWhenServerOverridesSkinState = property("Cosmetics.General.Hide cosmetics on server skins", false)
     var hideCosmeticsWhenServerOverridesSkin: Boolean by hideCosmeticsWhenServerOverridesSkinState

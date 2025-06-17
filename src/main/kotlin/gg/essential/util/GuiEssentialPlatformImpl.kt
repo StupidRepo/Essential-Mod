@@ -94,6 +94,10 @@ import java.nio.file.Path
 import java.util.*
 import kotlin.jvm.Throws
 
+//#if MC>=12106
+//$$ import com.mojang.blaze3d.systems.RenderSystem
+//#endif
+
 //#if MC>=12105
 //$$ import net.minecraft.client.texture.GlTexture
 //$$ import com.mojang.blaze3d.opengl.GlStateManager
@@ -350,6 +354,21 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         //#else
         get() = null
         //#endif
+
+    //#if MC>=12106
+    //$$ override val outputColorTextureOverride: GpuTexture?
+    //$$     get() = RenderSystem.outputColorTextureOverride?.let { tex ->
+    //$$         UnownedGlGpuTexture(GpuTexture.Format.RGBA8, (tex.texture() as GlTexture).glId, tex.getWidth(0), tex.getHeight(0))
+    //$$     }
+    //$$
+    //$$ override val outputDepthTextureOverride: GpuTexture?
+    //$$     get() = RenderSystem.outputDepthTextureOverride?.let { tex ->
+    //$$         UnownedGlGpuTexture(GpuTexture.Format.DEPTH32, (tex.texture() as GlTexture).glId, tex.getWidth(0), tex.getHeight(0))
+    //$$     }
+    //#else
+    override val outputColorTextureOverride: GpuTexture? get() = null
+    override val outputDepthTextureOverride: GpuTexture? get() = null
+    //#endif
 
     override fun newWindowedTextureProvider(inner: WindowedImageProvider): WindowedTextureProvider =
         MinecraftWindowedTextureProvider(inner)

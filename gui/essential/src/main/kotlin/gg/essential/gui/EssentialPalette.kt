@@ -19,6 +19,7 @@ import gg.essential.elementa.utils.withAlpha
 import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.image.ImageGeneratorSettings
 import gg.essential.gui.image.ResourceImageFactory
+import gg.essential.util.UIdentifier
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
@@ -1053,6 +1054,9 @@ object EssentialPalette {
 
     @JvmField
     val DOWNLOAD_7X8: ImageFactory = ResourceImageFactory("/assets/essential/textures/download_7x8.png")
+
+    @JvmField
+    val DOWNLOAD_7X8_ID: UIdentifier = UIdentifier("essential", "textures/download_7x8.png")
 
     @JvmField
     val COIN_7X: ImageFactory = ResourceImageFactory("/assets/essential/textures/coin/coin_icon.png")

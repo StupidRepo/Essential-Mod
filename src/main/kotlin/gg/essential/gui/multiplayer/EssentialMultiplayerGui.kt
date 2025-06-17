@@ -45,8 +45,8 @@ import gg.essential.mixins.ext.client.multiplayer.ext
 import gg.essential.mixins.ext.client.multiplayer.recommendedVersion
 import gg.essential.mixins.ext.client.multiplayer.showDownloadIcon
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager
-import gg.essential.universal.UMatrixStack
 import gg.essential.util.GuiUtil
+import gg.essential.util.UDrawContext
 import gg.essential.util.createEssentialTooltip
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiButton
@@ -59,6 +59,10 @@ import net.minecraft.client.multiplayer.ServerData
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
+
+//#if MC>=12106
+//$$ import gg.essential.util.AdvancedDrawContext
+//#endif
 
 //#if MC >= 11600
 //$$ import gg.essential.util.textLiteral
@@ -89,7 +93,7 @@ class EssentialMultiplayerGui {
     // fixme remove lateinit after feature flags are cleaned up
     lateinit var impressionTracker: NewServerDiscoveryManager.ImpressionTracker
 
-    private val window = Window(ElementaVersion.V6)
+    private val window = Window(ElementaVersion.V10)
 
     private val tooltipParent = UIContainer() childOf window
 
@@ -365,7 +369,7 @@ class EssentialMultiplayerGui {
         }
     }
 
-    fun draw(matrixStack: UMatrixStack) {
+    fun draw(drawContext: UDrawContext) {
         if (!EssentialConfig.essentialFull) return
 
         updateFriendsButton()
@@ -382,7 +386,13 @@ class EssentialMultiplayerGui {
             tooltip.hideTooltip()
         }
 
-        window.draw(matrixStack)
+        //#if MC>=12106
+        //$$ AdvancedDrawContext.drawImmediate(drawContext.mc) { matrixStack ->
+        //$$     window.draw(matrixStack)
+        //$$ }
+        //#else
+        window.draw(drawContext.matrixStack)
+        //#endif
     }
 
     fun updateSpsSessions() {

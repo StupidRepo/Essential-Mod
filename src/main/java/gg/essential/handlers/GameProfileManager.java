@@ -20,12 +20,10 @@ import gg.essential.mod.Skin;
 import gg.essential.network.connectionmanager.subscription.SubscriptionManager;
 import gg.essential.util.UUIDUtil;
 import net.minecraft.client.Minecraft;
-import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static gg.essential.util.ExtensionsKt.copy;
 
@@ -53,13 +51,12 @@ import com.mojang.authlib.minecraft.InsecureTextureException;
 
 public class GameProfileManager implements SubscriptionManager.Listener {
     public static final String SKIN_URL = Skin.SKIN_URL;
-    private final Map<UUID, Overwrites> uuidToOverwrites = new ConcurrentHashMap<>();
 
-    public GameProfile handleGameProfile(GameProfile profile) {
-        final Overwrites overwrites = this.uuidToOverwrites.get(profile.getId());
-        if (overwrites == null) {
+    public static GameProfile handleGameProfile(GameProfile profile, Skin skin) {
+        if (skin == null) {
             return null;
         }
+        Overwrites overwrites = new Overwrites(skin.getHash(), skin.getModel().getType(), null);
 
         final Property property = profile.getProperties().get("textures").stream().findFirst().orElse(null);
         if (property == null || ManagedTexturesProperty.hasOverwrites(property, overwrites)) {
@@ -67,21 +64,6 @@ public class GameProfileManager implements SubscriptionManager.Listener {
         }
 
         return overwrites.apply(profile);
-    }
-
-    public void updatePlayerSkin(UUID uuid, String hash, String type) {
-        updatePlayerSkin(uuid, new Overwrites(hash, type, null));
-    }
-
-    private void updatePlayerSkin(UUID uuid, Overwrites overwrites) {
-        this.uuidToOverwrites.put(uuid, overwrites);
-    }
-
-    @Override
-    public void onSubscriptionRemoved(@NotNull Set<UUID> uuids) {
-        for (UUID uuid : uuids) {
-            this.uuidToOverwrites.remove(uuid);
-        }
     }
 
     public static void updatePropertyMap(PropertyMap profileProperties, Property property) {
@@ -143,6 +125,18 @@ public class GameProfileManager implements SubscriptionManager.Listener {
             GameProfile updatedProfile = copy(originalProfile);
             updatePropertyMap(updatedProfile.getProperties(), ManagedTexturesProperty.create(originalProfile, this));
             return updatedProfile;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            Overwrites that = (Overwrites) o;
+            return Objects.equals(skinHash, that.skinHash) && Objects.equals(skinType, that.skinType) && Objects.equals(capeHash, that.capeHash);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(skinHash, skinType, capeHash);
         }
     }
 
@@ -221,7 +215,7 @@ public class GameProfileManager implements SubscriptionManager.Listener {
 
         public static boolean hasOverwrites(Property property, Overwrites overwrites) {
             return property instanceof ManagedTexturesProperty
-                    && ((ManagedTexturesProperty) property).overwrites == overwrites;
+                    && Objects.equals(((ManagedTexturesProperty) property).overwrites, overwrites);
         }
     }
 

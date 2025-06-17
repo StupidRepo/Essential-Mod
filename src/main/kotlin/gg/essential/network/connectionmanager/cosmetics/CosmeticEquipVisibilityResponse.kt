@@ -11,8 +11,8 @@
  */
 package gg.essential.network.connectionmanager.cosmetics
 
-import gg.essential.Essential
 import gg.essential.api.gui.Slot
+import gg.essential.config.EssentialConfig
 import gg.essential.connectionmanager.common.packet.Packet
 import gg.essential.connectionmanager.common.packet.response.ResponseActionPacket
 import gg.essential.gui.EssentialPalette
@@ -33,7 +33,7 @@ class CosmeticEquipVisibilityResponse(
         }
 
         if (packet is ResponseActionPacket && packet.isSuccessful) {
-            Essential.getInstance().connectionManager.cosmeticsManager.ownCosmeticsVisible = nextState
+            EssentialConfig.ownCosmeticsVisible = nextState
             if (notification) {
                 Notifications.push("Your cosmetics are ${if (nextState) "shown" else "hidden"}", "") {
                     if (nextState) {

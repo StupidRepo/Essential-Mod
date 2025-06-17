@@ -39,6 +39,7 @@ class CosmeticHoverOutlineEffect(
     private val outlineCosmetic: State<List<Cosmetic>>,
 ) : Effect() {
 
+    private var previousScissorEffectState: ScissorEffect.ScissorState? = null
     private var previousScissorState: Boolean = false
     private var previousFrameBuffer: () -> Unit = {}
 
@@ -49,6 +50,8 @@ class CosmeticHoverOutlineEffect(
         check(active == null) { "Outline effects cannot be nested." }
         active = this
 
+        previousScissorEffectState = ScissorEffect.currentScissorState
+        ScissorEffect.currentScissorState = null // required for Mc12106ScissorHandler to behave correctly
         previousScissorState = GL11.glGetBoolean(GL11.GL_SCISSOR_TEST)
         GL11.glDisable(GL11.GL_SCISSOR_TEST)
 
@@ -73,6 +76,7 @@ class CosmeticHoverOutlineEffect(
         if (previousScissorState) {
             GL11.glEnable(GL11.GL_SCISSOR_TEST)
         }
+        ScissorEffect.currentScissorState = previousScissorEffectState
 
         renderFullScreenQuad(COMPOSITE_PIPELINE) {
             texture("ColorSampler", compositeRenderResult.color.glId)
@@ -181,9 +185,9 @@ class CosmeticHoverOutlineEffect(
         private val mcFrameBufferSupported by lazy { platform.mcFrameBufferDepthTexture != null }
         private val fallbackFrameBuffer by lazy { GlFrameBuffer(viewportWidth, viewportHeight, depthFormat = GpuTexture.Format.DEPTH32) }
         private val renderTargetColor: GpuTexture
-            get() = if (mcFrameBufferSupported) platform.mcFrameBufferColorTexture else fallbackFrameBuffer.texture
+            get() = platform.outputColorTextureOverride ?: if (mcFrameBufferSupported) platform.mcFrameBufferColorTexture else fallbackFrameBuffer.texture
         private val renderTargetDepth: GpuTexture
-            get() = if (mcFrameBufferSupported) platform.mcFrameBufferDepthTexture!! else fallbackFrameBuffer.depthStencil
+            get() = platform.outputDepthTextureOverride ?: if (mcFrameBufferSupported) platform.mcFrameBufferDepthTexture!! else fallbackFrameBuffer.depthStencil
 
         private val mainTextureCopy by lazy { GpuTexture(viewportWidth, viewportHeight, GpuTexture.Format.RGBA8) }
         private val compositeRenderResult by lazy { RenderResult() }

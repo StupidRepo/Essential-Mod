@@ -20,6 +20,7 @@ import gg.essential.config.AccessedViaReflection;
 import gg.essential.config.EssentialConfig;
 import gg.essential.config.EssentialConfigApiImpl;
 import gg.essential.config.McEssentialConfig;
+import gg.essential.cosmetics.IngameEquippedOutfitsUpdateDispatcher;
 import gg.essential.cosmetics.PlayerWearableManager;
 import gg.essential.cosmetics.events.CosmeticEventEmitter;
 import gg.essential.data.OnboardingData;
@@ -141,8 +142,7 @@ public class Essential implements EssentialAPI {
     private ImageCache imageCache;
 
     private PlayerWearableManager playerWearableManager;
-    private final GameProfileManager gameProfileManager = new GameProfileManager();
-    private final MojangSkinManager skinManager = new McMojangSkinManager(gameProfileManager, () -> Wardrobe.getInstance() != null);
+    private final MojangSkinManager skinManager = new McMojangSkinManager(() -> Wardrobe.getInstance() != null);
     private CosmeticEventEmitter cosmeticEventEmitter;
     private Map<Object, Boolean> dynamicListeners = new HashMap<>();
     private EssentialGameRules gameRules;
@@ -265,10 +265,6 @@ public class Essential implements EssentialAPI {
         }
     }
 
-    public GameProfileManager getGameProfileManager() {
-        return gameProfileManager;
-    }
-
     public MojangSkinManager getSkinManager() {
         return skinManager;
     }
@@ -301,6 +297,9 @@ public class Essential implements EssentialAPI {
         registerListenerRequiresEssential(new ServerStatusHandler());
         registerListener(GuiUtil.INSTANCE);
         registerListener(OverlayManagerImpl.Events.INSTANCE);
+        //#if MC>=12106
+        //$$ registerListener(AdvancedDrawContext.INSTANCE);
+        //#endif
         registerListener(new PauseMenuDisplay());
         registerListenerRequiresEssential(DiscordIntegration.INSTANCE);
         registerListener(new OptionsScreenOverlay());
@@ -314,7 +313,10 @@ public class Essential implements EssentialAPI {
         if (!OptiFineUtil.isLoaded()) {
             registerListenerRequiresEssential(ZoomHandler.getInstance());
         }
-        connectionManager.getSubscriptionManager().addListener(gameProfileManager);
+        registerListener(new IngameEquippedOutfitsUpdateDispatcher(
+            connectionManager.getSubscriptionManager().getSubscriptionsAndSelf(),
+            connectionManager.getCosmeticsManager().getInfraEquippedOutfitsManager()
+        ));
 
         Net.INSTANCE.init();
         Multithreading.runAsync(() -> {

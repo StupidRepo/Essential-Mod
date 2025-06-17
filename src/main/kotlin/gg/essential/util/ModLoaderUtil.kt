@@ -14,16 +14,13 @@ package gg.essential.util
 import gg.essential.Essential
 import gg.essential.connectionmanager.common.packet.mod.ClientModsAnnouncePacket
 import gg.essential.connectionmanager.common.packet.partner.PartneredMod
+import gg.essential.data.VersionData
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.universal.UMinecraft
 import kotlin.io.path.*
 import org.apache.commons.codec.digest.DigestUtils
-
-//#if MC>=11400
-//$$ import net.minecraft.util.SharedConstants
-//#endif
 
 //#if FABRIC
 //$$ import gg.essential.lib.gson.JsonObject
@@ -128,7 +125,7 @@ object ModLoaderUtil {
 
     @JvmStatic
     fun createModsAnnouncePacket() = ClientModsAnnouncePacket(
-        getMinecraftVersion(), getModChecksums().values.toTypedArray(),
+        VersionData.getMinecraftVersion(), getModChecksums().values.toTypedArray(),
         getPlatform(), getPlatformVersion(), modpackId
     )
 
@@ -327,14 +324,6 @@ object ModLoaderUtil {
             //we will always use this one
             modId to if (modId != "feather") checksum else "e3d04e686b28b34b5a98ce078e4f9da8"
         }.toMap()
-    }
-
-    private fun getMinecraftVersion(): String {
-        //#if MC>=11400
-        //$$ return SharedConstants.getVersion().id
-        //#else
-        return ForgeVersion::mcVersion.get()
-        //#endif
     }
 
     private fun getPlatformVersion(): String {

@@ -22,6 +22,10 @@ import org.lwjgl.opengl.GL12
 import java.nio.IntBuffer
 
 //#if MC>=12105
+//$$ import com.mojang.blaze3d.textures.GpuTexture
+//#endif
+
+//#if MC>=12105
 //$$ import com.mojang.blaze3d.opengl.GlStateManager
 //$$ import com.mojang.blaze3d.textures.TextureFormat
 //$$ import net.minecraft.client.texture.GlTexture
@@ -56,7 +60,9 @@ class PixelBufferTexture(debugLabel: String, image: PixelBuffer) :
 
     init {
         if(image !is ErrorImage) {
-            //#if MC>=12105
+            //#if MC>=12106
+            //$$ glTexture = RenderSystem.getDevice().createTexture(debugLabel, GpuTexture.USAGE_TEXTURE_BINDING, TextureFormat.RGBA8, imageWidth, imageHeight, 1, 1)
+            //#elseif MC>=12105
             //$$ glTexture = RenderSystem.getDevice().createTexture(debugLabel, TextureFormat.RGBA8, imageWidth, imageHeight, 1)
             //#else
             glTextureId = GL11.glGenTextures()

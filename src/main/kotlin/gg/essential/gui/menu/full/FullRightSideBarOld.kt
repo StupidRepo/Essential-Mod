@@ -136,7 +136,7 @@ class FullRightSideBarOld(
         if (it) EssentialPalette.NOTIFICATIONS_10X_OFF else EssentialPalette.NOTIFICATIONS_10X_ON
     }.toV1(this)) childOf toolbar
 
-    private val isOwnCosmeticsVisible = pollingState { connectionManager.cosmeticsManager.ownCosmeticsVisible }
+    private val isOwnCosmeticsVisible = !EssentialConfig.ownCosmeticsHiddenState.toV1(this)
     private val cosmeticVisibilityToggleButton by MenuButton {
         connectionManager.cosmeticsManager.toggleOwnCosmeticVisibility(false)
     }.constrain {

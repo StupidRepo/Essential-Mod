@@ -17,6 +17,7 @@ import gg.essential.gui.multiplayer.EssentialMultiplayerGui;
 import gg.essential.mixins.ext.client.gui.GuiMultiplayerExt;
 import gg.essential.universal.UMatrixStack;
 import gg.essential.universal.UMinecraft;
+import gg.essential.util.UDrawContext;
 import kotlin.collections.CollectionsKt;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiMultiplayer;
@@ -198,13 +199,13 @@ public abstract class MixinGuiMultiplayer extends GuiScreen implements GuiMultip
     @Inject(method = "drawScreen", at = @At("RETURN"))
     //#if MC>=12000
     //$$ private void drawEssentialGui(DrawContext context, int mouseX, int mouseY, float partialTicks, CallbackInfo ci) {
-    //$$     UMatrixStack matrixStack = new UMatrixStack(context.getMatrices());
+    //$$     UDrawContext drawContext = new UDrawContext(context, new UMatrixStack(context.getMatrices()));
     //#elseif MC>=11600
     //$$ private void drawEssentialGui(MatrixStack vMatrixStack, int mouseX, int mouseY, float partialTicks, CallbackInfo ci) {
-    //$$     UMatrixStack matrixStack = new UMatrixStack(vMatrixStack);
+    //$$     UDrawContext drawContext = new UDrawContext(new UMatrixStack(vMatrixStack));
     //#else
     private void drawEssentialGui(int mouseX, int mouseY, float partialTicks, CallbackInfo ci) {
-        UMatrixStack matrixStack = new UMatrixStack();
+        UDrawContext drawContext = new UDrawContext(new UMatrixStack());
     //#endif
 
         //#if MC<11600
@@ -214,7 +215,7 @@ public abstract class MixinGuiMultiplayer extends GuiScreen implements GuiMultip
         GlStateManager.disableDepth();
         //#endif
 
-        essentialGui.draw(matrixStack);
+        essentialGui.draw(drawContext);
     }
 
     @Inject(method = "connectToServer", at = @At("HEAD"), cancellable = true)

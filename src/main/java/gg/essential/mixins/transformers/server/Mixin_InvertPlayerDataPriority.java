@@ -21,6 +21,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+//#if MC>=12106
+//$$ import net.minecraft.storage.ReadView;
+//$$ import net.minecraft.util.ErrorReporter;
+//#endif
+
 //#if MC>=12005
 //$$ import java.util.Optional;
 //#endif
@@ -51,16 +56,30 @@ public class Mixin_InvertPlayerDataPriority {
     @Inject(method = "readPlayerDataFromFile", at = @At("HEAD"), cancellable = true)
     private void essential$ignoreLevelDatIfPossible(
         EntityPlayerMP player,
-        //#if MC>=12005
+        //#if MC>=12106
+        //$$ ErrorReporter errorReporter,
+        //#endif
+        //#if MC>=12106
+        //$$ CallbackInfoReturnable<Optional<ReadView>> cir
+        //#elseif MC>=12005
         //$$ CallbackInfoReturnable<Optional<NbtCompound>> cir
         //#else
         CallbackInfoReturnable<NBTTagCompound> cir
         //#endif
     ) {
         PlayerListHook.suppressForgeEventIfLoadFails = true;
-        NBTTagCompound playerData = this.playerDataManager
+        //#if MC>=12106
+        //$$ ReadView
+        //#else
+        NBTTagCompound
+        //#endif
+        playerData = this.playerDataManager
             //#if MC>=11600
+            //#if MC>=12106
+            //$$ .loadPlayerData(player, errorReporter)
+            //#else
             //$$ .loadPlayerData(player)
+            //#endif
             //#if MC>=12005
             //$$ .orElse(null);
             //#else

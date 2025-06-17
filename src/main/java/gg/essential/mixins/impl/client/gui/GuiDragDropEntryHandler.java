@@ -35,6 +35,12 @@ import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+//#if MC>=12106
+//$$ import gg.essential.util.AdvancedDrawContext;
+//$$ import net.minecraft.client.gui.render.state.GuiRenderState;
+//$$ import static gg.essential.util.RenderGuiRenderStateToRenderTargetKt.renderGuiRenderStateToRenderTarget;
+//#endif
+
 //#if MC>=12004
 //$$ import gg.essential.mixins.transformers.client.gui.EntryListWidgetAccessor;
 //#endif
@@ -287,8 +293,23 @@ public class
         ScreenPosition newDragCenter = new ScreenPosition(x + width / 2.0, y + height / 2.0);
         boolean posChanged = draggedEntryState.updatePos(newDragCenter);
 
-        UMatrixStack matrixStack = event.getMatrixStack();
+        //#if MC>=12106
+        //$$ AdvancedDrawContext.INSTANCE.drawImmediate(event.getDrawContext().getMc(), matrixStack -> {
+        //$$     doDrawDraggedEntry(matrixStack, event, width, height, padUIBlockWidth, padEntryRenderWidth, x, y, x2, y2);
+        //$$     return kotlin.Unit.INSTANCE;
+        //$$ });
+        //#else
+        doDrawDraggedEntry(event.getMatrixStack(), event, width, height, padUIBlockWidth, padEntryRenderWidth, x, y, x2, y2);
+        //#endif
 
+        // trigger indicator update if necessary, ready for next draw
+        if (posChanged) {
+            // indicators are set relative to center pos as we want them to visually line up with where the drag is, not where the mouse is
+            indicatorPositionUpdater.accept(getDragCenterPos());
+        }
+    }
+
+    private void doDrawDraggedEntry(UMatrixStack matrixStack, GuiDrawScreenEvent event, int width, int height, int padUIBlockWidth, int padEntryRenderWidth, int x, int y, int x2, int y2) {
         // alpha effect to surround vanilla component rendering
         setUIBlockConstraints(alphaBlock, (float) (x - 2), (float) (y - 2), (float) (x + width - 8 + padUIBlockWidth), (float) (y + height + 2));
         alphaEffect.beforeDraw(matrixStack);
@@ -300,7 +321,12 @@ public class
         width += padEntryRenderWidth;
 
         // entry
-        //#if MC>=12000
+        //#if MC>=12106
+        //$$ GuiRenderState guiRenderState = new GuiRenderState();
+        //$$ DrawContext context = new DrawContext(MinecraftClient.getInstance(), guiRenderState);
+        //$$ draggedEntryState.entry.render(context, 0, y, x, width, height, event.getMouseX(), event.getMouseY(), true, event.getPartialTicks());
+        //$$ renderGuiRenderStateToRenderTarget(matrixStack, guiRenderState);
+        //#elseif MC>=12000
         //$$ DrawContext context = event.getDrawContext().getMc();
         //$$ draggedEntryState.entry.render(context, 0, y, x, width, height, event.getMouseX(), event.getMouseY(), true, event.getPartialTicks());
         //$$
@@ -317,12 +343,6 @@ public class
         //#endif
 
         alphaEffect.afterDraw(matrixStack);
-
-        // trigger indicator update if necessary, ready for next draw
-        if (posChanged) {
-            // indicators are set relative to center pos as we want them to visually line up with where the drag is, not where the mouse is
-            indicatorPositionUpdater.accept(getDragCenterPos());
-        }
     }
 
     private static void renderBackgroundWithBorder(final int width, final int height, final int padWidth, final int x, final int y, final int x2, final int y2, final UMatrixStack matrixStack, final Color backgroundColor, final Color outlineColor) {

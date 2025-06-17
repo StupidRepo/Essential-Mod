@@ -98,7 +98,7 @@ import java.util.concurrent.TimeUnit
 //#endif
 
 class EmoteWheel : WindowScreen(
-    version = ElementaVersion.V6,
+    version = ElementaVersion.V10,
     drawDefaultBackground = false,
     restoreCurrentGuiOnClose = false,
 ) {
@@ -393,7 +393,7 @@ class EmoteWheel : WindowScreen(
             Multithreading.scheduleOnMainThread({
                 emoteComing = false
 
-                if (cosmeticManager.equippedCosmetics[slot] == emote.cosmetic.id) {
+                if (cosmeticManager.equippedCosmetics[slot]?.id == emote.cosmetic.id) {
                     outfitManager.selectedOutfitId.getUntracked()?.let { setEmoteSettings(it) }
                     essential.cosmeticEventEmitter.triggerEvent(UUIDUtil.getClientUUID(), slot, "reset")
                     connectionManager.send(ClientCosmeticAnimationTriggerPacket(slot.toInfra(), "reset"))

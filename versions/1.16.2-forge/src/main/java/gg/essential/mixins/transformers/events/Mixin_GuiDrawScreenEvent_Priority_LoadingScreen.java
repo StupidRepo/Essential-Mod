@@ -29,7 +29,9 @@ import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(ResourceLoadProgressGui.class)
 public abstract class Mixin_GuiDrawScreenEvent_Priority_LoadingScreen {
-    //#if MC>=12000
+    //#if MC>=12106
+    //$$ private static final String SCREEN_RENDER = "Lnet/minecraft/client/gui/screen/Screen;renderWithTooltip(Lnet/minecraft/client/gui/DrawContext;IIF)V";
+    //#elseif MC>=12000
     //$$ private static final String SCREEN_RENDER = "Lnet/minecraft/client/gui/screen/Screen;render(Lnet/minecraft/client/gui/DrawContext;IIF)V";
     //#else
     private static final String SCREEN_RENDER = "Lnet/minecraft/client/gui/screen/Screen;render(Lcom/mojang/blaze3d/matrix/MatrixStack;IIF)V";

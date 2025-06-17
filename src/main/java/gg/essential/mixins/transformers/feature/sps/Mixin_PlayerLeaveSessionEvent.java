@@ -35,7 +35,11 @@ public class Mixin_PlayerLeaveSessionEvent {
 
     @Inject(method = "playerLoggedOut", at = @At("RETURN"))
     private void essential$playerLeaveSession(EntityPlayerMP player, CallbackInfo info) {
+        //#if MC>=12106
+        //$$ MinecraftServer server = player.getServer();
+        //#else
         MinecraftServer server = player.mcServer;
+        //#endif
         UUID uuid = player.getUniqueID();
         ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() -> {
             if (server instanceof IntegratedServerExt) {

@@ -19,3 +19,10 @@ inline fun <T> Iterable<T>.sumOf(selector: (T) -> Float): Float {
     return sum
 }
 
+fun <T, K, R> Iterable<T>.associateNotNull(transform: (T) -> Pair<K, R>?): Map<K, R> = buildMap {
+    for (item in this@associateNotNull) {
+        val (key, value) = transform(item) ?: continue
+        this[key] = value
+    }
+}
+

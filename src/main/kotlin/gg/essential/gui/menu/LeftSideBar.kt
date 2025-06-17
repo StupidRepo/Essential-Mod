@@ -102,7 +102,7 @@ class LeftSideBar(
         camera = stateOf(null),
         profile = stateOf(null),
         cosmetics = USession.active
-            .map { connectionManager.cosmeticsManager.equippedCosmeticsManager.getVisibleCosmeticsState(it.uuid) }
+            .map { connectionManager.cosmeticsManager.infraEquippedOutfitsManager.getVisibleCosmeticsState(it.uuid) }
             .flatten(),
     ).constrain {
         // x set in init

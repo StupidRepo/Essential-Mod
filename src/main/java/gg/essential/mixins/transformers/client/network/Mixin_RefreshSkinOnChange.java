@@ -15,6 +15,9 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import gg.essential.Essential;
 import gg.essential.handlers.GameProfileManager;
+import gg.essential.mixins.impl.client.network.NetworkPlayerInfoExt;
+import gg.essential.mod.Skin;
+import gg.essential.network.connectionmanager.cosmetics.EquippedOutfitsManager;
 import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.util.ResourceLocation;
 import org.spongepowered.asm.mixin.Final;
@@ -71,8 +74,10 @@ public class Mixin_RefreshSkinOnChange {
     @Inject(method = "getLocationSkin", at = @At("HEAD"))
     public void getLocationSkin(CallbackInfoReturnable<ResourceLocation> info) {
     //#endif
-        final GameProfileManager manager = Essential.getInstance().getGameProfileManager();
-        GameProfile updatedProfile = manager.handleGameProfile(this.gameProfile);
+        EquippedOutfitsManager manager = ((NetworkPlayerInfoExt) this).getEssential$equippedOutfitsManager();
+        if (manager == null) manager = Essential.getInstance().getConnectionManager().getCosmeticsManager().getInfraEquippedOutfitsManager();
+        Skin skin = manager.getSkin(this.gameProfile.getId());
+        GameProfile updatedProfile = GameProfileManager.handleGameProfile(this.gameProfile, skin);
         if (updatedProfile != null) {
             this.gameProfile = updatedProfile;
             //#if MC>=12002

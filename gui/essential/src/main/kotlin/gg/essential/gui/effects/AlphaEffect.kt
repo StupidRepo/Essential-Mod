@@ -68,7 +68,7 @@ class AlphaEffect(private val alphaState: State<Float>) : Effect() {
             resources.texture.resize(width, height)
         }
         resources.texture.copyFrom(listOf(GpuTexture.CopyOp(
-            platform.mcFrameBufferColorTexture, x, y, 0, 0, width, height
+            platform.outputColorTextureOverride ?: platform.mcFrameBufferColorTexture, x, y, 0, 0, width, height
         )))
 
         // Clear the render target before we draw our content

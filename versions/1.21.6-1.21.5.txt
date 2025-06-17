@@ -1,0 +1,3 @@
+net.minecraft.GameVersion comp_4024() getId()
+net.minecraft.GameVersion comp_4025() getName()
+net.minecraft.GameVersion packVersion() getResourceVersion()

@@ -49,6 +49,11 @@ import java.util.UUID;
 
 import static gg.essential.mixins.ext.client.multiplayer.ServerDataExtKt.getExt;
 
+//#if MC>=12106
+//$$ import com.mojang.blaze3d.pipeline.RenderPipeline;
+//$$ import static gg.essential.util.UIdentifierKt.toMC;
+//#endif
+
 //#if MC>=12102
 //$$ import java.util.function.Function;
 //#endif
@@ -82,7 +87,9 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 @Mixin(ServerListEntryNormal.class)
 public abstract class MixinServerListEntryNormal implements ServerListEntryNormalExt {
 
-    //#if MC>=12102
+    //#if MC>=12106
+    //$$ private static final String DRAW_TEXTURE = "Lnet/minecraft/client/gui/DrawContext;drawGuiTexture(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/util/Identifier;IIII)V";
+    //#elseif MC>=12102
     //$$ private static final String DRAW_TEXTURE = "Lnet/minecraft/client/gui/DrawContext;drawGuiTexture(Ljava/util/function/Function;Lnet/minecraft/util/Identifier;IIII)V";
     //#elseif MC>=12002
     //$$ private static final String DRAW_TEXTURE = "Lnet/minecraft/client/gui/DrawContext;drawGuiTexture(Lnet/minecraft/util/Identifier;IIII)V";
@@ -174,7 +181,9 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         //#endif
         String tooltip = this.friends.draw(matrixStack, x, y, listWidth, mouseX, mouseY, populationOrVersionTextWidth);
         if (tooltip != null) {
-            //#if MC>=12005
+            //#if MC>=12106
+            //$$ context.drawTooltip(Arrays.stream(tooltip.split("\n")).map(HelpersKt::textLiteral).map(Text::asOrderedText).collect(Collectors.toList()), mouseX, mouseY);
+            //#elseif MC>=12005
             //$$ this.screen.setTooltip(Arrays.stream(tooltip.split("\n")).map(HelpersKt::textLiteral).map(Text::asOrderedText).collect(Collectors.toList()));
             //#elseif MC>=11600
             //$$ this.owner.func_238854_b_(Arrays.stream(tooltip.split("\n")).map(HelpersKt::textLiteral).collect(Collectors.toList()));
@@ -186,7 +195,11 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
 
     //#if MC>=11600
     //#if MC>=12005
+    //#if MC>=12106
+    //$$ @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTooltip(Lnet/minecraft/text/Text;II)V"))
+    //#else
     //$$ @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/multiplayer/MultiplayerScreen;setTooltip(Lnet/minecraft/text/Text;)V"))
+    //#endif
     //$$ private Text addServerRegionToPing(Text str) {
     //#else
     //$$ @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Ljava/util/Collections;singletonList(Ljava/lang/Object;)Ljava/util/List;"))
@@ -234,7 +247,9 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
     private boolean drawDownloadIcon(
         //#if MC>=12000
         //$$ DrawContext context,
-        //#if MC>=12102
+        //#if MC>=12106
+        //$$ RenderPipeline renderPipeline,
+        //#elseif MC>=12102
         //$$ Function<?, ?> renderLayers,
         //#endif
         //$$ Identifier texture,
@@ -266,11 +281,26 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         UMatrixStack matrixStack = new UMatrixStack();
         //#endif
         if (getExt(this.server).getEssential$showDownloadIcon()) {
+            //#if MC>=12106
+            //$$ context.drawTexture(renderPipeline, toMC(EssentialPalette.DOWNLOAD_7X8_ID),
+            //$$     x + 2, y + 1,
+            //$$     0f, 0f, // u, v
+            //$$     7, 8, // width, height
+            //$$     7, 8, // textureWidth, textureHeight
+            //$$     EssentialPalette.BLUE_SHADOW.getRGB());
+            //$$ context.drawTexture(renderPipeline, toMC(EssentialPalette.DOWNLOAD_7X8_ID),
+            //$$     x + 1, y,
+            //$$     0f, 0f, // u, v
+            //$$     7, 8, // width, height
+            //$$     7, 8, // textureWidth, textureHeight
+            //$$     EssentialPalette.SERVER_DOWNLOAD_ICON.getRGB());
+            //#else
             if (downloadIcon == null) {
                 downloadIcon = EssentialPalette.DOWNLOAD_7X8.create();
             }
             downloadIcon.drawImage(matrixStack, x + 2, y + 1, 7, 8, EssentialPalette.BLUE_SHADOW);
             downloadIcon.drawImage(matrixStack, x + 1, y, 7, 8, EssentialPalette.SERVER_DOWNLOAD_ICON);
+            //#endif
             return false;
         }
         return true;
@@ -280,7 +310,10 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         method = "drawEntry",
         at = @At(
             value = "INVOKE",
-            //#if MC>=12006
+            //#if MC>=12106
+            //$$ target = "Lnet/minecraft/client/gui/DrawContext;drawTooltip(Lnet/minecraft/text/Text;II)V",
+            //$$ ordinal = 0
+            //#elseif MC>=12006
             //$$ target = "Lnet/minecraft/client/gui/screen/multiplayer/MultiplayerScreen;setTooltip(Lnet/minecraft/text/Text;)V",
             //$$ ordinal = 0
             //#elseif MC>=11600
@@ -293,13 +326,21 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         )
     )
     private boolean showCustomTooltip(
+        //#if MC>=12106
+        //$$ DrawContext drawContext,
+        //#else
         GuiMultiplayer instance,
+        //#endif
         //#if MC>=12006
         //$$ Text text,
         //#elseif MC>=11600
         //$$ List<ITextComponent> texts,
         //#else
         String text,
+        //#endif
+        //#if MC>=12106
+        //$$ int tooltipX,
+        //$$ int tooltipY,
         //#endif
         //#if MC>=11600
         //$$ @Local(ordinal = 1, argsOnly = true) int y,
@@ -311,7 +352,7 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         @Local(ordinal = 3, argsOnly = true) int listWidth
     ) {
         if (getExt(this.server).getEssential$showDownloadIcon()) {
-            EssentialMultiplayerGui gui = ((GuiMultiplayerExt) instance).essential$getEssentialGui();
+            EssentialMultiplayerGui gui = ((GuiMultiplayerExt) this.owner).essential$getEssentialGui();
             gui.showTooltipString(x + listWidth - 15 + 1, y, 7, 8, "Download compatible version");
             return false;
         }

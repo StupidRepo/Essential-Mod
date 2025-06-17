@@ -521,7 +521,9 @@ object InviteFriendsModal {
                 getMinecraft().integratedServer?.let { integratedServer ->
                     if (getMinecraft().isIntegratedServerRunning && integratedServer.isServerStopped) {
                         Essential.EVENT_BUS.unregister(this)
-                        //#if MC>=11602
+                        //#if MC>=12106
+                        //$$ getMinecraft().disconnectWithProgressScreen()
+                        //#elseif MC>=11602
                         //$$ getMinecraft().unloadWorld()
                         //#else
                         getMinecraft().loadWorld(null as WorldClient?)

@@ -87,7 +87,7 @@ dependencies {
     }
     if (platform.mcVersion >= 12105 && (platform.isFabric || platform.isNeoForge)) {
         repositories.modrinth()
-        modCompileOnly("maven.modrinth:iris:1.8.11+$platform")
+        modCompileOnly("maven.modrinth:iris:1.8.11+1.21.5-${platform.loaderStr}")
     }
 
     testImplementation(kotlin("test"))
@@ -125,6 +125,7 @@ dependencies {
             12103 -> "0.106.0+1.21.2"
             12104 -> "0.110.0+1.21.4"
             12105 -> "0.119.0+1.21.5"
+            12106 -> "0.126.0+1.21.6"
             else -> error("No fabric API version configured!")
         }
         include(modImplementation(fabricApi.module("fabric-api-base", fapiVersion))!!)

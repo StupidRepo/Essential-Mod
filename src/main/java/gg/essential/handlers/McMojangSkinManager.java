@@ -18,7 +18,6 @@ import gg.essential.mod.Model;
 import gg.essential.mod.Skin;
 import gg.essential.util.DispatchersKt;
 import gg.essential.util.SkinKt;
-import gg.essential.util.UUIDUtil;
 import kotlinx.coroutines.Dispatchers;
 import me.kbrewster.eventbus.Subscribe;
 import net.minecraft.client.Minecraft;
@@ -31,12 +30,8 @@ import static kotlinx.coroutines.ExecutorsKt.asExecutor;
 
 public class McMojangSkinManager extends MojangSkinManager {
 
-    private final GameProfileManager gameProfileManager;
-
-    public McMojangSkinManager(GameProfileManager gameProfileManager, BooleanSupplier delayChanges) {
+    public McMojangSkinManager(BooleanSupplier delayChanges) {
         super(delayChanges);
-
-        this.gameProfileManager = gameProfileManager;
     }
 
     @Override
@@ -67,10 +62,5 @@ public class McMojangSkinManager extends MojangSkinManager {
                 .map(SkinKt::propertyToSkin)
                 .orElse(new Skin("", Model.STEVE))
         );
-    }
-
-    @Override
-    protected void applySkinToGame(Skin skin) {
-        gameProfileManager.updatePlayerSkin(UUIDUtil.getClientUUID(), skin.getHash(), skin.getModel().getType());
     }
 }

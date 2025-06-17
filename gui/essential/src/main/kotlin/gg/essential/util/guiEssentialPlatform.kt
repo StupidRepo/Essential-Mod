@@ -141,6 +141,9 @@ interface GuiEssentialPlatform {
     val mcFrameBufferColorTexture: GpuTexture
     val mcFrameBufferDepthTexture: GpuTexture?
 
+    val outputColorTextureOverride: GpuTexture?
+    val outputDepthTextureOverride: GpuTexture?
+
     fun newWindowedTextureProvider(inner: WindowedImageProvider): WindowedTextureProvider
 
     fun newUIPlayer(

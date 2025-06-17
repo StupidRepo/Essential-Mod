@@ -62,7 +62,6 @@ import gg.essential.sps.McIntegratedServerManager;
 import gg.essential.universal.UMinecraft;
 import gg.essential.util.ModLoaderUtil;
 import gg.essential.util.Multithreading;
-import gg.essential.util.UUIDUtil;
 import gg.essential.util.lwjgl3.Lwjgl3Loader;
 import kotlin.Unit;
 import kotlin.collections.MapsKt;
@@ -192,7 +191,7 @@ public class ConnectionManager extends ConnectionManagerKt {
         // Cosmetics
         this.cosmeticsManager = new CosmeticsManager(this, baseDir);
         this.managers.add(this.cosmeticsManager);
-        this.managers.add(this.cosmeticsManager.getEquippedCosmeticsManager());
+        this.managers.add(this.cosmeticsManager.getInfraEquippedOutfitsManager());
         noticesManager.register(cosmeticNotices = new CosmeticNotices(noticesManager, cosmeticsManager.getCosmeticsData()));
         noticesManager.register(saleNoticeManager = new SaleNoticeManager());
         noticesManager.register(new GiftedCosmeticNoticeListener(noticesManager, cosmeticsManager.getCosmeticsData()));
@@ -257,7 +256,7 @@ public class ConnectionManager extends ConnectionManagerKt {
             this,
             this.cosmeticsManager.getCosmeticsData(),
             this.cosmeticsManager.getUnlockedCosmetics(),
-            this.cosmeticsManager.getEquippedCosmeticsManager(),
+            this.cosmeticsManager.getInfraEquippedOutfitsManager(),
             map(this.skinsManager.getSkins(), map -> MapsKt.mapValues(map, it -> it.getValue().getSkin()))
         );
         this.managers.add(this.outfitManager);
@@ -267,7 +266,6 @@ public class ConnectionManager extends ConnectionManagerKt {
             Model model = skin.getModel();
             String hash = skin.getHash();
             String url = String.format(Locale.ROOT, GameProfileManager.SKIN_URL, hash);
-            Essential.getInstance().getGameProfileManager().updatePlayerSkin(UUIDUtil.getClientUUID(), hash, model.getType());
             Essential.getInstance().getSkinManager().changeSkin(UMinecraft.getMinecraft().getSession().getToken(), model, url);
             return Unit.INSTANCE;
         });

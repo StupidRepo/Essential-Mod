@@ -56,7 +56,11 @@ public class MixinGuiPlayerTabOverlay {
     }
 
     //#if MC>=12000
+    //#if MC>=12106
+    //$$ @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)V"), index = 2)
+    //#else
     //$$ @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)I"), index = 2)
+    //#endif
     //$$ private int essential$shiftNameTextAndRenderIcon(TextRenderer textRenderer, Text text, int x, int y, int color, @Local(argsOnly = true) DrawContext context, @Local PlayerListEntry networkPlayerInfo) {
     //$$     UDrawContext drawContext = new UDrawContext(context, new UMatrixStack(context.getMatrices()));
     //#else

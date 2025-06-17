@@ -47,6 +47,7 @@ import gg.essential.model.util.UVertexConsumer as CVertexConsumer
 //$$ import net.irisshaders.iris.api.v0.IrisApi
 //$$ import net.irisshaders.iris.api.v0.IrisProgram
 //#endif
+//$$ import net.minecraft.client.MinecraftClient
 //$$ import net.minecraft.client.gl.Framebuffer
 //$$ import net.minecraft.client.gl.RenderPipelines
 //$$ import net.minecraft.client.render.BuiltBuffer
@@ -147,9 +148,18 @@ object MinecraftRenderBackend : RenderBackend {
     //$$ }
     //#endif
     //$$
-    //$$ private fun RenderLayer.drawImpl(buffer: BuiltBuffer) {
+    //$$ private fun RenderLayer.drawImpl(pipeline: RenderPipeline, buffer: BuiltBuffer) {
     //$$     startDrawing()
     //$$     buffer.use {
+            //#if MC>=12106
+            //$$ val dynamicTransforms = RenderSystem.getDynamicUniforms().write(
+            //$$     RenderSystem.getModelViewMatrix(),
+            //$$     org.joml.Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
+            //$$     RenderSystem.getModelOffset(),
+            //$$     RenderSystem.getTextureMatrix(),
+            //$$     RenderSystem.getShaderLineWidth(),
+            //$$ )
+            //#endif
     //$$         val vertexBuffer = pipeline.vertexFormat.uploadImmediateVertexBuffer(buffer.buffer)
     //$$         val sortedBuffer = buffer.sortedBuffer
     //$$         val (indexBuffer, indexType) = if (sortedBuffer != null) {
@@ -158,23 +168,40 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             val shapeIndexBuffer = RenderSystem.getSequentialBuffer(buffer.drawParameters.mode())
     //$$             shapeIndexBuffer.getIndexBuffer(buffer.drawParameters.indexCount()) to shapeIndexBuffer.indexType
     //$$         }
-    //$$         val target = target
+    //$$         val target = MinecraftClient.getInstance().framebuffer
     //$$         RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-    //$$             target.colorAttachment!!,
-    //$$             java.util.OptionalInt.empty(),
-    //$$             if (target.useDepthAttachment) target.depthAttachment else null,
-    //$$             java.util.OptionalDouble.empty()
+                //#if MC>=12106
+                //$$ { "Immediate draw for $name" },
+                //$$ RenderSystem.outputColorTextureOverride ?: target.colorAttachmentView!!,
+                //$$ java.util.OptionalInt.empty(),
+                //$$ if (target.useDepthAttachment) RenderSystem.outputDepthTextureOverride ?: target.depthAttachmentView else null,
+                //$$ java.util.OptionalDouble.empty()
+                //#else
+                //$$ target.colorAttachment!!,
+                //$$ java.util.OptionalInt.empty(),
+                //$$ if (target.useDepthAttachment) target.depthAttachment else null,
+                //$$ java.util.OptionalDouble.empty()
+                //#endif
     //$$         ).use { renderPass ->
     //$$             renderPass.setPipeline(pipeline)
-    //$$             if (RenderSystem.SCISSOR_STATE.isEnabled) {
-    //$$                 renderPass.enableScissor(RenderSystem.SCISSOR_STATE)
-    //$$             }
+                //#if MC>=12106
+                //$$ RenderSystem.bindDefaultUniforms(renderPass)
+                //$$ renderPass.setUniform("DynamicTransforms", dynamicTransforms)
+                //#else
+                //$$ if (RenderSystem.SCISSOR_STATE.isEnabled) {
+                //$$     renderPass.enableScissor(RenderSystem.SCISSOR_STATE)
+                //$$ }
+                //#endif
     //$$             for (i in 0 until 12) {
     //$$                 RenderSystem.getShaderTexture(i)?.let { renderPass.bindSampler("Sampler$i", it) }
     //$$             }
     //$$             renderPass.setVertexBuffer(0, vertexBuffer)
     //$$             renderPass.setIndexBuffer(indexBuffer, indexType)
-    //$$             renderPass.drawIndexed(0, buffer.drawParameters.indexCount())
+                //#if MC>=12106
+                //$$ renderPass.drawIndexed(0, 0, buffer.drawParameters.comp_751(), 1)
+                //#else
+                //$$ renderPass.drawIndexed(0, buffer.drawParameters.indexCount())
+                //#endif
     //$$         }
     //$$     }
     //$$     endDrawing()
@@ -213,11 +240,16 @@ object MinecraftRenderBackend : RenderBackend {
     //$$         { inner.startDrawing() },
     //$$         { inner.endDrawing() },
     //$$     ) {
-    //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(buffer)
+    //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(getPipeline(), buffer)
+    //#if MC>=12106
+    //$$         private fun getPipeline(): RenderPipeline =
+    //#else
     //$$         override fun getTarget(): Framebuffer = inner.target
     //$$         override fun getPipeline(): RenderPipeline =
+    //#endif
     //$$             when (renderPass.material) {
-    //$$                 Cutout, Blend -> inner.pipeline
+    //$$                 Cutout -> RenderPipelines.OPAQUE_PARTICLE
+    //$$                 Blend -> RenderPipelines.TRANSLUCENT_PARTICLE
     //$$                 Add -> particleAdditivePipeline
     //$$             }
     //$$         override fun getVertexFormat(): VertexFormat = inner.vertexFormat
@@ -270,9 +302,11 @@ object MinecraftRenderBackend : RenderBackend {
     //$$         { inner.startDrawing() },
     //$$         { inner.endDrawing() },
     //$$     ) {
-    //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(buffer)
+    //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(entityTranslucentCullPipeline, buffer)
+    //#if MC<12106
     //$$         override fun getTarget(): Framebuffer = inner.target
     //$$         override fun getPipeline(): RenderPipeline = entityTranslucentCullPipeline
+    //#endif
     //$$         override fun getVertexFormat(): VertexFormat = inner.vertexFormat
     //$$         override fun getDrawMode(): VertexFormat.DrawMode = inner.drawMode
     //$$     }
@@ -377,8 +411,10 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             inner.draw(buffer)
     //$$             VIEW_OFFSET_Z_LAYERING.endDrawing()
     //$$         }
+    //#if MC<12106
     //$$         override fun getTarget(): Framebuffer = inner.target
     //$$         override fun getPipeline(): RenderPipeline = inner.pipeline
+    //#endif
     //$$         override fun getVertexFormat(): VertexFormat = inner.vertexFormat
     //$$         override fun getDrawMode(): VertexFormat.DrawMode = inner.drawMode
     //$$     }
