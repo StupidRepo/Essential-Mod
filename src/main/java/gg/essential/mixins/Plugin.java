@@ -38,6 +38,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 //#if FABRIC
 //$$ import java.lang.management.ManagementFactory;
@@ -175,6 +176,26 @@ public class Plugin implements IMixinConfigPlugin {
             }
         }
 
+        //#if MC>=12006 && MC<12102
+        //$$ // mixin is already dummy targeted outside this range
+        //$$ if (mixinClassName.endsWith("Mixin_FancyMainMenu_3_2_1_GuiDrawScreenEvent")) {
+        //$$     // underlying issue was fixed in FancyMenu v3.4.0, but we still need to apply this mixin for 1.20.6 and 1.21, as they do not have v3.4.0+
+        //$$     // this is a check just in case v3.4.0 ever gets backported to 1.20.6 or 1.21, so we don't apply this mixin in that case.
+        //$$     // there were no classes removed in 3.4.0 that could be used to detect the affected version so lets check the mixin directly
+        //$$     return testClass("de.keksuccino.fancymenu.mixin.mixins.common.client.MixinTitleScreen",
+        //$$             clazz -> {
+        //$$                 for (MethodNode method : clazz.methods) {
+        //$$                     if (method.name.equals("wrap_super_render_in_render_FancyMenu")) {
+        //$$                         // this is the mixin that cancels the super.render call in TitleScreen, which is the cause of the issue
+        //$$                         return true;
+        //$$                     }
+        //$$                 }
+        //$$                 return false;
+        //$$             }
+        //$$     );
+        //$$ }
+        //#endif
+
         // Due to changes in FancyMenu, we need a different Mixin for v2.14.10 and above. This version can be identified
         // by the ScreenBackgroundRenderedEvent class.
         if (mixinClassName.endsWith("Mixin_FancyMainMenu_GuiDrawScreenEvent_Pre") && hasClass("de.keksuccino.fancymenu.events.ScreenBackgroundRenderedEvent")) {
@@ -274,13 +295,17 @@ public class Plugin implements IMixinConfigPlugin {
     }
 
     static boolean hasClass(String name) {
+        return testClass(name, cls -> true);
+    }
+
+    static boolean testClass(String className, Predicate<ClassNode> test) {
         try {
-            MixinService.getService().getBytecodeProvider().getClassNode(name);
-            return true;
+            ClassNode classNode = MixinService.getService().getBytecodeProvider().getClassNode(className);
+            return test.test(classNode);
         } catch (ClassNotFoundException e) {
             return false;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception when testing class {}: ", className, e);
             return false;
         }
     }

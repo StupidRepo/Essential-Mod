@@ -87,7 +87,11 @@ dependencies {
     }
     if (platform.mcVersion >= 12105 && (platform.isFabric || platform.isNeoForge)) {
         repositories.modrinth()
-        modCompileOnly("maven.modrinth:iris:1.8.11+1.21.5-${platform.loaderStr}")
+        if (platform.mcVersion >= 12106) {
+            modCompileOnly("maven.modrinth:iris:1.9.0+1.21.6-${platform.loaderStr}")
+        } else {
+            modCompileOnly("maven.modrinth:iris:1.8.11+1.21.5-${platform.loaderStr}")
+        }
     }
 
     testImplementation(kotlin("test"))

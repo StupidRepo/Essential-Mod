@@ -58,10 +58,10 @@ class CosmeticsState(
     val bedrockModels: Map<Cosmetic, BedrockModel>,
 
     /**
-     * All body parts which currently have armor equipped. Cosmetics which conflict with any of these will not be
+     * All armor slot IDs which currently have armor equipped. Cosmetics which conflict with any of these will not be
      * rendered.
      */
-    val armor: Set<EnumPart>,
+    val armor: ArmorSlots,
 ) {
 
     /**
@@ -183,7 +183,7 @@ class CosmeticsState(
                 if (data.body) { add(EnumPart.BODY) }
                 if (data.arms) { add(EnumPart.LEFT_ARM); add(EnumPart.RIGHT_ARM) }
                 if (data.legs) { add(EnumPart.LEFT_LEG); add(EnumPart.RIGHT_LEG) }
-            }.filter { it in armor }
+            }.filter { part -> part.armorSlotIds.any { armor[it] } }
 
         }
 
@@ -209,10 +209,7 @@ class CosmeticsState(
 
     private val hiddenBonesDueArmor: Map<CosmeticId, Set<BoneId>> = cosmetics.values
         .flatMap { it.cosmetic.properties.filterIsInstance<CosmeticProperty.ArmorHandlingV2>() }
-        .groupByPropertyTargetId { property ->
-            val equippedSlotIDs = armor.flatMap { it.armorSlotIds }.toSet()
-            property.data.conflicts.mapNotNull { (boneId, slots) -> if (slots.any { equippedSlotIDs.contains(it) }) boneId else null }
-        }
+        .groupByPropertyTargetId { prop -> prop.data.conflicts.mapNotNull { (boneId, slots) -> if (slots.any { armor[it] }) boneId else null } }
 
     val hiddenBones: Map<CosmeticId, Set<BoneId>> =
         (hiddenBonesDueToOtherCosmetics.asSequence() + hiddenBonesDueArmor.asSequence())
@@ -343,6 +340,6 @@ class CosmeticsState(
         )
 
         @JvmField
-        val EMPTY = CosmeticsState(Model.STEVE, emptyMap(), emptyMap(), emptySet())
+        val EMPTY = CosmeticsState(Model.STEVE, emptyMap(), emptyMap(), ArmorSlots(0))
     }
 }

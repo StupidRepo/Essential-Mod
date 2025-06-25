@@ -32,7 +32,7 @@ public class ServerProfileStatusPacket extends Packet {
     private final @Nullable Long lastOnlineTimestamp;
 
     public ServerProfileStatusPacket(final @NotNull UUID uuid, final @Nullable ProfileStatus profileStatus) {
-        this(uuid, profileStatus, null);
+        this(uuid, profileStatus, (Long) null);
     }
 
     public ServerProfileStatusPacket(@NotNull final UUID uuid, @Nullable final ProfileStatus status, final @Nullable Long lastOnlineTimestamp) {

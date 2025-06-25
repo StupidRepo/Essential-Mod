@@ -126,6 +126,8 @@ class EmoteWheel : WindowScreen(
         }
     }.toListState()
 
+    private var equipping = false
+
     init {
         // Allow the player to move while the emote wheel is open
         //#if MC>=12000
@@ -173,20 +175,6 @@ class EmoteWheel : WindowScreen(
             }.apply { shouldIgnore = { it.isPassThrough() } }
         }
 
-        var equipping = false
-        // Check for keybind release to equip the emote and close the wheel
-        window.addUpdateFunc { _, _ ->
-            if (!equipping && !keybind.keyBinding.isKeyDown) {
-                window.focusedComponent?.let { focused ->
-                    if (focused is EmoteWheelEntry && canEmote(UPlayer.getPlayer()!!)) {
-                        focused.emoteModel?.getUntracked()?.let { equipEmote(it) }
-                    }
-                }
-                displayScreen(null)
-                equipping = true
-            }
-        }
-
         window.onKeyType { _, keyCode ->
             if (MinecraftUtils.isDevelopment() || System.getProperty("elementa.debug", "false") == "true") {
                 if (keyCode == UKeyboard.KEY_F3) {
@@ -203,6 +191,20 @@ class EmoteWheel : WindowScreen(
                 else -> return@onMouseScroll
             }
             emoteWheelManager.shiftSelectedEmoteWheel(shiftValue)
+        }
+    }
+
+    override fun onTick() {
+        super.onTick()
+        // Check for keybind release to equip the emote and close the wheel
+        if (!equipping && !keybind.keyBinding.isKeyDown) {
+            window.focusedComponent?.let { focused ->
+                if (focused is EmoteWheelEntry && canEmote(UPlayer.getPlayer()!!)) {
+                    focused.emoteModel?.getUntracked()?.let { equipEmote(it) }
+                }
+            }
+            displayScreen(null)
+            equipping = true
         }
     }
 

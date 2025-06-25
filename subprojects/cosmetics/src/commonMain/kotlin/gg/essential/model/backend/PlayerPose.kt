@@ -66,6 +66,23 @@ data class PlayerPose(
 
     override fun isEmpty(): Boolean = false
 
+    fun mapParts(transform: (EnumPart, Part) -> Part): PlayerPose {
+        return PlayerPose(
+            head = transform(EnumPart.HEAD, head),
+            body = transform(EnumPart.BODY, body),
+            rightArm = transform(EnumPart.RIGHT_ARM, rightArm),
+            leftArm = transform(EnumPart.LEFT_ARM, leftArm),
+            rightLeg = transform(EnumPart.RIGHT_LEG, rightLeg),
+            leftLeg = transform(EnumPart.LEFT_LEG, leftLeg),
+            rightShoulderEntity = transform(EnumPart.RIGHT_SHOULDER_ENTITY, rightShoulderEntity),
+            leftShoulderEntity = transform(EnumPart.LEFT_SHOULDER_ENTITY, leftShoulderEntity),
+            rightWing = transform(EnumPart.RIGHT_WING, rightWing),
+            leftWing = transform(EnumPart.LEFT_WING, leftWing),
+            cape = transform(EnumPart.CAPE, cape),
+            child = child,
+        )
+    }
+
     fun withoutAttachments() = copy(
         rightShoulderEntity = Part.MISSING,
         leftShoulderEntity = Part.MISSING,
@@ -73,6 +90,7 @@ data class PlayerPose(
         leftWing = Part.MISSING,
         cape = Part.MISSING,
     )
+
 
     data class Part(
         val pivotX: Float = 0f,

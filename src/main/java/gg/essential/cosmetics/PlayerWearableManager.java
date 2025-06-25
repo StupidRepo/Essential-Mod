@@ -92,8 +92,8 @@ public class PlayerWearableManager {
         // FIXME should use State effect instead of checking every tick
         Map<CosmeticSlot, EquippedCosmetic> newCosmetics = cosmeticsSource.getUntracked();
         Map<CosmeticSlot, EquippedCosmetic> oldCosmetics = oldState.getCosmetics();
-        Set<EnumPart> newArmour = getArmourFromPlayer(player);
-        Set<EnumPart> oldArmour = oldState.getArmor();
+        ArmorSlots newArmour = getArmourFromPlayer(player);
+        ArmorSlots oldArmour = oldState.getArmor();
 
         if (Objects.equals(newCosmetics, oldCosmetics) && Objects.equals(newSkinType, oldSkinType) && Objects.equals(oldArmour, newArmour)) {
             return;
@@ -186,29 +186,18 @@ public class PlayerWearableManager {
         }
     }
 
-    private Set<EnumPart> getArmourFromPlayer(AbstractClientPlayer player) {
-
-        Set<EnumPart> equippedSlots = new HashSet<>();
-
+    private ArmorSlots getArmourFromPlayer(AbstractClientPlayer player) {
         int armorSetting = ArmorRenderingUtil.getCosmeticArmorSetting(player);
         if (armorSetting > 0) {
-            return equippedSlots;
+            return new ArmorSlots((byte) 0);
         }
 
-        if (!canRenderCosmetic(player, 0) || !canRenderCosmetic(player, 1)) {
-            equippedSlots.add(EnumPart.LEFT_LEG);
-            equippedSlots.add(EnumPart.RIGHT_LEG);
-        }
-        if (!canRenderCosmetic(player, 2)) {
-            equippedSlots.add(EnumPart.LEFT_ARM);
-            equippedSlots.add(EnumPart.RIGHT_ARM);
-            equippedSlots.add(EnumPart.BODY);
-        }
-        if (!canRenderCosmetic(player, 3)) {
-            equippedSlots.add(EnumPart.HEAD);
-        }
-
-        return equippedSlots;
+        return new ArmorSlots(
+                !canRenderCosmetic(player, 0),
+                !canRenderCosmetic(player, 1),
+                !canRenderCosmetic(player, 2),
+                !canRenderCosmetic(player, 3)
+        );
     }
 
     private boolean canRenderCosmetic(AbstractClientPlayer player, int slot) {

@@ -133,6 +133,7 @@
     "compatibility.fancymenu.KonkreteDrawScreenEventAcc",
     "compatibility.fancymenu.KonkreteGuiScreenEventAcc",
     "compatibility.fancymenu.Mixin_FancyMainMenu_2_14_10_GuiDrawScreenEvent_Pre",
+    "compatibility.fancymenu.Mixin_FancyMainMenu_3_2_1_GuiDrawScreenEvent",
     "compatibility.fancymenu.Mixin_FancyMainMenu_GuiDrawScreenEvent_Post",
     "compatibility.fancymenu.Mixin_FancyMainMenu_GuiDrawScreenEvent_Pre",
     "compatibility.forge.Mixin_FixInternalByteBufAccess",

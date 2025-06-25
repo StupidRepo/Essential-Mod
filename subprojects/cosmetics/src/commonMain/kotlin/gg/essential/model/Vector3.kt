@@ -292,6 +292,23 @@ data class Vector3(
         return this.sub(v1.copy(normal).multiplyScalar(2 * this.dot(normal)))
     }
 
+    /**
+     * Computes distance of Vector3 vector to v.
+     */
+    fun distanceTo(v: Vector3): Float {
+        return sqrt(this.distanceToSquared(v))
+    }
+
+    /**
+     * Computes squared distance of Vector3 vector to v.
+     */
+    fun distanceToSquared(v: Vector3): Float {
+        val dx = this.x - v.x
+        val dy = this.y - v.y
+        val dz = this.z - v.z
+        return dx * dx + dy * dy + dz * dz
+    }
+
 
     operator fun plus(b: Vector3): Vector3 {
         return copy().add(b)

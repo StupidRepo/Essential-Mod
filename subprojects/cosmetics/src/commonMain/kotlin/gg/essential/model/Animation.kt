@@ -46,7 +46,7 @@ class ModelAnimationState(
         if (active.any { it.animation == animation }) {
             return
         }
-        active.add(AnimationState(animation))
+        active.add(AnimationState(animation, entity))
 
         animation.effects.values.forEach { list ->
             list.forEach { event ->
@@ -218,24 +218,40 @@ class ModelAnimationState(
         }
     }
 
-    inner class AnimationState(
-        val animation: Animation
+    class AnimationState(
+        val animation: Animation,
+        val entity: MolangQueryEntity,
+        val animStartTime: Float = entity.lifeTime,
+        private val contextVariables: VariablesMap = VariablesMap(),
+        internal var lastEffectTime: Float = Float.NEGATIVE_INFINITY, // Effects up to and including this time have already been emitted.
+        internal var effectLoops: Int = 0,
     ) : MolangQueryAnimation, MolangQueryEntity by entity {
-        val context = MolangContext(this)
-        val animStartTime = entity.lifeTime
+        val context: MolangContext = MolangContext(this, contextVariables)
         override val animTime: Float
             get() = entity.lifeTime - animStartTime
         override val animLoopTime: Float
             get() =
                 if (animation.loop == AnimationFile.Loop.HoldOnLastFrame) animTime.coerceAtMost(animation.animationLength)
                 else animTime % animation.animationLength
+        val hasEnded: Boolean
+            get() = animation.loop == AnimationFile.Loop.False && animTime > animation.animationLength
 
-        /** Effects up to and including this time have already been emitted. */
-        internal var lastEffectTime = Float.NEGATIVE_INFINITY
-        internal var effectLoops = 0
+        fun copy(
+            animation: Animation = this.animation,
+            entity: MolangQueryEntity = this.entity,
+            animStartTime: Float = this.animStartTime,
+            contextVariables: VariablesMap = this.contextVariables.copy(),
+            lastEffectTime: Float = this.lastEffectTime,
+            effectLoops: Int = this.effectLoops,
+        ): AnimationState {
+            return AnimationState(animation, entity, animStartTime, contextVariables, lastEffectTime, effectLoops)
+        }
+
         internal val effectLoopsDuration: Float
             get() = if (animation.loop == AnimationFile.Loop.True) effectLoops * animation.animationLength else 0f
     }
+
+
 
     sealed interface Event {
         val timeSource: MolangQueryTime

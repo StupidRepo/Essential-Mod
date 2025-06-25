@@ -242,6 +242,17 @@ object MinecraftRenderBackend : RenderBackend {
     //$$     ) {
     //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(getPipeline(), buffer)
     //#if MC>=12106
+    //$$         // re: https://github.com/IrisShaders/Iris/blob/052faeb4c4382cc4d186ced14ec7a160615801e3/common/src/main/java/net/irisshaders/iris/mixin/MixinRenderType2.java#L14
+    //$$         // iris applies an interface to [RenderLayer] (linked above), but this "super impl" only
+    //$$         // throws errors, its true functionality is in [RenderLayer.MultiPhase], and we need to implement
+    //$$         // it as well ourselves for these wrapper classes, or redirect to inner where required
+    //$$         fun `iris$getRenderTarget`(): Framebuffer? {
+    //$$             return inner.javaClass.getMethod("iris\$getRenderTarget").invoke(inner) as Framebuffer?
+    //$$         }
+    //$$         fun `iris$getPipeline`(): RenderPipeline? {
+    //$$             return getPipeline()
+    //$$         }
+    //$$
     //$$         private fun getPipeline(): RenderPipeline =
     //#else
     //$$         override fun getTarget(): Framebuffer = inner.target
@@ -303,7 +314,15 @@ object MinecraftRenderBackend : RenderBackend {
     //$$         { inner.endDrawing() },
     //$$     ) {
     //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(entityTranslucentCullPipeline, buffer)
-    //#if MC<12106
+    //#if MC>=12106
+    //$$         // see [ParticleLayer] above
+    //$$         fun `iris$getRenderTarget`(): Framebuffer? {
+    //$$             return inner.javaClass.getMethod("iris\$getRenderTarget").invoke(inner) as Framebuffer?
+    //$$         }
+    //$$         fun `iris$getPipeline`(): RenderPipeline? {
+    //$$             return entityTranslucentCullPipeline
+    //$$         }
+    //#else
     //$$         override fun getTarget(): Framebuffer = inner.target
     //$$         override fun getPipeline(): RenderPipeline = entityTranslucentCullPipeline
     //#endif
@@ -411,7 +430,15 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             inner.draw(buffer)
     //$$             VIEW_OFFSET_Z_LAYERING.endDrawing()
     //$$         }
-    //#if MC<12106
+    //#if MC>=12106
+    //$$         // see [ParticleLayer] above
+    //$$         fun `iris$getRenderTarget`(): Framebuffer? {
+    //$$             return inner.javaClass.getMethod("iris\$getRenderTarget").invoke(inner) as Framebuffer?
+    //$$         }
+    //$$         fun `iris$getPipeline`(): RenderPipeline? {
+    //$$             return inner.javaClass.getMethod("iris\$getPipeline").invoke(inner) as RenderPipeline?
+    //$$         }
+    //#else
     //$$         override fun getTarget(): Framebuffer = inner.target
     //$$         override fun getPipeline(): RenderPipeline = inner.pipeline
     //#endif
