@@ -103,51 +103,6 @@ object MinecraftRenderBackend : RenderBackend {
     }
 
     //#if MC>=12105
-    //#if FABRIC || FORGE
-    //$$ private fun RenderPipeline.toBuilder(): RenderPipeline.Builder = RenderPipeline.builder().copyFrom(this)
-    //$$ private fun RenderPipeline.Builder.copyFrom(pipeline: RenderPipeline): RenderPipeline.Builder = apply {
-    //$$     withLocation(pipeline.location)
-    //$$     withVertexShader(pipeline.vertexShader)
-    //$$     withFragmentShader(pipeline.fragmentShader)
-    //$$     pipeline.shaderDefines.values.forEach { (key, value) ->
-    //$$         if ("." in value) withShaderDefine(key, value.toFloat())
-    //$$         else withShaderDefine(key, value.toInt())
-    //$$     }
-    //$$     pipeline.shaderDefines.flags.forEach { withShaderDefine(it) }
-    //$$     pipeline.samplers.forEach { sampler ->
-    //$$         withSampler(sampler)
-    //$$     }
-    //$$     pipeline.uniforms.forEach { uniform ->
-    //$$         withUniform(uniform.name(), uniform.type())
-    //$$     }
-    //$$     withDepthTestFunction(pipeline.depthTestFunction)
-    //$$     withPolygonMode(pipeline.polygonMode)
-    //$$     withCull(pipeline.isCull)
-    //$$     if (pipeline.blendFunction.isPresent) {
-    //$$         withBlend(pipeline.blendFunction.get())
-    //$$     } else {
-    //$$         withoutBlend()
-    //$$     }
-    //$$     withColorWrite(pipeline.isWriteColor, pipeline.isWriteAlpha)
-    //$$     withDepthWrite(pipeline.isWriteDepth)
-    //$$     withColorLogic(pipeline.colorLogic)
-    //$$     withVertexFormat(pipeline.vertexFormat, pipeline.vertexFormatMode)
-    //$$     withDepthBias(pipeline.depthBiasScaleFactor, pipeline.depthBiasConstant)
-    //$$ }
-    //#endif
-    //#if FABRIC
-    //$$ // Note: Cannot pass `program` directly because Iris might not be installed
-    //$$ private fun RenderPipeline.assignIrisProgram(program: () -> IrisProgram): RenderPipeline = apply {
-    //$$     if (ModLoaderUtil.isModLoaded("iris")) {
-    //$$         // Separate method for class loading reasons
-    //$$         fun doIt() {
-    //$$             IrisApi.getInstance().assignPipeline(this, program())
-    //$$         }
-    //$$         doIt()
-    //$$     }
-    //$$ }
-    //#endif
-    //$$
     //$$ private fun RenderLayer.drawImpl(pipeline: RenderPipeline, buffer: BuiltBuffer) {
     //$$     startDrawing()
     //$$     buffer.use {
@@ -211,16 +166,11 @@ object MinecraftRenderBackend : RenderBackend {
     //#if MC>=12104
     //$$ // As of 1.21.4, MC itself now finally uses the RenderLayer system for its particles, so we'll do the same.
     //$$ // Our particles have more blending modes though, so we need some custom layers.
-    //#if MC>=12105
-    //$$ private val particleAdditivePipeline = RenderPipelines.TRANSLUCENT_PARTICLE.toBuilder()
-    //$$     .withBlend(BlendFunction.LIGHTNING)
-    //$$     .build()
-        //#if FABRIC
-        //$$ .assignIrisProgram { IrisProgram.PARTICLES_TRANSLUCENT }
-        //#endif
-    //#endif
     //$$ private val particleLayers = mutableMapOf<ParticleEffect.RenderPass, RenderLayer>()
     //$$ private fun getParticleLayer(renderPass: ParticleEffect.RenderPass) = particleLayers.getOrPut(renderPass) {
+    //#if MC>=12105
+    //$$     RenderLayerFactory.createParticleLayer(renderPass)
+    //#else
     //$$     val texture = (renderPass.texture as MinecraftTexture).identifier
     //$$     val inner =
     //$$         if (renderPass.material == Cutout) RenderLayer.getOpaqueParticle(texture)
@@ -229,44 +179,11 @@ object MinecraftRenderBackend : RenderBackend {
     //$$     // field in the wrong class (MinecraftRenderBackend), which will then throw an IllegalAccessError.
     //$$     class ParticleLayer : RenderLayer(
     //$$         renderPass.material.name.lowercase() + "_particle",
-            //#if MC<12105
-            //$$ inner.vertexFormat,
-            //$$ inner.drawMode,
-            //#endif
+    //$$         inner.vertexFormat,
+    //$$         inner.drawMode,
     //$$         inner.expectedBufferSize,
     //$$         inner.hasCrumbling(),
     //$$         inner.isTranslucent,
-    //#if MC>=12105
-    //$$         { inner.startDrawing() },
-    //$$         { inner.endDrawing() },
-    //$$     ) {
-    //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(getPipeline(), buffer)
-    //#if MC>=12106
-    //$$         // re: https://github.com/IrisShaders/Iris/blob/052faeb4c4382cc4d186ced14ec7a160615801e3/common/src/main/java/net/irisshaders/iris/mixin/MixinRenderType2.java#L14
-    //$$         // iris applies an interface to [RenderLayer] (linked above), but this "super impl" only
-    //$$         // throws errors, its true functionality is in [RenderLayer.MultiPhase], and we need to implement
-    //$$         // it as well ourselves for these wrapper classes, or redirect to inner where required
-    //$$         fun `iris$getRenderTarget`(): Framebuffer? {
-    //$$             return inner.javaClass.getMethod("iris\$getRenderTarget").invoke(inner) as Framebuffer?
-    //$$         }
-    //$$         fun `iris$getPipeline`(): RenderPipeline? {
-    //$$             return getPipeline()
-    //$$         }
-    //$$
-    //$$         private fun getPipeline(): RenderPipeline =
-    //#else
-    //$$         override fun getTarget(): Framebuffer = inner.target
-    //$$         override fun getPipeline(): RenderPipeline =
-    //#endif
-    //$$             when (renderPass.material) {
-    //$$                 Cutout -> RenderPipelines.OPAQUE_PARTICLE
-    //$$                 Blend -> RenderPipelines.TRANSLUCENT_PARTICLE
-    //$$                 Add -> particleAdditivePipeline
-    //$$             }
-    //$$         override fun getVertexFormat(): VertexFormat = inner.vertexFormat
-    //$$         override fun getDrawMode(): VertexFormat.DrawMode = inner.drawMode
-    //$$     }
-    //#else
     //$$         {
     //$$             inner.startDrawing()
     //$$             when (renderPass.material) {
@@ -281,55 +198,29 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             inner.endDrawing()
     //$$         },
     //$$     )
-    //#endif
     //$$     ParticleLayer()
+    //#endif
     //$$ }
     //#endif
 
     //#if MC>=12102
     //$$ // MC no longer provides the CULL variant of ENTITY_TRANSLUCENT which we use to render our cosmetics, so we'll
     //$$ // have to build it ourselves.
-    //#if MC>=12105
-    //$$ private val entityTranslucentCullPipeline = RenderPipelines.ENTITY_TRANSLUCENT.toBuilder().withCull(true).build()
-        //#if FABRIC
-        //$$ .assignIrisProgram { IrisProgram.ENTITIES_TRANSLUCENT }
-        //#endif
-    //#endif
     //$$ private val entityTranslucentCullLayers = mutableMapOf<Identifier, RenderLayer>()
     //$$ fun getEntityTranslucentCullLayer(texture: Identifier) = entityTranslucentCullLayers.getOrPut(texture) {
+    //#if MC>=12105
+    //$$     RenderLayerFactory.createEntityTranslucentCullLayer(texture)
+    //#else
     //$$     val inner = RenderLayer.getEntityTranslucent(texture)
     //$$     // Note: If this is turned into an anonymous class, Kotlin will generate the bridge for the protected
     //$$     // field in the wrong class (MinecraftRenderBackend), which will then throw an IllegalAccessError.
     //$$     class EntityTranslucentCullLayer : RenderLayer(
     //$$         "entity_translucent_cull",
-            //#if MC<12105
-            //$$ inner.vertexFormat,
-            //$$ inner.drawMode,
-            //#endif
+    //$$         inner.vertexFormat,
+    //$$         inner.drawMode,
     //$$         inner.expectedBufferSize,
     //$$         inner.hasCrumbling(),
     //$$         inner.isTranslucent,
-    //#if MC>=12105
-    //$$         { inner.startDrawing() },
-    //$$         { inner.endDrawing() },
-    //$$     ) {
-    //$$         override fun draw(buffer: BuiltBuffer) = drawImpl(entityTranslucentCullPipeline, buffer)
-    //#if MC>=12106
-    //$$         // see [ParticleLayer] above
-    //$$         fun `iris$getRenderTarget`(): Framebuffer? {
-    //$$             return inner.javaClass.getMethod("iris\$getRenderTarget").invoke(inner) as Framebuffer?
-    //$$         }
-    //$$         fun `iris$getPipeline`(): RenderPipeline? {
-    //$$             return entityTranslucentCullPipeline
-    //$$         }
-    //#else
-    //$$         override fun getTarget(): Framebuffer = inner.target
-    //$$         override fun getPipeline(): RenderPipeline = entityTranslucentCullPipeline
-    //#endif
-    //$$         override fun getVertexFormat(): VertexFormat = inner.vertexFormat
-    //$$         override fun getDrawMode(): VertexFormat.DrawMode = inner.drawMode
-    //$$     }
-    //#else
     //$$         {
     //$$             inner.startDrawing()
     //$$             DISABLE_CULLING.endDrawing()
@@ -341,8 +232,8 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             inner.endDrawing()
     //$$         },
     //$$     )
-    //#endif
     //$$     EntityTranslucentCullLayer()
+    //#endif
     //$$ }
     //#elseif MC>=11400
     //$$ fun getEntityTranslucentCullLayer(texture: ResourceLocation) = RenderType.getEntityTranslucentCull(texture)
@@ -409,48 +300,24 @@ object MinecraftRenderBackend : RenderBackend {
     //$$ // our emissive layer if we don't do the same.
     //$$ private val armorLayers = mutableMapOf<ResourceLocation, RenderType>()
     //$$ fun getEmissiveArmorLayer(texture: ResourceLocation) = armorLayers.getOrPut(texture) {
+    //#if MC>=12105
+    //$$     RenderLayerFactory.createEmissiveArmorLayer(texture)
+    //#else
     //$$     val inner = getEmissiveLayer(texture)
     //$$     // Note: If this is turned into an anonymous class, Kotlin will generate the bridge for the protected
     //$$     // field in the wrong class (MinecraftRenderBackend), which will then throw an IllegalAccessError.
     //$$     class EmissiveArmorLayer : RenderType(
     //$$         "armor_translucent_emissive",
-            //#if MC<12105
-            //$$ inner.vertexFormat,
-            //$$ inner.drawMode,
-            //#endif
+    //$$         inner.vertexFormat,
+    //$$         inner.drawMode,
     //$$         inner.bufferSize,
     //$$         inner.isUseDelegate,
     //$$         true,
-    //#if MC>=12105
-    //$$         {},
-    //$$         {},
-    //$$     ) {
-    //$$         override fun draw(buffer: BuiltBuffer) {
-    //$$             VIEW_OFFSET_Z_LAYERING.startDrawing()
-    //$$             inner.draw(buffer)
-    //$$             VIEW_OFFSET_Z_LAYERING.endDrawing()
-    //$$         }
-    //#if MC>=12106
-    //$$         // see [ParticleLayer] above
-    //$$         fun `iris$getRenderTarget`(): Framebuffer? {
-    //$$             return inner.javaClass.getMethod("iris\$getRenderTarget").invoke(inner) as Framebuffer?
-    //$$         }
-    //$$         fun `iris$getPipeline`(): RenderPipeline? {
-    //$$             return inner.javaClass.getMethod("iris\$getPipeline").invoke(inner) as RenderPipeline?
-    //$$         }
-    //#else
-    //$$         override fun getTarget(): Framebuffer = inner.target
-    //$$         override fun getPipeline(): RenderPipeline = inner.pipeline
-    //#endif
-    //$$         override fun getVertexFormat(): VertexFormat = inner.vertexFormat
-    //$$         override fun getDrawMode(): VertexFormat.DrawMode = inner.drawMode
-    //$$     }
-    //#else
     //$$         { inner.setupRenderState(); field_239235_M_.setupRenderState() },
     //$$         { field_239235_M_.clearRenderState(); inner.clearRenderState() },
     //$$     )
-    //#endif
     //$$     EmissiveArmorLayer()
+    //#endif
     //$$ }
     //#if MC>=12102
     //$$ object NullMcVertexConsumer : VertexConsumer {

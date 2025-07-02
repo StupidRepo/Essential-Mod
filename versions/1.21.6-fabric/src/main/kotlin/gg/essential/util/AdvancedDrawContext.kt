@@ -28,6 +28,7 @@ import net.minecraft.util.Identifier
 // Changes from UC:
 //   - `class` -> `object`
 //   - `nextFrame` is called automatically via `RenderTickEvent.Pre`
+//   - save and restore projection matrix
 /**
  * Allows rendering of raw OpenGL into [DrawContext] by drawing to a temporary texture which is then submitted as a
  * plain textured quad to [DrawContext].
@@ -59,6 +60,8 @@ internal object AdvancedDrawContext : AutoCloseable {
             projectionMatrix = ProjectionMatrix2("pre-rendered screen", 1000f, 21000f, true)
             allocatedProjectionMatrix = projectionMatrix
         }
+        val orgProjectionMatrixBuffer = RenderSystem.getProjectionMatrixBuffer()
+        val orgProjectionType = RenderSystem.getProjectionType()
         RenderSystem.setProjectionMatrix(
             projectionMatrix.set(width.toFloat() / scaleFactor, height.toFloat() / scaleFactor),
             ProjectionType.ORTHOGRAPHIC,
@@ -75,6 +78,9 @@ internal object AdvancedDrawContext : AutoCloseable {
 
         RenderSystem.outputColorTextureOverride = orgOutputColorTextureOverride
         RenderSystem.outputDepthTextureOverride = orgOutputDepthTextureOverride
+
+        @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+        RenderSystem.setProjectionMatrix(orgProjectionMatrixBuffer, orgProjectionType)
 
         draw(context, texture)
     }

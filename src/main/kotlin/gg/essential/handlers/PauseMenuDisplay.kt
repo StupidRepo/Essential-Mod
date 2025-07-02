@@ -146,17 +146,25 @@ class PauseMenuDisplay {
                 else MenuType.SINGLEPLAYER
 
             // Create containers around the top and bottom buttons, so we can use them for GUI alignment
-            val topButton by UIContainer().constrainTo(
-                listOf(
-                    screen.findButtonByLabel("menu.singleplayer", "menu.returnToGame"),
-                    screen.findButtonByLabel("menu.multiplayer")
-                )
+            val topButtonGetter = screen.findButtonByLabel("menu.singleplayer", "menu.returnToGame")
+            // topButtonAndMultiplayer is used to calculate x positioning for when single and multiplayer buttons
+            //  are side by side
+            val topButtonAndMultiplayer by UIContainer().constrainTo(
+                listOf(topButtonGetter, screen.findButtonByLabel("menu.multiplayer"))
             ) {
                 x = CenterConstraint()
                 y = 25.percent + 48.pixels
                 width = 200.pixels
                 height = 20.pixels
             } childOf window
+
+            val topButton by UIContainer().constrainTo(listOf(topButtonGetter)) {
+                x = CenterConstraint()
+                y = 25.percent + 48.pixels
+                width = 200.pixels
+                height = 20.pixels
+            } childOf window
+
             val bottomButton by UIContainer().constrainTo(
                 screen.findButtonByLabel("menu.quit", "menu.returnToMenu", "menu.disconnect", "replaymod.gui.exit")
             ) {
@@ -169,7 +177,7 @@ class PauseMenuDisplay {
             val isCompact = BasicState(EssentialConfig.essentialMenuLayout == 1)
 
             val collapsed = bottomButton.pollingState {
-                    getRightSideMenuX(topButton, fullRightMenuPixelWidth).getXPosition(window) +
+                    getRightSideMenuX(topButtonAndMultiplayer, fullRightMenuPixelWidth).getXPosition(window) +
                         fullRightMenuPixelWidth.value + rightMenuMinPadding >= window.getRight()
                 }
 
@@ -181,27 +189,27 @@ class PauseMenuDisplay {
                 if (isCompact) {
                     x = if (EssentialConfig.closerMenuSidebar) {
                         (13.pixels(alignOpposite = true) boundTo window).coerceIn(
-                            (0.pixels(alignOpposite = true) boundTo topButton) + 24.pixels,
-                            (SiblingConstraint(maxSpaceBetweenSides + 20f) boundTo topButton) - basicXConstraint { it.getWidth() },
+                            (0.pixels(alignOpposite = true) boundTo topButtonAndMultiplayer) + 24.pixels,
+                            (SiblingConstraint(maxSpaceBetweenSides + 20f) boundTo topButtonAndMultiplayer) - basicXConstraint { it.getWidth() },
                         )
                     } else {
                         (13.pixels(alignOpposite = true) boundTo window)
-                            .coerceAtLeast((0.pixels(alignOpposite = true) boundTo topButton) + 24.pixels)
+                            .coerceAtLeast((0.pixels(alignOpposite = true) boundTo topButtonAndMultiplayer) + 24.pixels)
                     }.coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
-                    y = (((CenterConstraint() boundTo bottomButton) + (CenterConstraint() boundTo topButton)) / 2)
+                    y = (((CenterConstraint() boundTo bottomButton) + (CenterConstraint() boundTo topButtonAndMultiplayer)) / 2)
                         .coerceAtMost(40.pixels(alignOpposite = true) boundTo window)
                         .coerceAtLeast(0.pixels(alignOpposite = true) boundTo bottomButton)
                     width = ChildBasedSizeConstraint()
                 } else {
                     width = if (collapse) collapsedRightMenuPixelWidth else fullRightMenuPixelWidth
-                    x = getRightSideMenuX(topButton, width).coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
-                    y = 28.pixels.coerceAtLeast((0.pixels boundTo topButton) - 100.pixels)
+                    x = getRightSideMenuX(topButtonAndMultiplayer, width).coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
+                    y = 28.pixels.coerceAtLeast((0.pixels boundTo topButtonAndMultiplayer) - 100.pixels)
                 }
             } childOf window
 
             bottomButton.addUpdateFunc { _, _ ->
                 isCompact.set(
-                    getRightSideMenuX(topButton, collapsedRightMenuPixelWidth).getXPosition(rightContainer) +
+                    getRightSideMenuX(topButtonAndMultiplayer, collapsedRightMenuPixelWidth).getXPosition(rightContainer) +
                         collapsedRightMenuPixelWidth.value + rightMenuMinPadding >= window.getRight()
                         || EssentialConfig.essentialMenuLayout == 1
                 )
@@ -215,10 +223,10 @@ class PauseMenuDisplay {
             val accountManager = AccountManager()
             CompactRightSideBarOld(menuType, menuVisible, rightContainer, accountManager)
                 .bindParent(rightContainer, menuVisible and isCompact)
-            FullRightSideBarOld(menuType, topButton, bottomButton, collapsed, menuVisible and !isCompact)
+            FullRightSideBarOld(menuType, topButtonAndMultiplayer, bottomButton, collapsed, menuVisible and !isCompact)
                 .bindParent(rightContainer, menuVisible and !isCompact)
 
-            LeftSideBar(topButton, bottomButton, menuVisible.toV2(), collapsed.toV2(), isCompact.toV2(), menuType, rightContainer, leftContainer, accountManager)
+            LeftSideBar(topButtonAndMultiplayer, bottomButton, menuVisible.toV2(), collapsed.toV2(), isCompact.toV2(), menuType, rightContainer, leftContainer, accountManager)
                 .bindParent(leftContainer, menuVisible)
 
             if (menuType == MenuType.MAIN

@@ -46,7 +46,7 @@ import gg.essential.vigilance.utils.onLeftClick
 import gg.essential.gui.elementa.state.v2.State as StateV2
 
 class LeftSideBar(
-    private val topButton: UIContainer,
+    private val topButtonAndMultiplayer: UIContainer,
     private val bottomButton: UIContainer,
     menuVisible: StateV2<Boolean>,
     collapsed: StateV2<Boolean>,
@@ -139,13 +139,13 @@ class LeftSideBar(
         bindConstraints(isCompact) { compact ->
             if (compact) {
                 x = if (EssentialConfig.closerMenuSidebar) {
-                    basicXConstraint { (topButton.getLeft() / 2) - (it.getWidth() / 2) }.coerceIn(
-                        basicXConstraint { topButton.getLeft() - (player.getWidth() / 2) - (wardrobeButton.getWidth() / 2) - PauseMenuDisplay.maxSpaceBetweenSides },
-                        17.pixels(alignOutside = true) boundTo topButton,
+                    basicXConstraint { (topButtonAndMultiplayer.getLeft() / 2) - (it.getWidth() / 2) }.coerceIn(
+                        basicXConstraint { topButtonAndMultiplayer.getLeft() - (player.getWidth() / 2) - (wardrobeButton.getWidth() / 2) - PauseMenuDisplay.maxSpaceBetweenSides },
+                        17.pixels(alignOutside = true) boundTo topButtonAndMultiplayer,
                     )
                 } else {
-                    basicXConstraint { (topButton.getLeft() / 2) - (it.getWidth() / 2) }
-                        .coerceAtMost(17.pixels(alignOutside = true) boundTo topButton)
+                    basicXConstraint { (topButtonAndMultiplayer.getLeft() / 2) - (it.getWidth() / 2) }
+                        .coerceAtMost(17.pixels(alignOutside = true) boundTo topButtonAndMultiplayer)
                 }
                 y = 0.pixels boundTo player
                 width = 100.percent boundTo player

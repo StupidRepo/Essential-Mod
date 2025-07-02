@@ -44,6 +44,7 @@ import oshi.hardware.Processor;
 //$$ import oshi.hardware.CentralProcessor;
 //#endif
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -160,6 +161,7 @@ public class TelemetryManager implements NetworkedManager {
             put("lang", UMinecraft.getMinecraft().gameSettings.language);
         }}));
         queueInstallerTelemetryPacket();
+        queueIntegrationModTelemetryPacket();
     }
 
     /**
@@ -257,15 +259,9 @@ public class TelemetryManager implements NetworkedManager {
                 }
                 String pathChecksum = pathChecksumBuilder.toString();
 
-                // Grab the raw JSON object from the telemetry file
+                // Grab the raw JSON data from the telemetry file
                 // This is to allow installer to add telemetry fields without having to update the mod
-                String rawFile = new String(Files.readAllBytes(installerMetadataPath), StandardCharsets.UTF_8);
-                JsonObject telemetryObject = new Gson().fromJson(rawFile, JsonObject.class);
-                // Convert to map
-                HashMap<String, Object> telemetryMap = new HashMap<>();
-                for (Map.Entry<String, JsonElement> entry : telemetryObject.entrySet()) {
-                    telemetryMap.put(entry.getKey(), entry.getValue());
-                }
+                HashMap<String, Object> telemetryMap = getHashMapFromJsonFile(installerMetadataPath);
                 // Check if the game folder has been moved
                 boolean hasBeenMoved = false;
                 Object installPathChecksum = telemetryMap.get("installPathChecksum");
@@ -283,6 +279,38 @@ public class TelemetryManager implements NetworkedManager {
                 Essential.logger.warn("Error when trying to parse installer telemetry!", e);
             }
         });
+    }
+
+    private void queueIntegrationModTelemetryPacket() {
+        // We go async, since we are reading a file
+        Multithreading.runAsync(() -> {
+            try {
+                Path integrationModMetadataPath = Essential.getInstance().getBaseDir().toPath().resolve("partner-integration-mod-metadata.json");
+
+                if (Files.notExists(integrationModMetadataPath))
+                    return;
+
+                // Send telemetry file as-is
+                HashMap<String, Object> telemetryMap = getHashMapFromJsonFile(integrationModMetadataPath);
+                // Then queue the packet on the main thread again
+                Multithreading.scheduleOnMainThread(() -> enqueue(new ClientTelemetryPacket("PARTNER_INTEGRATION_MOD", telemetryMap)), 0, TimeUnit.SECONDS);
+                // Delete file after enqueueing, to ensure we only send this packet once.
+                Files.deleteIfExists(integrationModMetadataPath);
+            } catch (Exception e) {
+                Essential.logger.warn("Error when trying to parse partner integration mod telemetry!", e);
+            }
+        });
+    }
+
+    private HashMap<String, Object> getHashMapFromJsonFile(Path path) throws IOException {
+        String rawFile = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+        JsonObject telemetryObject = new Gson().fromJson(rawFile, JsonObject.class);
+        // Convert to map
+        HashMap<String, Object> telemetryMap = new HashMap<>();
+        for (Map.Entry<String, JsonElement> entry : telemetryObject.entrySet()) {
+            telemetryMap.put(entry.getKey(), entry.getValue());
+        }
+        return telemetryMap;
     }
 
 }
