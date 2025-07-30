@@ -23,8 +23,6 @@ import org.lwjgl.opengl.GL11.GL_TEXTURE_2D
 import org.lwjgl.opengl.GL11.GL_TEXTURE_MAG_FILTER
 import org.lwjgl.opengl.GL11.GL_TEXTURE_MIN_FILTER
 import org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE
-import org.lwjgl.opengl.GL11.glDeleteTextures
-import org.lwjgl.opengl.GL11.glGenTextures
 import org.lwjgl.opengl.GL11.glTexImage2D
 import org.lwjgl.opengl.GL11.glTexParameteri
 import org.lwjgl.opengl.GL14.GL_DEPTH_COMPONENT32
@@ -32,6 +30,12 @@ import org.lwjgl.opengl.GL30.GL_DEPTH24_STENCIL8
 import org.lwjgl.opengl.GL30.GL_DEPTH_STENCIL
 import org.lwjgl.opengl.GL30.GL_UNSIGNED_INT_24_8
 import java.nio.ByteBuffer
+
+//#if MC>=11600
+//$$ import com.mojang.blaze3d.platform.GlStateManager
+//#else
+import net.minecraft.client.renderer.GlStateManager
+//#endif
 
 class OwnedGlGpuTexture(
     width: Int,
@@ -61,7 +65,13 @@ class OwnedGlGpuTexture(
     }
 
     private fun init() {
-        glId = glGenTextures()
+        // Note: Must allocate via GlStateManager because we must use it to deallocate as well (see [delete])
+        //       and GlStateManager does some internal counting on newer versions.
+        //#if MC>=11600
+        //$$ glId = GlStateManager.genTexture()
+        //#else
+        glId = GlStateManager.generateTexture()
+        //#endif
 
         UGraphics.configureTexture(glId) {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
@@ -94,7 +104,12 @@ class OwnedGlGpuTexture(
 
     override fun delete() {
         if (glId != -1) {
-            glDeleteTextures(glId)
+            // Note: Must use GlStateManager to deallocate as otherwise the caching in its `bindTexture` can break!
+            //#if MC>=11600
+            //$$ GlStateManager.deleteTexture(glId)
+            //#else
+            GlStateManager.deleteTexture(glId)
+            //#endif
             glId = -1
         }
     }

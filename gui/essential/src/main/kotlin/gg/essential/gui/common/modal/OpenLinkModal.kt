@@ -13,8 +13,8 @@ package gg.essential.gui.common.modal
 
 import gg.essential.config.EssentialConfig
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.StyledButton
-import gg.essential.gui.common.styledButton
+import gg.essential.gui.common.OutlineButtonStyle
+import gg.essential.gui.common.outlineButton
 import gg.essential.gui.common.textStyle
 import gg.essential.gui.layoutdsl.Arrangement
 import gg.essential.gui.layoutdsl.LayoutScope
@@ -65,14 +65,14 @@ class OpenLinkModal(
         row(Arrangement.spacedBy(8f)) {
             cancelButton("Cancel")
 
-            styledButton(
-                Modifier.width(91f).onLeftClick {
+            outlineButton(
+                Modifier.width(91f).shadow().onLeftClick {
                     USound.playButtonPress()
 
                     openInBrowser(uri)
                     close()
                 },
-                style = StyledButton.Style.BLUE,
+                style = OutlineButtonStyle.BLUE,
             ) { style ->
                 row(Arrangement.spacedBy(5f)) {
                     text("Open", Modifier.textStyle(style))

@@ -79,7 +79,7 @@ class SelectModalBuilder<T>(
     internal val defaultUserRow: SectionLayoutBlock<UUID>
         get() = { selected, uuid ->
             box(Modifier.fillParent()) {
-                row(Modifier.fillParent(padding = 3f)) {
+                row(Modifier.fillParent(padding = 4f)) {
                     playerEntry(selected, uuid)
                     defaultAddRemoveButton(selected)
                 }
@@ -93,7 +93,7 @@ class SelectModalBuilder<T>(
     internal val defaultGroupRow: SectionLayoutBlock<Long>
         get() = { selected, id ->
             box(Modifier.fillParent()) {
-                row(Modifier.fillParent(padding = 3f)) {
+                row(Modifier.fillParent(padding = 4f)) {
                     groupEntry(selected, id)
                     defaultAddRemoveButton(selected)
                 }
@@ -110,7 +110,7 @@ class SelectModalBuilder<T>(
                 if (channel.type != ChannelType.DIRECT_MESSAGE) null
                 else channel.members.find { it != USession.activeNow().uuid }
             box(Modifier.fillParent()) {
-                row(Modifier.fillParent(padding = 3f)) {
+                row(Modifier.fillParent(padding = 4f)) {
                     if (otherUser == null) {
                         groupEntry(selected, channel.id)
                     } else {
@@ -174,17 +174,17 @@ class SelectModalBuilder<T>(
     fun emptyTextNoFriends() = emptyText("You haven't added any friends yet. You can add them in the social menu.")
 
     fun LayoutScope.playerEntry(selected: MutableState<Boolean>, uuid: UUID) {
-        row(Modifier.fillRemainingWidth(), Arrangement.spacedBy(5f, FloatPosition.START)) {
-            playerAvatar(uuid, modifier = Modifier.width(8f).heightAspect(1f))
-            playerName(uuid)
+        row(Modifier.fillRemainingWidth(), Arrangement.spacedBy(7f, FloatPosition.START)) {
+            playerAvatar(uuid, shadowColor = EssentialPalette.BLACK, modifier = Modifier.width(8f).heightAspect(1f))
+            playerName(uuid, modifier = Modifier.alignVertical(Alignment.Start(1f)).shadow(EssentialPalette.BLACK))
         }
     }
 
     fun LayoutScope.groupEntry(selected: MutableState<Boolean>, id: Long) {
-        row(Modifier.fillRemainingWidth(), Arrangement.spacedBy(5f)) {
-            icon(EssentialPalette.groupIconForChannel(id))
-            row(Modifier.fillRemainingWidth(), Arrangement.spacedBy(float = FloatPosition.START)) {
-                text(messageStates.getTitle(id), truncateIfTooSmall = true)
+        row(Modifier.fillRemainingWidth(), Arrangement.spacedBy(7f)) {
+            image(EssentialPalette.groupIconForChannel(id), Modifier.shadow(EssentialPalette.BLACK))
+            row(Modifier.fillRemainingWidth().alignVertical(Alignment.Start(1f)), Arrangement.spacedBy(float = FloatPosition.START)) {
+                text(messageStates.getTitle(id), truncateIfTooSmall = true, modifier = Modifier.shadow(EssentialPalette.BLACK))
             }
         }
     }

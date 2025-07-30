@@ -17,7 +17,7 @@ import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
 import gg.essential.elementa.state.BasicState
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.MenuButton
+import gg.essential.gui.common.OutlineButtonStyle
 import gg.essential.gui.common.modal.CancelableInputModal
 import gg.essential.gui.common.modal.ConfirmDenyModal
 import gg.essential.gui.common.modal.EssentialModal
@@ -170,8 +170,8 @@ class SkinModal private constructor(
             contentText = errorText
             contentTextColor = EssentialPalette.TEXT
             primaryButtonText = "Select New File"
-            primaryButtonStyle = MenuButton.DARK_GRAY
-            primaryButtonHoverStyle = MenuButton.GRAY
+            primaryButtonStyle = OutlineButtonStyle.GRAY.defaultStyle
+            primaryButtonHoverStyle = OutlineButtonStyle.GRAY.hoveredStyle
 
             contentTextSpacingState.rebind(BasicState(17f))
             spacer.setHeight(13.pixels)

@@ -80,9 +80,9 @@ class WardrobeContainer(
 
                     // Collapsible categories handle the top scroll gradient themselves (below each sub-category)
                     if_(stateOf(true) or !currentSuperCategory.map { it is WardrobeCategory.ParentCategory }) {
-                        scrollGradient(scroller, true, Modifier.height(gradientHeight))
+                        scrollGradient(scroller, true, gradientHeight)
                     }
-                    scrollGradient(scroller, false, Modifier.height(gradientHeight))
+                    scrollGradient(scroller, false, gradientHeight)
                 }
             }
 

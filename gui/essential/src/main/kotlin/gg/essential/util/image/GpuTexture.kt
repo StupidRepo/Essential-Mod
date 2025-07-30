@@ -13,6 +13,7 @@ package gg.essential.util.image
 
 import gg.essential.model.util.Color
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
+import gg.essential.util.image.bitmap.Bitmap
 
 interface GpuTexture {
     val glId: Int
@@ -37,6 +38,8 @@ interface GpuTexture {
 
     fun readPixelColor(x: Int, y: Int): Color
     fun readPixelDepth(x: Int, y: Int): Float
+
+    fun readPixelColors(x: Int, y: Int, width: Int, height: Int): Bitmap
 
     enum class Format(val isColor: Boolean) {
         RGBA8(true),

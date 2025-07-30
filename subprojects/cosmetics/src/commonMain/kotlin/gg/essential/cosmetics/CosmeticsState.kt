@@ -216,6 +216,9 @@ class CosmeticsState(
             .groupBy({ it.key }) { it.value }
             .mapValues { it.value.flatten().toSet() }
 
+    private val hiddenSpecialBones: Map<CosmeticId, Set<EnumPart>> =
+        hiddenBones.mapValues { (_, bones) -> bones.mapNotNullTo(mutableSetOf()) { EnumPart.fromBoneName(it) } }
+
     /**
      * For each cosmetic, contains the user-configured positional offset (e.g. glasses can be adjusted to your skin).
      */
@@ -265,6 +268,10 @@ class CosmeticsState(
         if (hiddenParts.any { it in mask.parts }) {
             mask = SkinMask(mask.parts.filterKeys { it !in hiddenParts })
         }
+        val hiddenSpecialBones = hiddenSpecialBones[cosmetic.id] ?: emptySet()
+        if (hiddenSpecialBones.any { it in mask.parts }) {
+            mask = SkinMask(mask.parts.filterKeys { it !in hiddenSpecialBones })
+        }
 
         val positionAdjustment = positionAdjustments[cosmetic.id]?.takeUnless { it == Vector3() }
         if (positionAdjustment != null) {
@@ -305,7 +312,10 @@ class CosmeticsState(
      * Calls [valueSelector] on each setting to extract the relevant data and then groups all these values by the
      * target of the setting which they were extracted from.
      */
-    private fun <T, E: CosmeticProperty> List<E>.groupByPropertyTargetId(valueSelector: (E) -> Iterable<T>): Map<CosmeticId, Set<T>> =
+    @Suppress("DEPRECATION")
+    private fun <T, E> List<E>.groupByPropertyTargetId(valueSelector: (E) -> Iterable<T>): Map<CosmeticId, Set<T>>
+            where E: CosmeticProperty,
+                  E: CosmeticProperty.UsesId =
         this
             .flatMap { setting -> valueSelector(setting).map { setting.id!! to it } }
             .groupBy({ it.first }) { it.second }

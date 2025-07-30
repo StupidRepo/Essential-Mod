@@ -66,7 +66,7 @@ fun Project.configurePreprocessTree(versions: File) {
         fabric12106.link(fabric12105, versions.resolve("1.21.6-1.21.5.txt"))
         neoForge12105.link(fabric12105)
         forge12105.link(fabric12105)
-        fabric12105.link(fabric12104)
+        fabric12105.link(fabric12104, versions.resolve("1.21.5-1.21.4.txt"))
         neoForge12104.link(fabric12104)
         forge12104.link(fabric12104)
         fabric12104.link(fabric12103, versions.resolve("1.21.4-1.21.3.txt"))

@@ -21,19 +21,16 @@ import gg.essential.data.VersionData
 import gg.essential.data.VersionInfo
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.components.Window
-import gg.essential.elementa.constraints.AspectConstraint
 import gg.essential.elementa.constraints.CenterConstraint
 import gg.essential.elementa.constraints.ChildBasedMaxSizeConstraint
 import gg.essential.elementa.constraints.ChildBasedSizeConstraint
 import gg.essential.elementa.constraints.SiblingConstraint
 import gg.essential.elementa.constraints.WidthConstraint
 import gg.essential.elementa.constraints.XConstraint
-import gg.essential.elementa.dsl.basicXConstraint
 import gg.essential.elementa.dsl.boundTo
 import gg.essential.elementa.dsl.childOf
 import gg.essential.elementa.dsl.coerceAtLeast
 import gg.essential.elementa.dsl.coerceAtMost
-import gg.essential.elementa.dsl.coerceIn
 import gg.essential.elementa.dsl.constrain
 import gg.essential.elementa.dsl.div
 import gg.essential.elementa.dsl.minus
@@ -45,8 +42,8 @@ import gg.essential.elementa.state.BasicState
 import gg.essential.event.essential.InitMainMenuEvent
 import gg.essential.event.gui.GuiDrawScreenEvent
 import gg.essential.event.gui.GuiOpenEvent
+import gg.essential.event.gui.InitGuiEvent
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.Checkbox
 import gg.essential.gui.common.MenuButton
 import gg.essential.gui.common.TextFlag
 import gg.essential.gui.common.and
@@ -66,19 +63,21 @@ import gg.essential.gui.layoutdsl.Alignment
 import gg.essential.gui.layoutdsl.Arrangement
 import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.alignBoth
+import gg.essential.gui.layoutdsl.alignVertical
+import gg.essential.gui.layoutdsl.checkboxAlt
 import gg.essential.gui.layoutdsl.color
 import gg.essential.gui.layoutdsl.column
 import gg.essential.gui.layoutdsl.hoverColor
 import gg.essential.gui.layoutdsl.hoverScope
+import gg.essential.gui.layoutdsl.inheritHoverScope
 import gg.essential.gui.layoutdsl.layout
 import gg.essential.gui.layoutdsl.row
 import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.spacer
 import gg.essential.gui.layoutdsl.text
 import gg.essential.gui.menu.AccountManager
+import gg.essential.gui.menu.RightSideBarNew
 import gg.essential.gui.menu.LeftSideBar
-import gg.essential.gui.menu.compact.CompactRightSideBarOld
-import gg.essential.gui.menu.full.FullRightSideBarOld
 import gg.essential.gui.modal.sps.FirewallBlockingModal
 import gg.essential.gui.modals.EssentialAutoInstalledModal
 import gg.essential.gui.modals.FeaturesEnabledModal
@@ -104,7 +103,6 @@ import gg.essential.network.connectionmanager.sps.SPSSessionSource
 import gg.essential.universal.USound
 import gg.essential.util.FirewallUtil
 import gg.essential.util.MinecraftUtils
-import gg.essential.util.findChildOfTypeOrNull
 import gg.essential.util.isMainMenu
 import gg.essential.vigilance.utils.onLeftClick
 import me.kbrewster.eventbus.Subscribe
@@ -129,14 +127,12 @@ class PauseMenuDisplay {
     private val fullRightMenuPixelWidth = 104.pixels
     private val collapsedRightMenuPixelWidth = 68.pixels
     private val rightMenuMinPadding = 5
-    private var init = false
 
-    fun init(screen: GuiScreen) {
-        init = true
+    private var initContent = false
+    private var initModals = false
 
-        if (screen.isMainMenu) {
-            Essential.EVENT_BUS.post(InitMainMenuEvent())
-        }
+    private fun initContent(screen: GuiScreen) {
+        initContent = true
 
         if (EssentialConfig.essentialFull) {
 
@@ -174,12 +170,12 @@ class PauseMenuDisplay {
                 height = 20.pixels
             } childOf window
 
-            val isCompact = BasicState(EssentialConfig.essentialMenuLayout == 1)
-
-            val collapsed = bottomButton.pollingState {
+            val isCompact = BasicState(EssentialConfig.essentialMenuLayout == 1) or bottomButton.pollingState {
                     getRightSideMenuX(topButtonAndMultiplayer, fullRightMenuPixelWidth).getXPosition(window) +
                         fullRightMenuPixelWidth.value + rightMenuMinPadding >= window.getRight()
                 }
+
+            val collapsed = BasicState(false)
 
             val menuVisible = bottomButton.pollingState { EssentialConfig.essentialMenuLayout != 2 }
 
@@ -187,33 +183,17 @@ class PauseMenuDisplay {
                 height = ChildBasedMaxSizeConstraint()
             }.bindConstraints(collapsed.zip(isCompact)) { (collapse, isCompact) ->
                 if (isCompact) {
-                    x = if (EssentialConfig.closerMenuSidebar) {
-                        (13.pixels(alignOpposite = true) boundTo window).coerceIn(
-                            (0.pixels(alignOpposite = true) boundTo topButtonAndMultiplayer) + 24.pixels,
-                            (SiblingConstraint(maxSpaceBetweenSides + 20f) boundTo topButtonAndMultiplayer) - basicXConstraint { it.getWidth() },
-                        )
-                    } else {
-                        (13.pixels(alignOpposite = true) boundTo window)
-                            .coerceAtLeast((0.pixels(alignOpposite = true) boundTo topButtonAndMultiplayer) + 24.pixels)
-                    }.coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
-                    y = (((CenterConstraint() boundTo bottomButton) + (CenterConstraint() boundTo topButtonAndMultiplayer)) / 2)
-                        .coerceAtMost(40.pixels(alignOpposite = true) boundTo window)
-                        .coerceAtLeast(0.pixels(alignOpposite = true) boundTo bottomButton)
+                    x = (13.pixels(alignOpposite = true) boundTo window)
+                            .coerceAtLeast((0.pixels(alignOpposite = true) boundTo topButtonAndMultiplayer) + 24.pixels).coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
                     width = ChildBasedSizeConstraint()
                 } else {
                     width = if (collapse) collapsedRightMenuPixelWidth else fullRightMenuPixelWidth
                     x = getRightSideMenuX(topButtonAndMultiplayer, width).coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
-                    y = 28.pixels.coerceAtLeast((0.pixels boundTo topButtonAndMultiplayer) - 100.pixels)
                 }
+                y = (((CenterConstraint() boundTo bottomButton) + (CenterConstraint() boundTo topButton)) / 2)
+                    .coerceAtMost(40.pixels(alignOpposite = true) boundTo window)
+                    .coerceAtLeast(28.pixels)
             } childOf window
-
-            bottomButton.addUpdateFunc { _, _ ->
-                isCompact.set(
-                    getRightSideMenuX(topButtonAndMultiplayer, collapsedRightMenuPixelWidth).getXPosition(rightContainer) +
-                        collapsedRightMenuPixelWidth.value + rightMenuMinPadding >= window.getRight()
-                        || EssentialConfig.essentialMenuLayout == 1
-                )
-            }
 
             val leftContainer by UIContainer().constrain {
                 width = 50.percent
@@ -221,12 +201,9 @@ class PauseMenuDisplay {
             } childOf window
 
             val accountManager = AccountManager()
-            CompactRightSideBarOld(menuType, menuVisible, rightContainer, accountManager)
-                .bindParent(rightContainer, menuVisible and isCompact)
-            FullRightSideBarOld(menuType, topButtonAndMultiplayer, bottomButton, collapsed, menuVisible and !isCompact)
-                .bindParent(rightContainer, menuVisible and !isCompact)
+            RightSideBarNew(menuType, isCompact.toV2(), menuVisible.toV2(), accountManager).bindParent(rightContainer, menuVisible)
 
-            LeftSideBar(topButtonAndMultiplayer, bottomButton, menuVisible.toV2(), collapsed.toV2(), isCompact.toV2(), menuType, rightContainer, leftContainer, accountManager)
+            LeftSideBar(topButtonAndMultiplayer, bottomButton, menuVisible.toV2(), collapsed.toV2(), stateOf(true), menuType, rightContainer, leftContainer, accountManager)
                 .bindParent(leftContainer, menuVisible)
 
             if (menuType == MenuType.MAIN
@@ -264,6 +241,15 @@ class PauseMenuDisplay {
                     //#endif
                 } childOf window
             }
+        }
+    }
+
+    private fun initModals(screen: GuiScreen) {
+        initModals = true
+
+        if (screen.isMainMenu) {
+            // only triggers a modal currently
+            Essential.EVENT_BUS.post(InitMainMenuEvent())
         }
 
         EssentialAutoInstalledModal.showModal()
@@ -331,6 +317,16 @@ class PauseMenuDisplay {
     }
 
     @Subscribe
+    fun guiInit(event: InitGuiEvent) {
+        // re init so that our buttons can re-attach to the proxy vanilla buttons on screen resize
+        // this massively simplifies re-attachment to the [EssentialProxyElement]'s and syncs our button lifecycles with those of vanilla
+
+        // same as refresh() but only for screen content
+        window.clearChildren()
+        initContent = false
+    }
+
+    @Subscribe
     fun drawScreen(event: GuiDrawScreenEvent) {
         val screen = event.screen
         if (screen !is GuiIngameMenu && !screen.isMainMenu) {
@@ -345,23 +341,25 @@ class PauseMenuDisplay {
         //$$ }
         //#endif
 
-        if (!init) {
-            init(screen)
+        if (!initContent) {
+            initContent(screen)
+        }
+
+        if (!initModals) {
+            initModals(screen)
         }
     }
 
     fun refresh() {
         window.clearChildren()
-        init = false
+        initContent = false
+        initModals = false
     }
 
     private fun getRightSideMenuX(topButton: UIContainer, width: WidthConstraint): XConstraint {
-        return ((SiblingConstraint() boundTo topButton) +
-                    (((0.pixels(alignOpposite = true) boundTo window) - (0.pixels(alignOpposite = true) boundTo topButton)) / 2f - (width / 2)))
-                .coerceIn(
-                    SiblingConstraint(28f) boundTo topButton,
-                    SiblingConstraint(65f) boundTo topButton
-                )
+        return ((SiblingConstraint() boundTo topButton) - (width - RightSideBarNew.BUTTON_WIDTH.pixels) +
+                    (((0.pixels(alignOpposite = true) boundTo window) - (0.pixels(alignOpposite = true) boundTo topButton)) / 2f - (RightSideBarNew.BUTTON_WIDTH.pixels / 2)))
+                .coerceAtLeast(SiblingConstraint(28f) boundTo topButton)
     }
 
     companion object {
@@ -369,8 +367,6 @@ class PauseMenuDisplay {
 
         @JvmStatic
         val minWidth = 404
-        @JvmStatic
-        val maxSpaceBetweenSides = 187f
 
         @JvmStatic
         fun canRescale(screen: GuiScreen): Boolean {
@@ -538,19 +534,12 @@ class PauseMenuDisplay {
                     val checkBoxState = !EssentialConfig.spsIPWarningState
                     column(Modifier.alignBoth(Alignment.Center)) {
                         row(Modifier.hoverScope(), Arrangement.spacedBy(5f)) {
-                            val notifyToggle by Checkbox(checkmarkColor = BasicState(EssentialPalette.TEXT)).constrain {
-                                width = 9.pixels
-                                height = AspectConstraint()
-                            }
-                            notifyToggle.isChecked.onSetValue {
-                                checkBoxState.set(it)
-                            }
-                            notifyToggle()
-                            text("Do not show this warning again", shadow = false, modifier = Modifier.color(EssentialPalette.TEXT_DISABLED))
+                            checkboxAlt(checkBoxState, Modifier.shadow(EssentialPalette.BLACK).inheritHoverScope())
+                            text("Don't show this warning again", modifier = Modifier.alignVertical(Alignment.Center(true)).color(EssentialPalette.TEXT_DISABLED).shadow(EssentialPalette.BLACK))
                         }.onLeftClick {
                             it.stopPropagation()
                             USound.playButtonPress()
-                            findChildOfTypeOrNull<Checkbox>(true)?.toggle()
+                            checkBoxState.set { !it }
                         }
                         spacer(height = 14f)
                     }

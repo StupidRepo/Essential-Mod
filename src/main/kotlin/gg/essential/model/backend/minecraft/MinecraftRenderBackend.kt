@@ -466,18 +466,20 @@ object MinecraftRenderBackend : RenderBackend {
             //$$ )
             //$$ block(VertexConsumerAdapter(UVertexConsumer.of(buffer)))
             //#else
-            val renderer = UGraphics.getFromTessellator()
-            GlStateManager.enableCull()
-            UGraphics.enableAlpha()
-            @Suppress("DEPRECATION")
-            UGraphics.enableBlend()
-            @Suppress("DEPRECATION")
-            UGraphics.tryBlendFuncSeparate(770, 771, 1, 0)
+            val prevCull = GL11.glGetBoolean(GL11.GL_CULL_FACE)
+            val prevAlphaTest = GL11.glGetBoolean(GL11.GL_ALPHA_TEST)
+            val prevBlend = BlendState.active()
+
+            if (!prevCull) GlStateManager.enableCull()
+            if (!prevAlphaTest) UGraphics.enableAlpha()
+            if (prevBlend != BlendState.ALPHA) UGraphics.Globals.blendState(BlendState.ALPHA)
+
             UGraphics.color4f(1f, 1f, 1f, 1f)
             val prevTextureId = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)
             UGraphics.bindTexture(0, texture.identifier)
             val cleanupEmissive = if (emissive) setupEmissiveRendering() else ({})
 
+            val renderer = UGraphics.getFromTessellator()
             @Suppress("DEPRECATION")
             renderer.beginWithDefaultShader(UGraphics.DrawMode.QUADS, VERTEX_FORMAT)
 
@@ -486,8 +488,10 @@ object MinecraftRenderBackend : RenderBackend {
             renderer.drawSorted(0, 0, 0)
 
             cleanupEmissive()
-            GlStateManager.disableCull()
             UGraphics.bindTexture(0, prevTextureId)
+            if (prevBlend != BlendState.ALPHA) UGraphics.Globals.blendState(prevBlend)
+            if (!prevAlphaTest) UGraphics.disableAlpha()
+            if (!prevCull) GlStateManager.disableCull()
             //#endif
         }
 

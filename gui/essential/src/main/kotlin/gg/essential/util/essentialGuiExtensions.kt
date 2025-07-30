@@ -30,6 +30,7 @@ import gg.essential.gui.common.LayoutDslTooltip
 import gg.essential.gui.common.bindParent
 import gg.essential.gui.common.constraints.DivisionConstraint
 import gg.essential.gui.common.constraints.MultiplicativeConstraint
+import gg.essential.gui.common.effect.EffectWithFakeComponent
 import gg.essential.gui.effects.GradientEffect
 import gg.essential.gui.elementa.lazyPosition
 import gg.essential.gui.elementa.state.v2.*
@@ -39,6 +40,7 @@ import gg.essential.gui.elementa.state.v2.utils.toState
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.util.hoveredState
 import gg.essential.gui.util.isComponentInParentChain
+import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UMouse
 import gg.essential.vigilance.utils.onLeftClick
 import kotlinx.coroutines.Dispatchers
@@ -272,7 +274,7 @@ fun ScrollComponent.getHeightState(): StateV2<Float> {
     return height
 }
 
-fun LayoutScope.scrollGradient(scroller: ScrollComponent, top: Boolean, modifier: Modifier, maxGradient: Int = 204, opposite: Boolean = false) {
+fun scrollGradient(scroller: ScrollComponent, top: Boolean, height: Float, maxGradient: Int = 204, opposite: Boolean = false) {
     val percentState = mutableStateOf(0f)
 
     scroller.addScrollAdjustEvent(false) { percent, _ ->
@@ -281,8 +283,8 @@ fun LayoutScope.scrollGradient(scroller: ScrollComponent, top: Boolean, modifier
 
     val heightState = scroller.getHeightState()
     val percentAndHeightState = memo { Pair(percentState(), heightState()) }
-    val gradient = scroller.newGradient(top, 0.pixels, maxGradient = maxGradient, percentAndHeightState = percentAndHeightState)
-    gradient(Modifier.fillWidth().alignVertical(if (top) Alignment.Start else Alignment.End).then(modifier))
+
+    scroller.effect(newGradient(top, height.pixels, maxGradient = maxGradient, percentAndHeightState = percentAndHeightState))
 }
 
 fun ScrollComponent.createScrollGradient(
@@ -291,7 +293,7 @@ fun ScrollComponent.createScrollGradient(
     color: Color = EssentialPalette.GUI_BACKGROUND,
     maxGradient: Int = 204,
     opposite: Boolean = false,
-): UIComponent {
+) {
 
     val percentState = mutableStateOf(0f)
 
@@ -300,7 +302,7 @@ fun ScrollComponent.createScrollGradient(
     }
 
     val heightState = getHeightState()
-    return createGradient(top, heightSize, color, maxGradient, percentState, heightState)
+    createGradient(top, heightSize, color, maxGradient, percentState, heightState)
 }
 
 fun <T : UIComponent> T.createGradient(
@@ -310,21 +312,18 @@ fun <T : UIComponent> T.createGradient(
     maxGradient: Int = 204,
     percentState: StateV2<Float>,
     heightState: StateV2<Float>
-): UIComponent {
+) {
     val percentAndHeightState = memo { Pair(percentState(), heightState()) }
-    val gradient = newGradient(top, heightSize, color, maxGradient, percentAndHeightState)
-    gradient.parent = this
-    this.children.add(gradient)
-    return gradient
+    effect(newGradient(top, heightSize, color, maxGradient, percentAndHeightState))
 }
 
-fun <T : UIComponent> T.newGradient(
+fun newGradient(
     top: Boolean,
     heightSize: HeightConstraint,
     color: Color = EssentialPalette.GUI_BACKGROUND,
     maxGradient: Int = 204,
     percentAndHeightState: StateV2<Pair<Float, Float>> = stateOf(Pair(if (top) 1f else 0f, 0f)),
-): UIComponent {
+): EffectWithFakeComponent {
     val topColor = percentAndHeightState.map { (percentage, height) ->
         if (top) {
             color.withAlpha((percentage * (height).coerceAtLeast(1000f)).toInt().coerceIn(0..maxGradient))
@@ -339,22 +338,30 @@ fun <T : UIComponent> T.newGradient(
             color.withAlpha(((1 - percentage) * (height).coerceAtLeast(1000f)).toInt().coerceIn(0..maxGradient))
         }
     }
-    return object : UIContainer() {
-        // Override because the gradient should be treated as if it does not exist from an input point of view
-        override fun isPointInside(x: Float, y: Float): Boolean {
-            return false
+    return object : EffectWithFakeComponent(GradientEffect(topColor, topColor, bottomColor, bottomColor)) {
+        override fun preFirstDraw() {
+            dummyComponent.constrain {
+                x = CopyConstraintFloat() boundTo boundComponent
+                y = if (top) 0.pixels boundTo boundComponent else (-1).pixels(alignOpposite = true) boundTo boundComponent
+                width = CopyConstraintFloat() boundTo boundComponent
+                height = heightSize
+            }
+            super.preFirstDraw()
         }
-    }.constrain {
-        y = 0.pixels(alignOpposite = !top) boundTo this@newGradient
-        x = CopyConstraintFloat() boundTo this@newGradient
-        width = CopyConstraintFloat() boundTo this@newGradient
-        height = heightSize
-    }.effect(GradientEffect(topColor, topColor, bottomColor, bottomColor))
+
+        override fun beforeChildrenDraw(matrixStack: UMatrixStack) {
+            // Run in afterDraw
+        }
+
+        override fun afterDraw(matrixStack: UMatrixStack) {
+            super.beforeChildrenDraw(matrixStack)
+        }
+    }
 }
 
 infix fun ScrollComponent.scrollGradient(heightSize: HeightConstraint) = apply {
-    val topGradient = createScrollGradient(true, heightSize)
-    createScrollGradient(false, 100.percent boundTo topGradient)
+    createScrollGradient(true, heightSize)
+    createScrollGradient(false, heightSize)
 }
 
 /**

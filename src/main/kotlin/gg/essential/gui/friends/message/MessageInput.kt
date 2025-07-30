@@ -256,8 +256,8 @@ class MessageInput(
                                 scrollBar = box(Modifier.fillWidth().color(EssentialPalette.SCROLLBAR))
                             }
                         }
-                        scrollGradient(scrollComponent, true, Modifier.height(30f), maxGradient = 153)
-                        scrollGradient(scrollComponent, false, Modifier.height(30f), maxGradient = 153)
+                        scrollGradient(scrollComponent, true, 30f, maxGradient = 153)
+                        scrollGradient(scrollComponent, false, 30f, maxGradient = 153)
                         // Place the icon last, so it is above the gradients
                         IconButton(EssentialPalette.PICTURES_SHORT_9X7, tooltipText = "Attach Pictures")
                             .setDimension(IconButton.Dimension.Fixed(17f, 17f))(

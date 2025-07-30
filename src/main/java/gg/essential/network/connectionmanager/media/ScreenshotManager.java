@@ -472,7 +472,9 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
             new ClientScreenshotMetadata.Location(type, identifier),
             false,
             false,
-            null);
+            Collections.emptySet(),
+            null
+        );
     }
 
     /**
@@ -598,7 +600,14 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
     }
 
     public Media getUploadedMedia(Path path) {
-        return getUploadedMedia(screenshotMetadataManager.getOrCreateMetadata(path).getMediaId());
+        ClientScreenshotMetadata metadata = screenshotMetadataManager.getOrCreateMetadata(path);
+        for (String mediaId : metadata.getMediaIds()) {
+            Media media = getUploadedMedia(mediaId);
+            if (media != null) {
+                return media;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -739,7 +748,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
             //        using coroutines.
             ClientScreenshotMetadata metadata = screenshotMetadataManager.getMetadata(localFile);
             if (metadata != null) {
-                screenshotMetadataManager.updateMetadata(metadata.withMediaId(null));
+                screenshotMetadataManager.updateMetadata(metadata.withoutMediaId(mediaId));
             }
         }
 
@@ -779,7 +788,17 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         try {
             final String checksum = saveScreenshot(screenshot, output);
 
-            screenshotMetadataManager.updateMetadata(new ClientScreenshotMetadata(originalMetadata.getAuthorId(), originalMetadata.getTime(), checksum, new DateTime(System.currentTimeMillis()), originalMetadata.getLocationMetadata(), favorite, true, null));
+            screenshotMetadataManager.updateMetadata(new ClientScreenshotMetadata(
+                originalMetadata.getAuthorId(),
+                originalMetadata.getTime(),
+                checksum,
+                new DateTime(System.currentTimeMillis()),
+                originalMetadata.getLocationMetadata(),
+                favorite,
+                true,
+                Collections.emptySet(),
+                null
+            ));
 
             screenshotFiles.add(output.getName());
             // Precomputing not done here because the UI is already open and will it will generate what it needs as it needs it

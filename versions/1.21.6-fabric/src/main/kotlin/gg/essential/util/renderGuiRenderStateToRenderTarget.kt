@@ -41,6 +41,18 @@ private val COMPOSITE_PIPELINE = URenderPipeline.builderWithDefaultShader(
  * doesn't respect [RenderSystem.outputColorTextureOverride].
  */
 fun renderGuiRenderStateToRenderTarget(matrixStack: UMatrixStack, guiRenderState: GuiRenderState) {
+    val resultColor = renderGuiRenderStateToTexture(guiRenderState)
+    blitTextureToRenderTarget(matrixStack, resultColor)
+    resultColor.delete()
+}
+
+/**
+ * Renders the given [GuiRenderState] to a [GpuTexture].
+ *
+ * Most of the implementation is dealing with the fact that MC's gui renderer always renders to MC's framebuffer and
+ * doesn't respect [RenderSystem.outputColorTextureOverride].
+ */
+fun renderGuiRenderStateToTexture(guiRenderState: GuiRenderState): GpuTexture {
     val mcColor = platform.mcFrameBufferColorTexture
     val mcDepth = platform.mcFrameBufferDepthTexture!!
 
@@ -75,6 +87,7 @@ fun renderGuiRenderStateToRenderTarget(matrixStack: UMatrixStack, guiRenderState
     guiRenderer.render(fogRenderer.getFogBuffer(FogRenderer.FogType.NONE))
     guiRenderer.close()
     fogRenderer.close()
+    GuiRendererInfo.customGuiRendererUsedThisFrame = true
 
     // Restore projection matrix
     // Nullability annotations are a bit off, null seems fine. And we MUST NOT keep the current buffer, even if the org
@@ -94,10 +107,17 @@ fun renderGuiRenderStateToRenderTarget(matrixStack: UMatrixStack, guiRenderState
     orgColor.delete()
     orgDepth.delete()
 
+    return resultColor
+}
+
+private fun blitTextureToRenderTarget(
+    matrixStack: UMatrixStack,
+    resultColor: GpuTexture
+) {
     // Draw texture to render target
     val scale = 1 / UResolution.scaleFactor
-    val w = width * scale
-    val h = height * scale
+    val w = resultColor.width * scale
+    val h = resultColor.height * scale
     val buffer = UBufferBuilder.create(UGraphics.DrawMode.QUADS, UGraphics.CommonVertexFormats.POSITION_TEXTURE)
     buffer.pos(matrixStack, 0.0, h, 0.0).tex(0.0, 0.0).endVertex()
     buffer.pos(matrixStack, w, h, 0.0).tex(1.0, 0.0).endVertex()
@@ -106,6 +126,8 @@ fun renderGuiRenderStateToRenderTarget(matrixStack: UMatrixStack, guiRenderState
     buffer.build()?.drawAndClose(COMPOSITE_PIPELINE) {
         texture(0, resultColor.glId)
     }
+}
 
-    resultColor.delete()
+object GuiRendererInfo {
+    var customGuiRendererUsedThisFrame = false
 }

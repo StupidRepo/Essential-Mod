@@ -450,8 +450,14 @@ fun combinedOrderedScreenshotsState(
     }
     return State {
         val result = mutableListOf<ScreenshotInfo>()
-        localWithTime().mapTo(result) { ScreenshotInfo(it.id, it.checksumOrUid, it.time(), it.metadata()) }
-        val localMediaIds = result.mapNotNullTo(mutableSetOf()) { it.metadata?.mediaId }
+        val remoteMediaIds = remoteWithTime().mapTo(mutableSetOf()) { (it.id as RemoteScreenshot).media.id }
+        localWithTime().mapTo(result) { unresolved ->
+            val metadata = unresolved.metadata()
+            ScreenshotInfo(unresolved.id, unresolved.checksumOrUid, unresolved.time(), metadata?.copy(
+                ownedMediaId = metadata.mediaIds.firstOrNull { it in remoteMediaIds },
+            ))
+        }
+        val localMediaIds = result.flatMapTo(mutableSetOf()) { it.metadata?.mediaIds ?: emptySet() }
         remoteWithTime().filterTo(result) { (it.id as RemoteScreenshot).media.id !in localMediaIds }
         result.sortWith(compareByDescending<ScreenshotInfo> { it.time }.thenBy { it.id.name })
         result

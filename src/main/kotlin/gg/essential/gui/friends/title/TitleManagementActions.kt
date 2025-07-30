@@ -171,7 +171,7 @@ abstract class TitleManagementActions(private val gui: SocialMenu) : UIContainer
         }
 
         suspend fun ModalFlow.selectFriendsForGroupModal(): Set<UUID>? {
-            return selectModal("Select Friends") {
+            return selectModal("Select friends to make group") {
                 requiresSelection = true
                 requiresButtonPress = false
 

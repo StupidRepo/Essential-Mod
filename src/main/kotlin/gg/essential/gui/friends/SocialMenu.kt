@@ -549,7 +549,7 @@ class SocialMenu @JvmOverloads constructor(
         }
 
         fun createAddFriendsToGroupModal(manager: ModalManager, potentialFriends: ListState<UUID>) =
-            selectModal<UUID>(manager, "Add Friends to Group") {
+            selectModal<UUID>(manager, "Add friends to group") {
                 requiresButtonPress = false
                 requiresSelection = true
 

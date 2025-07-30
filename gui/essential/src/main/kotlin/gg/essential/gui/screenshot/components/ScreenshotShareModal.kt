@@ -40,7 +40,7 @@ suspend fun ModalFlow.shareScreenshotModal(
 }
 
 suspend fun ModalFlow.selectScreenshotShareTargetsModal(): Set<Channel>? {
-    return selectModal("Share Picture") {
+    return selectModal("Share picture") {
         friendsAndGroups()
 
         modalSettings {

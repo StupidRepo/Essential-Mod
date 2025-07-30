@@ -51,7 +51,7 @@ suspend fun ModalFlow.deleteScreenshot(
         screenshotManager.deleteFile(id.path)
     }
 
-    val mediaId = metadata?.mediaId
+    val mediaId = metadata?.ownedMediaId
     if (mediaId != null) {
         screenshotManager.deleteMedia(mediaId, (id as? LocalScreenshot)?.path)
     }

@@ -89,7 +89,7 @@ object InviteFriendsModal {
         )
 
         return ConfirmDenyModal(modalManager, false).configure {
-            titleText = "Basic World Settings"
+            titleText = "Configure world settings"
             titleTextColor = EssentialPalette.TEXT_HIGHLIGHT
             spacer.setHeight(14.pixels)
             if (worldSummary != null) {
@@ -339,7 +339,7 @@ object InviteFriendsModal {
             return true
         }
 
-        val title = "Invite Friends"
+        val title = if (getMinecraft().currentServerData != null) "Invite friends to server" else "Invite friends to world"
         return selectModal(modalManager, title) {
             fun LayoutScope.customPlayerEntry(selected: MutableState<Boolean>, uuid: UUID) {
                 val onlineState = connectionManager.spsManager.getOnlineState(uuid)

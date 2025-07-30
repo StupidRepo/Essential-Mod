@@ -26,7 +26,7 @@ import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.text.ITextComponent;
 
-//#if MC>=11800
+//#if MC>=11800 && MC<12100
 //$$ import gg.essential.compat.ImmediatelyFastCompat;
 //#endif
 
@@ -174,13 +174,13 @@ public class OnlineIndicator {
     }
 
     public static void beforeTabDraw() {
-        //#if MC>=11800
+        //#if MC>=11800 && MC<12100
         //$$ ImmediatelyFastCompat.beforeHudDraw();
         //#endif
     }
 
     public static void afterTabDraw() {
-        //#if MC>=11800
+        //#if MC>=11800 && MC<12100
         //$$ ImmediatelyFastCompat.afterHudDraw();
         //#endif
     }

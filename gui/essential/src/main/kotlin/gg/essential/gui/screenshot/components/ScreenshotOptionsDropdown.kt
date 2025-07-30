@@ -98,7 +98,7 @@ class ScreenshotOptionsDropdown(
 
         options.add(ContextOptionMenu.Divider)
 
-        val mediaId = metadata?.mediaId
+        val mediaId = metadata?.ownedMediaId
         if (mediaId != null) {
             options.add(
                 ContextOptionMenu.Option(

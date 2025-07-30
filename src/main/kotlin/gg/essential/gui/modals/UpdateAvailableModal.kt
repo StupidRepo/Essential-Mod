@@ -18,7 +18,7 @@ import gg.essential.elementa.dsl.pixels
 import gg.essential.elementa.state.BasicState
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.EssentialTooltip
-import gg.essential.gui.common.MenuButton
+import gg.essential.gui.common.OutlineButtonStyle
 import gg.essential.gui.common.compactFullEssentialToggle
 import gg.essential.gui.common.modal.ConfirmDenyModal
 import gg.essential.gui.common.modal.configure
@@ -56,8 +56,8 @@ class UpdateAvailableModal(modalManager: ModalManager) : ConfirmDenyModal(modalM
         titleText = AutoUpdate.getNotificationTitle()
         contentTextColor = EssentialPalette.TEXT
         primaryButtonText = "Update"
-        primaryButtonStyle = MenuButton.GREEN
-        primaryButtonHoverStyle = MenuButton.LIGHT_GREEN
+        primaryButtonStyle = OutlineButtonStyle.GREEN.defaultStyle
+        primaryButtonHoverStyle = OutlineButtonStyle.GREEN.hoveredStyle
         contentTextSpacingState.rebind(BasicState(17f))
 
         if (AutoUpdate.requiresUpdate()) {
@@ -135,8 +135,8 @@ class UpdateRequiredModal(modalManager: ModalManager) : ConfirmDenyModal(modalMa
     init {
         contentText = "Sorry, you are on an outdated version of Essential. Restart your game to update."
         primaryButtonText = "Quit & Update"
-        primaryButtonStyle = MenuButton.DARK_GRAY
-        primaryButtonHoverStyle = MenuButton.GRAY
+        primaryButtonStyle = OutlineButtonStyle.GRAY.defaultStyle
+        primaryButtonHoverStyle = OutlineButtonStyle.GRAY.hoveredStyle
         primaryActionButton.bindHoverEssentialTooltip(
             stateOf("This will close your game!").toV1(this),
             EssentialTooltip.Position.ABOVE,

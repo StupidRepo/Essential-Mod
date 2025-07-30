@@ -16,7 +16,6 @@ import gg.essential.data.OnboardingData
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
-import gg.essential.elementa.state.BasicState
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.common.modal.ConfirmDenyModal
@@ -161,7 +160,7 @@ class TOSModal(
                 contentText = "To use Essential's features, you must first accept our Terms of Service."
                 cancelButtonText = "Deny"
                 primaryButtonText = "Accept"
-                (cancelButton as? MenuButton)?.rebindStyle(BasicState(MenuButton.RED), BasicState(MenuButton.LIGHT_RED))
+                cancelButtonStyle = OutlineButtonStyle.RED
             } else {
                 contentText = "An Essential feature you are trying\n to use requires you to accept our\n Terms of Service."
                 cancelButtonText = "Back"

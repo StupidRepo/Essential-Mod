@@ -12,7 +12,6 @@
 package gg.essential.gui.menu
 
 import gg.essential.Essential
-import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.state.State
 import gg.essential.elementa.utils.ObservableList
 import gg.essential.gui.EssentialPalette
@@ -22,27 +21,33 @@ import gg.essential.gui.common.modal.DangerConfirmationEssentialModal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.common.onSetValueAndNow
 import gg.essential.gui.elementa.state.v2.ListState
+import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl
+import gg.essential.gui.elementa.state.v2.await
+import gg.essential.gui.elementa.state.v2.awaitValue
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.toListState
-import gg.essential.gui.menu.compact.CompactAccountSwitcher
 import gg.essential.gui.menu.full.FullAccountSwitcher
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.error
 import gg.essential.gui.notification.iconAndMarkdownBody
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.handlers.account.WebAccountManager
+import gg.essential.network.connectionmanager.ConnectionManager
 import gg.essential.universal.UMinecraft
-import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.GuiUtil
 import gg.essential.util.USession
 import gg.essential.util.colored
 import gg.essential.util.executor
+import gg.essential.util.raceOf
 import gg.essential.util.setSession
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Duration.Companion.seconds
 
 class AccountManager {
 
@@ -54,8 +59,6 @@ class AccountManager {
     val originalAccounts: ListState<AccountInfo> = originalAccountsMutable.toListState()
 
     fun getFullAccountSwitcher(collapsed: State<Boolean>) = FullAccountSwitcher(accountsList, collapsed, this)
-
-    fun getCompactAccountSwitcher(sidebarContainer: UIContainer) = CompactAccountSwitcher(accountsList, sidebarContainer, this)
 
     init {
         USession.active.onSetValueAndNow(referenceHolder) {
@@ -89,21 +92,38 @@ class AccountManager {
     fun login(uuid: UUID) {
         if (USession.active.get().uuid != uuid) {
             val isSwitching = mutableStateOf(true)
-            val modalManager = platform.createModalManager().also { it.coroutineScope.cancel() }
+            val modalManager = GuiUtil.pushModal { AccountSwitchingModal(it, isSwitching) }
             refreshSession(uuid) { session, error ->
                 if (error == null) {
-                    Notifications.push("", "", 1f) {
-                        iconAndMarkdownBody(
-                            EssentialPalette.EMOTES_7X.create(),
-                            "Logged in as ${session.username.colored(EssentialPalette.TEXT_HIGHLIGHT)}"
-                        )
-                    }
+                    monitorSwitching(modalManager.coroutineScope, isSwitching, session.username)
                 } else {
                     isSwitching.set(false)
                     Essential.logger.error("Account Error: $error")
                     Notifications.error("Account Error", "Something went wrong\nduring login.")
                 }
                 refreshAccounts()
+            }
+        }
+    }
+
+    private fun monitorSwitching(coroutineScope: CoroutineScope, isSwitching: MutableState<Boolean>, username: String) {
+        coroutineScope.launch {
+            val connectionStatus = Essential.getInstance().connectionManager.connectionStatus
+            // Stop switching if there is a connection error, cosmetics have finished loading or after a 10-second delay
+            raceOf(
+                { connectionStatus.await { it != null && it != ConnectionManager.Status.SUCCESS } },
+                {
+                    connectionStatus.awaitValue(ConnectionManager.Status.SUCCESS)
+                    Essential.getInstance().connectionManager.cosmeticsManager.cosmeticsLoaded.awaitValue(true)
+                },
+                { delay(10.seconds) }
+            )
+            isSwitching.set(false)
+            Notifications.push("", "", 1f) {
+                iconAndMarkdownBody(
+                    EssentialPalette.SMILEY_8X.create(),
+                    "Logged in as ${username.colored(EssentialPalette.TEXT_HIGHLIGHT)}"
+                )
             }
         }
     }

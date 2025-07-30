@@ -17,6 +17,7 @@ import net.minecraft.client.gui.GuiButton;
 //#if MC>=11700
 //$$ import net.minecraft.client.gui.Drawable;
 //$$ import net.minecraft.client.gui.Selectable;
+//$$ import org.spongepowered.asm.mixin.gen.Invoker;
 //#else
 //$$ import net.minecraft.client.gui.widget.Widget;
 //#endif
@@ -40,6 +41,8 @@ public interface GuiScreenAccessor {
     //$$ List<Drawable> getDrawables();
     //$$ @Accessor
     //$$ List<Selectable> getSelectables();
+    //$$ @Invoker("addDrawableChild")
+    //$$ <T extends Element & Drawable & Selectable> T essential$addDrawableChild(T drawable);
     //#else
     //$$ @Accessor("buttons")
     //$$ List<Widget> getButtonList();

@@ -1064,6 +1064,15 @@ object EssentialPalette {
     @JvmField
     val COIN_BUNDLE_0_999: ImageFactory = ResourceImageFactory("/assets/essential/textures/coin/coin_bundle_0_999.png")
 
+    @JvmField
+    val HOST_5X: ImageFactory = ResourceImageFactory("/assets/essential/textures/host_5x.png")
+
+    @JvmField
+    val SMILEY_8X: ImageFactory = ResourceImageFactory("/assets/essential/textures/account/smiley_8x8.png")
+
+    @JvmField
+    val SIGN_OUT_8X7: ImageFactory = ResourceImageFactory("/assets/essential/textures/account/sign_out_8x7.png")
+
     @LoadsResources("/assets/essential/textures/friends/group_[a-z]+.png")
     private fun createGroupIconFactory(name: String): ImageFactory =
         ResourceImageFactory("/assets/essential/textures/friends/group_$name.png")

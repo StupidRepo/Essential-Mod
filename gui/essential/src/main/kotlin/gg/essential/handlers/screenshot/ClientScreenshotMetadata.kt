@@ -25,21 +25,21 @@ import java.nio.file.Path
 import java.util.*
 
 data class ClientScreenshotMetadata(
-    @SerializedName("authorId", alternate = ["a"])
     val authorId: UUID,
-    @SerializedName("time", alternate = ["b"])
     val time: DateTime,
-    @SerializedName("checksum", alternate = ["c"])
     val checksum: String,
-    @SerializedName("editTime")
     val editTime: DateTime?,
-    @SerializedName("locationMetadata", alternate = ["d"])
     val locationMetadata: Location,
-    @SerializedName("favorite", alternate = ["e"])
     val favorite: Boolean,
-    @SerializedName("edited", alternate = ["f"])
     val edited: Boolean,
-    val mediaId: String? = null,
+    /**
+     * Contains all known media ids of this screenshot.
+     * Note that some, or even all, of these may belong to different user accounts, so it might not be possible to modify them
+     * as the current user. If one of the ids is owned by the current user, [ownedMediaId] will contain that id.
+     */
+    val mediaIds: Set<String>,
+    /** @see mediaIds */
+    val ownedMediaId: String?,
 ) {
     constructor(media: Media) : this(
         media.metadata.authorId,
@@ -49,10 +49,12 @@ data class ClientScreenshotMetadata(
         Location(media.metadata.locationMetadata),
         media.metadata.isFavorite,
         media.metadata.isEdited,
+        setOf(media.id),
         media.id,
     )
 
-    fun withMediaId(mediaId: String?) = copy(mediaId = mediaId)
+    fun withoutMediaId(mediaId: String) = copy(mediaIds = mediaIds - mediaId, ownedMediaId = ownedMediaId?.takeUnless { it == mediaId })
+    fun withMediaId(mediaId: String) = copy(mediaIds = mediaIds + mediaId, ownedMediaId = mediaId)
     fun withFavorite(favorite: Boolean) = copy(favorite = favorite)
 
     data class Location(
@@ -114,6 +116,8 @@ data class ClientScreenshotMetadata(
                 Location(ClientScreenshotMetadata.Location.Type.UNKNOWN, "Unknown"),
                 favorite = false,
                 edited = false,
+                mediaIds = emptySet(),
+                ownedMediaId = null,
             )
     }
 }

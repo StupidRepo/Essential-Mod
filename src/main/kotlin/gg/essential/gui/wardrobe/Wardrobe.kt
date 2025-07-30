@@ -26,7 +26,7 @@ import gg.essential.gui.InternalEssentialGUI
 import gg.essential.gui.common.ContextOptionMenu
 import gg.essential.gui.common.EssentialCollapsibleSearchbar
 import gg.essential.gui.common.EssentialDropDown
-import gg.essential.gui.common.MenuButton
+import gg.essential.gui.common.OutlineButtonStyle
 import gg.essential.gui.common.modal.ConfirmDenyModal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.common.onSetValueAndNow
@@ -389,8 +389,8 @@ class Wardrobe(
                 contentText = "Unowned items will\nnot be visible in-game."
                 contentTextColor = EssentialPalette.TEXT
                 primaryButtonText = "Okay!"
-                primaryButtonStyle = MenuButton.DARK_GRAY
-                primaryButtonHoverStyle = MenuButton.GRAY
+                primaryButtonStyle = OutlineButtonStyle.GRAY.defaultStyle
+                primaryButtonHoverStyle = OutlineButtonStyle.GRAY.hoveredStyle
                 cancelButtonText = "Back"
             }
         }

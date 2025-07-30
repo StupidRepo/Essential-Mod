@@ -35,6 +35,7 @@ import gg.essential.gui.screenshot.components.ScreenshotBrowser
 import gg.essential.gui.screenshot.constraints.AspectPreservingFillConstraint
 import gg.essential.gui.screenshot.copyScreenshotToClipboard
 import gg.essential.gui.util.hoveredState
+import gg.essential.gui.util.stateBy
 import gg.essential.universal.ChatColor
 import gg.essential.universal.UKeyboard
 import gg.essential.util.*
@@ -62,19 +63,13 @@ class ImageEmbedImpl(
     private var loadedImage: BufferedImage? = null
     private var loading: Int? = null
 
-    private val aspectRatio = BasicState(9 / 16f)
+    private val aspectRatio = BasicState(16 / 9f)
     private val highlightedState = BasicState(false)
     private val focusedView by FocusedView()
 
-    // Dummy component that stores the size of the image
-    private val imageSizeContainer by UIContainer().constrain {
-        width = MessageUtils.getMessageWidth(wrapper.channelType == ChannelType.ANNOUNCEMENT)
-        height = AspectConstraint(9 / 16f)
-    } hiddenChildOf wrapper
-
     private val loadingEmbed by UIBlock(EssentialPalette.LIGHT_DIVIDER).constrain {
-        width = 100.percent boundTo imageSizeContainer
-        height = 100.percent boundTo imageSizeContainer
+        width = RelativeConstraint()
+        height = AspectConstraint(9 / 16f)
     }.bindParent(this, loadingState)
 
     private val loadingIcon by LoadingIcon(2.0) childOf loadingEmbed
@@ -84,7 +79,7 @@ class ImageEmbedImpl(
         constrain {
             x = 10.pixels(alignOpposite = wrapper.sentByClient)
             y = SiblingConstraint(4f)
-            width = ChildBasedSizeConstraint()
+            width = MessageUtils.getMessageWidth(wrapper.channelType == ChannelType.ANNOUNCEMENT)
             height = ChildBasedMaxSizeConstraint()
         }
 
@@ -218,9 +213,10 @@ class ImageEmbedImpl(
                 return@maybeLoadUIImage
             }
 
-            val imageContainer by UIContainer().constrain {
-                width = ChildBasedMaxSizeConstraint()
-                height = ChildBasedMaxSizeConstraint()
+            val imageContainer by UIContainer().apply {
+                layout(Modifier.fillWidth()
+                    .then(stateBy { Modifier.heightAspect( (1/aspectRatio()).coerceAtMost(9/16f)) })
+                ) {}
             } childOf this
 
             if (uiImage == null) {
@@ -379,8 +375,9 @@ class ImageEmbedImpl(
 
         container.layout {
             box(
-                Modifier.then(BasicHeightModifier { AspectPreservingFillConstraint(aspectRatio) boundTo imageSizeContainer })
-                    .then(BasicWidthModifier { AspectPreservingFillConstraint(aspectRatio) boundTo imageSizeContainer })
+                Modifier.then(BasicHeightModifier { AspectPreservingFillConstraint(aspectRatio) })
+                    .then(BasicWidthModifier { AspectPreservingFillConstraint(aspectRatio) })
+                    .alignHorizontal(if (messageWrapper.sentByClient) Alignment.End else Alignment.Start)
             ) {
                 image(Modifier.fillParent())
                 if_(highlightedState) {

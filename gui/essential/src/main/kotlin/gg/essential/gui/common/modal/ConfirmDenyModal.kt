@@ -15,9 +15,20 @@ import gg.essential.elementa.UIComponent
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
 import gg.essential.elementa.state.BasicState
+import gg.essential.elementa.state.State
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
+import gg.essential.gui.common.shadow.ShadowEffect
+import gg.essential.gui.elementa.state.v2.toV2
+import gg.essential.gui.elementa.state.v2.State as StateV2
+import gg.essential.gui.layoutdsl.Alignment
+import gg.essential.gui.layoutdsl.LayoutScope
+import gg.essential.gui.layoutdsl.Modifier
+import gg.essential.gui.layoutdsl.alignVertical
+import gg.essential.gui.layoutdsl.text
 import gg.essential.gui.overlay.ModalManager
+import gg.essential.universal.USound
+import gg.essential.util.onLeftClick
 
 /**
  * Template for a modal giving the user a choice to confirm or deny an action
@@ -35,7 +46,7 @@ open class ConfirmDenyModal(
 ) {
 
     private val cancelButtonTextState = BasicState("Cancel").map { it }
-    private val cancelButtonStyleState = BasicState(StyledButton.Style.GRAY).map { it }
+    private val cancelButtonStyleState = BasicState(OutlineButtonStyle.GRAY).map { it }
     private val cancelButtonEnabledState = BasicState(true).map { it }
 
     private val cancelActions = mutableListOf<(Boolean) -> Unit>()
@@ -44,30 +55,34 @@ open class ConfirmDenyModal(
         get() = cancelButtonTextState.get()
         set(value) = cancelButtonTextState.set(value)
 
+    var cancelButtonStyle: StyledButton.Style
+        get() = cancelButtonStyleState.get()
+        set(value) = cancelButtonStyleState.set(value)
+
     var cancelButtonEnabled: Boolean
         get() = cancelButtonEnabledState.get()
         set(value) = cancelButtonEnabledState.set(value)
 
-    val cancelButton: UIComponent by MenuButton(
-            cancelButtonTextState,
-            hoverStyle = BasicState(MenuButton.GRAY),
-        ) {
+    val cancelButton: UIComponent by OutlineButton(
+            cancelButtonStyleState.toV2(),
+            cancelButtonEnabledState.not().toV2(),
+        ) { currentStyle ->
+            layoutCancelButton(cancelButtonTextState.toV2(), currentStyle)
+        }.effect(ShadowEffect(EssentialPalette.BLACK)).constrain {
+            width = CopyConstraintFloat() boundTo primaryActionButton
+        }.onLeftClick {
+            USound.playButtonPress()
             fireCancel(true)
             replaceWith(null)
-        }.apply {
-            rebindEnabled(cancelButtonEnabledState)
-        }.constrain {
-            width = CopyConstraintFloat() boundTo primaryActionButton
-            height = 20.pixels
         }
 
     // Top padding
     val spacer by Spacer(height = 14f) childOf customContent
 
     init {
-        primaryButtonStyle = MenuButton.BLUE
-        primaryButtonHoverStyle = MenuButton.LIGHT_BLUE
-        primaryButtonDisabledStyle = MenuButton.BLUE_DISABLED
+        primaryButtonStyle = OutlineButtonStyle.BLUE.defaultStyle
+        primaryButtonHoverStyle = OutlineButtonStyle.BLUE.hoveredStyle
+        primaryButtonDisabledStyle = OutlineButtonStyle.BLUE.disabledStyle
         buttonContainer.insertChildBefore(cancelButton, primaryActionButton)
 
         primaryActionButton.constrain {
@@ -90,6 +105,10 @@ open class ConfirmDenyModal(
     fun onCancel(callback: (Boolean) -> Unit) = apply {
         cancelActions.add(callback)
         return this
+    }
+
+    open fun LayoutScope.layoutCancelButton(text: StateV2<String>, currentStyle: StateV2<MenuButton.Style>) {
+        text(text, Modifier.alignVertical(Alignment.Center(true)).textStyle(currentStyle))
     }
 
     private fun fireCancel(buttonClicked: Boolean) {

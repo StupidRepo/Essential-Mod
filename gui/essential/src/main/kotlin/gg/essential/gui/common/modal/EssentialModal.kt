@@ -21,12 +21,18 @@ import gg.essential.elementa.state.toConstraint
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.common.shadow.EssentialUIWrappedText
+import gg.essential.gui.common.shadow.ShadowEffect
 import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.toV2
+import gg.essential.gui.layoutdsl.Alignment
 import gg.essential.gui.layoutdsl.LayoutScope
+import gg.essential.gui.layoutdsl.Modifier
+import gg.essential.gui.layoutdsl.alignVertical
 import gg.essential.gui.layoutdsl.text
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.util.simulateLeftClick
 import gg.essential.universal.UKeyboard
+import gg.essential.universal.USound
 import gg.essential.util.*
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import java.awt.Color
@@ -53,9 +59,9 @@ open class EssentialModal(
     private val titleTextState = BasicState("").map { it }
     private val contentTextState = BasicState("").map { it }
     private val primaryButtonTextState = BasicState("Continue").map { it }
-    private val primaryButtonStyleState = BasicState(MenuButton.DARK_GRAY)
-    private val primaryButtonHoverStyleState = BasicState(MenuButton.GRAY)
-    private val primaryButtonDisabledStyleState = BasicState(MenuButton.GRAY_DISABLED)
+    private val primaryButtonStyleState = BasicState(OutlineButtonStyle.GRAY.defaultStyle)
+    private val primaryButtonHoverStyleState = BasicState(OutlineButtonStyle.GRAY.hoveredStyle)
+    private val primaryButtonDisabledStyleState = BasicState(OutlineButtonStyle.GRAY.disabledStyle)
     private val contentTextColorState = BasicState(EssentialPalette.TEXT_HIGHLIGHT).map { it }
     private val titleTextColorState = BasicState(EssentialPalette.ACCENT_BLUE).map { it }
     private val widthState = BasicState(190f)
@@ -124,7 +130,7 @@ open class EssentialModal(
                 // For getting previous button if shift+tab
                 val direction = if (UKeyboard.isShiftKeyDown()) -1 else 1
                 // Get all buttons in menu and set default button
-                val allButtons = this@EssentialModal.findChildrenOfType<MenuButton>(true)
+                val allButtons = this@EssentialModal.findChildrenOfType<OutlineButton>(true)
                 var nextButton = primaryActionButton
 
                 if (selectedButton != null) {
@@ -215,16 +221,19 @@ open class EssentialModal(
         height = ChildBasedMaxSizeConstraint()
     } childOf content
 
-    val primaryActionButton: UIComponent by MenuButton(
-            primaryButtonTextState,
-            primaryButtonStyleState,
-            primaryButtonHoverStyleState,
-            primaryButtonDisabledStyleState,
-        ) { primaryButtonAction?.invoke() }.constrain {
+    val primaryActionButton: UIComponent by OutlineButton(
+            // doing this "properly" with a memo and states each converted to v2 made this crash with a concurrent modification...
+            primaryButtonStyleState.zip(primaryButtonHoverStyleState).zip(primaryButtonDisabledStyleState).toV2().map {
+                StyledButton.Style(it.first.first, it.first.second, it.second)
+            },
+            (primaryButtonEnabledState and primaryButtonEnableStateOverride).not().toV2(),
+        ) { currentStyle ->
+            text(primaryButtonTextState, Modifier.alignVertical(Alignment.Center(true)).textStyle(currentStyle))
+        }.effect(ShadowEffect(EssentialPalette.BLACK)).constrain {
             width = 91.pixels
-            height = 20.pixels
-        }.apply {
-            rebindEnabled(primaryButtonEnabledState and primaryButtonEnableStateOverride)
+        }.onLeftClick {
+            USound.playButtonPress()
+            primaryButtonAction?.invoke()
         } childOf buttonContainer
 
     init {

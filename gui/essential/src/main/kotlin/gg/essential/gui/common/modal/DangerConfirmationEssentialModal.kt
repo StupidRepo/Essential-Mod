@@ -28,8 +28,8 @@ open class DangerConfirmationEssentialModal(
         primaryButtonText = confirmText
         contentTextColor = EssentialPalette.TEXT_HIGHLIGHT
         configure {
-            primaryButtonStyle = MenuButton.RED
-            primaryButtonHoverStyle = MenuButton.LIGHT_RED
+            primaryButtonStyle = OutlineButtonStyle.RED.defaultStyle
+            primaryButtonHoverStyle = OutlineButtonStyle.RED.hoveredStyle
         }
     }
 }

@@ -204,7 +204,7 @@ fun createSelectFriendsToGiftModal(
 
     val selectedFriends = mutableListStateOf<UUID>()
 
-    return selectModal(manager, "Select friends to\ngift them ${ChatColor.WHITE + item.name + ChatColor.RESET}.") {
+    return selectModal(manager, "Select friends to gift\nthem ${ChatColor.WHITE + item.name + ChatColor.RESET}.") {
         modalSettings {
             primaryButtonText = "Purchase"
             titleTextColor = EssentialPalette.TEXT

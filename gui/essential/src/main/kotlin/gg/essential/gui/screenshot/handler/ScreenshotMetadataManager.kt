@@ -20,8 +20,10 @@ import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
+import gg.essential.handlers.screenshot.ClientScreenshotMetadata.Location
 import gg.essential.lib.gson.GsonBuilder
 import gg.essential.lib.gson.JsonSyntaxException
+import gg.essential.lib.gson.annotations.SerializedName
 import gg.essential.network.connectionmanager.media.IScreenshotMetadataManager
 import gg.essential.util.Client
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +36,10 @@ import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Note: Metadata returned by this class does not yet have [ClientScreenshotMetadata.ownedMediaId] set!
+ *       The caller is expected to derive it from a list of known owned remote media.
+ */
 class ScreenshotMetadataManager(
     private val metadataFolder: File,
     private val screenshotChecksumManager: ScreenshotChecksumManager,
@@ -57,7 +63,7 @@ class ScreenshotMetadataManager(
     private fun readMetadata(imageChecksum: String): ClientScreenshotMetadata? {
         return try {
             val fileContents = File(metadataFolder, imageChecksum).readText()
-            gson.fromJson(fileContents, ClientScreenshotMetadata::class.java)
+            gson.fromJson(fileContents, SerializedMetadata::class.java)?.toMod()
         } catch (exception: JsonSyntaxException) {
             LOGGER.error("Metadata corrupt for checksum $imageChecksum. Attempting recovery.", exception)
             tryRecoverMetadata(imageChecksum)
@@ -107,13 +113,13 @@ class ScreenshotMetadataManager(
      * Get metadata straight from the cache using a media id.
      */
     fun getMetadataCache(mediaId: String): ClientScreenshotMetadata? {
-        return metadataCache.values.firstOrNull { it.mediaId == mediaId }
+        return metadataCache.values.firstOrNull { mediaId in it.mediaIds }
     }
 
     private fun writeMetadata(metadata: ClientScreenshotMetadata) {
         negativeChecksumCache.remove(metadata.checksum)
         try {
-            File(metadataFolder, metadata.checksum).writeText(gson.toJson(metadata))
+            File(metadataFolder, metadata.checksum).writeText(gson.toJson(SerializedMetadata.fromMod(metadata)))
         } catch (e: IOException) {
             e.printStackTrace()
         }
@@ -172,6 +178,60 @@ class ScreenshotMetadataManager(
 
     fun metadata(checksum: String): State<ClientScreenshotMetadata?> {
         return stateByChecksum.getOrPut(checksum) { mutableStateOf(getMetadata(checksum)) }
+    }
+
+    private data class SerializedMetadata(
+        @SerializedName("authorId", alternate = ["a"])
+        val authorId: UUID,
+        @SerializedName("time", alternate = ["b"])
+        val time: DateTime,
+        @SerializedName("checksum", alternate = ["c"])
+        val checksum: String,
+        @SerializedName("editTime")
+        val editTime: DateTime?,
+        @SerializedName("locationMetadata", alternate = ["d"])
+        val locationMetadata: Location,
+        @SerializedName("favorite", alternate = ["e"])
+        val favorite: Boolean,
+        @SerializedName("edited", alternate = ["f"])
+        val edited: Boolean,
+        val mediaId: String? = null,
+        val moreMediaIds: List<String>? = null,
+    ) {
+        fun toMod() = ClientScreenshotMetadata(
+            authorId,
+            time,
+            checksum,
+            editTime,
+            locationMetadata,
+            favorite,
+            edited,
+            mediaIds = when {
+                mediaId == null -> emptySet()
+                moreMediaIds == null -> setOf(mediaId)
+                else -> buildSet { add(mediaId); addAll(moreMediaIds) }
+            },
+            ownedMediaId = null,
+        )
+
+        companion object {
+            fun fromMod(mod: ClientScreenshotMetadata) = with(mod) {
+                val mediaIdsIter = mediaIds.iterator()
+                val firstMediaId = if (mediaIdsIter.hasNext()) mediaIdsIter.next() else null
+                val moreMediaIds = if (mediaIdsIter.hasNext()) mediaIdsIter.asSequence().toList() else null
+                SerializedMetadata(
+                    authorId,
+                    time,
+                    checksum,
+                    editTime,
+                    locationMetadata,
+                    favorite,
+                    edited,
+                    firstMediaId,
+                    moreMediaIds,
+                )
+            }
+        }
     }
 
     companion object {

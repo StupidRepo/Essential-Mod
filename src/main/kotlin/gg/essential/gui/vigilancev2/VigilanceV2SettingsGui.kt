@@ -11,16 +11,31 @@
  */
 package gg.essential.gui.vigilancev2
 
+import gg.essential.data.VersionData
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
+import gg.essential.elementa.constraints.CopyConstraintFloat
+import gg.essential.elementa.constraints.MaxConstraint
+import gg.essential.elementa.constraints.MinConstraint
+import gg.essential.elementa.dsl.boundTo
+import gg.essential.elementa.dsl.constrain
+import gg.essential.elementa.dsl.pixels
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.InternalEssentialGUI
 import gg.essential.gui.elementa.state.v2.*
 import gg.essential.gui.layoutdsl.*
+import gg.essential.gui.modals.UpdateAvailableModal
+import gg.essential.gui.vigilancev2.components.vigilanceCategoryTextColor
 import gg.essential.gui.vigilancev2.palette.VigilancePalette
+import gg.essential.universal.UDesktop
+import gg.essential.universal.UMinecraft
+import gg.essential.universal.USound
 import gg.essential.util.AutoUpdate
 import gg.essential.util.GuiUtil
+import gg.essential.util.openInBrowser
 import gg.essential.vigilance.data.PropertyData
+import java.awt.Color
+import java.net.URI
 
 const val bottomBarHeight = 30f
 
@@ -53,6 +68,12 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
     val currentCategoryName: MutableState<String> = mutableStateOf(defaultCategoryName)
 
     init {
+        container.constrain {
+            width = MaxConstraint(MinConstraint(width, 595.pixels), 558.pixels)
+        }
+        scissorBox.constrain {
+            width = CopyConstraintFloat() boundTo container
+        }
 
         titleBar.layout {
             searchState = vigilanceTitleBar(outlineThickness, { leftTitleBarContent() })
@@ -74,7 +95,23 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
                 currentCategoryName,
                 searchState,
                 scrollbar,
-                sidebarSections = listOf(),
+                sidebarSections = listOf(
+                    {
+                        listOf(
+                            "Changelog" to URI("https://essential.gg/changelog"),
+                            "Privacy Policy" to URI("https://essential.gg/privacy-policy"),
+                            "Terms of Service" to URI("https://essential.gg/terms-of-use")
+                        ).forEach { (text, uri) -> sidebarLink(text, uri) }
+                    },
+                    {
+                        listOf(
+                            "Discord" to URI("https://discord.gg/essential"),
+                            "Twitter" to URI("https://x.com/EssentialMod"),
+                            "Website" to URI("https://essential.gg/")
+                        ).forEach { (text, uri) -> sidebarLink(text, uri) }
+                    },
+                    { versionInformation() },
+                ),
                 bottomSidebarContent = { bottomSidebarContent() },
             )
         }
@@ -97,9 +134,85 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
 
     private fun LayoutScope.leftTitleBarContent() {
 
+        iconButton(EssentialPalette.MC_FOLDER_8X7, tooltipText = "Open Minecraft Folder") {
+            UDesktop.open(UMinecraft.getMinecraft().mcDataDir)
+        }
     }
 
     private fun LayoutScope.bottomSidebarContent() {
+
+        val updateButtonModifier = Modifier
+            .childBasedWidth(10f)
+            .childBasedHeight(5f)
+            .color(EssentialPalette.GREEN_BUTTON)
+            .hoverColor(EssentialPalette.GREEN_BUTTON_HOVER)
+            .shadow(Color.BLACK)
+            .onLeftClick {
+                GuiUtil.pushModal { UpdateAvailableModal(it) }
+            }
+
+        if_(AutoUpdate.updateAvailable) {
+            bottomBar {
+                box(Modifier.fillParent().color(EssentialPalette.COMPONENT_BACKGROUND)) {
+                    row(Modifier.fillWidth(padding = 10f), Arrangement.SpaceBetween) {
+                        text(
+                            "Update Available!",
+                            Modifier.color(EssentialPalette.UPDATE_AVAILABLE_GREEN).shadow(EssentialPalette.TEXT_SHADOW)
+                        )
+
+                        box(updateButtonModifier.hoverScope()) {
+                            text(
+                                "Update",
+                                Modifier
+                                    .color(EssentialPalette.TEXT_HIGHLIGHT)
+                                    .shadow(EssentialPalette.TEXT_SHADOW)
+                                    .alignBoth(Alignment.Center(true))
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun LayoutScope.bottomBar(block: LayoutScope.() -> Unit) {
+        // This has been mostly copied from gui.about.components.LeftPane#bottomBar:
+        // The design includes the bottom divider in the vertical space for the bottom bar. However, that divider is
+        // outside the `content` component, and therefore this component must be $outlineThickness pixels smaller because
+        // those pixels aren't inside `content`.
+        // We'll then add them back inside the outer box (intentionally going out of bounds) so that the components
+        // can be implemented as if the outline was part of the content all along.
+        box(Modifier.fillWidth(rightPadding = outlineThickness).height(bottomBarHeight - outlineThickness)) {
+            box(Modifier.fillWidth().height(bottomBarHeight).alignVertical(Alignment.Start)) {
+                block()
+            }
+        }
+    }
+
+    private fun LayoutScope.versionInformation() {
+        val versionText = listOf(
+            "Essential Mod v${VersionData.essentialVersion}",
+            "#${VersionData.essentialCommit}",
+            VersionData.formatPlatform(VersionData.getEssentialPlatform())
+        )
+
+        wrappedText(
+            versionText.joinToString("\n"),
+            Modifier.color(EssentialPalette.TEXT_DISABLED).shadow(EssentialPalette.COMPONENT_BACKGROUND),
+        )
+    }
+
+    private fun LayoutScope.sidebarLink(text: String, uri: URI) {
+        row(
+            Modifier.hoverScope().onLeftClick {
+                USound.playButtonPress()
+                openInBrowser(uri)
+            },
+            Arrangement.spacedBy(4f)
+        ) {
+            text(text, vigilanceCategoryTextColor())
+            icon(EssentialPalette.ARROW_UP_RIGHT_5X5, vigilanceCategoryTextColor())
+        }
     }
 
     override fun updateGuiScale() {

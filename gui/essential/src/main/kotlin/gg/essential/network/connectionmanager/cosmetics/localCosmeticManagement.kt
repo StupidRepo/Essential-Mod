@@ -94,7 +94,7 @@ fun CosmeticsDataWithChanges.setCosmeticSingletonPropertyEnabled(
         } else {
             val newProperty = when (type) {
                 CosmeticPropertyType.ARMOR_HANDLING -> CosmeticProperty.ArmorHandling(
-                    "UNUSED",
+                    cosmeticId,
                     enabled,
                     CosmeticProperty.ArmorHandling.Data()
                 )

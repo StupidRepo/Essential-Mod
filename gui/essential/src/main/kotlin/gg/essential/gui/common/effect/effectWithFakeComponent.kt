@@ -12,7 +12,6 @@
 package gg.essential.gui.common.effect
 
 import gg.essential.elementa.components.UIContainer
-import gg.essential.elementa.components.Window
 import gg.essential.elementa.constraints.CopyConstraintFloat
 import gg.essential.elementa.constraints.PixelConstraint
 import gg.essential.elementa.dsl.*
@@ -21,19 +20,22 @@ import gg.essential.elementa.effects.ScissorEffect
 import gg.essential.universal.UMatrixStack
 
 /**
- * A base wrapper used to create more advanced scissor effects
+ * A wrapper used to add an effect using a fake component
  * Extend this class and edit the constraints of the dummy component
  */
-abstract class AdvancedScissorEffectBase : Effect() {
+abstract class EffectWithFakeComponent(private val effect: Effect) : Effect() {
 
     protected val dummyComponent = UIContainer()
-    protected val scissorEffect = ScissorEffect()
     protected var initialised = false
 
     open fun preFirstDraw() {
-        dummyComponent.parent = Window.of(boundComponent)
-        dummyComponent.effect(scissorEffect)
+        dummyComponent.parent = boundComponent
+        dummyComponent.effect(effect)
         initialised = true
+    }
+
+    override fun setup() {
+        effect.setup()
     }
 
     override fun animationFrame() {
@@ -44,11 +46,15 @@ abstract class AdvancedScissorEffectBase : Effect() {
         if (!initialised) {
             this.preFirstDraw()
         }
-        scissorEffect.beforeDraw(matrixStack)
+        effect.beforeDraw(matrixStack)
     }
 
     override fun afterDraw(matrixStack: UMatrixStack) {
-        scissorEffect.afterDraw(matrixStack)
+        effect.afterDraw(matrixStack)
+    }
+
+    override fun beforeChildrenDraw(matrixStack: UMatrixStack) {
+        effect.beforeChildrenDraw(matrixStack)
     }
 
 }
@@ -59,7 +65,7 @@ abstract class AdvancedScissorEffectBase : Effect() {
 class HorizontalScissorEffect(
     private val topMargin: PixelConstraint = 0.pixels,
     private val bottomMargin: PixelConstraint = 0.pixels
-) : AdvancedScissorEffectBase() {
+) : EffectWithFakeComponent(ScissorEffect()) {
 
     override fun preFirstDraw() {
         dummyComponent.constrain {

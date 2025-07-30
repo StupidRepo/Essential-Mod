@@ -759,6 +759,11 @@ class ParticleSystem(
 
             components.particleMotionParametric?.let { config ->
                 position.set(config.relativePosition.eval(molang))
+                if (localSpace == null) {
+                    position.plusSelf(emitter.position)
+                } else if (emitter.locatorOffset != null) {
+                    position.plusSelf(emitter.locatorOffset)
+                }
                 rotationAngle = config.rotation.eval(molang)
                 if (config.direction != null) {
                     direction.set(config.direction.eval(molang))

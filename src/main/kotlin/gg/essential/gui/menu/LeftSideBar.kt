@@ -12,8 +12,8 @@
 package gg.essential.gui.menu
 
 import gg.essential.Essential
-import gg.essential.config.EssentialConfig
 import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPacket
+import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
@@ -32,6 +32,13 @@ import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.systemTime
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.elementa.state.v2.withSystemTime
+import gg.essential.gui.layoutdsl.BasicXModifier
+import gg.essential.gui.layoutdsl.BasicYModifier
+import gg.essential.gui.layoutdsl.Modifier
+import gg.essential.gui.layoutdsl.box
+import gg.essential.gui.layoutdsl.layout
+import gg.essential.gui.layoutdsl.then
+import gg.essential.gui.proxies.ScreenWithProxiesHandler.Companion.mountWithProxy
 import gg.essential.gui.wardrobe.Wardrobe
 import gg.essential.gui.wardrobe.WardrobeCategory
 import gg.essential.handlers.PauseMenuDisplay
@@ -109,7 +116,7 @@ class LeftSideBar(
         width = AspectConstraint()
     }.bindConstraints(collapsed) { isCollapsed ->
         height = if (isCollapsed) 110.pixels else 120.pixels
-    } childOf playerWardrobeContainer
+    }
 
     private val wardrobeButton by MenuButton(BasicState("Wardrobe"), textAlignment = MenuButton.Alignment.LEFT) {
         openWardrobe()
@@ -121,32 +128,40 @@ class LeftSideBar(
     ).constrain {
         width = 80.pixels
         height = 20.pixels
-    }.bindConstraints(menuSize) { (collapsed, isCompact) ->
-        if (isCompact) {
-            x = CenterConstraint()
-            y = SiblingConstraint(9f)
-        } else if (collapsed) {
-            x = CenterConstraint()
-            y = SiblingConstraint(10f)
-        } else {
-            x = 0.pixels boundTo this@LeftSideBar
-            y = SiblingConstraint(30f)
-        }
     }.setTooltip(menuSize.map { (isCompact, collapsed) -> if (isCompact || collapsed) "Wardrobe" else "" }.toV1(this))
-        .bindCollapsed((collapsed or isCompact).toV1(this), 20f) childOf playerWardrobeContainer
+        .bindCollapsed((collapsed or isCompact).toV1(this), 20f)
+
+    private val wardrobeButtonContainerModifier = Modifier.then(StateV2 {
+        if (isCompact()) {
+            BasicXModifier { CenterConstraint() }.then(
+                BasicYModifier { SiblingConstraint(9f) }
+            )
+        } else if (collapsed()) {
+            BasicXModifier { CenterConstraint() }.then(
+                BasicYModifier { SiblingConstraint(10f) }
+            )
+        } else {
+            BasicXModifier { 0.pixels boundTo this@LeftSideBar }.then(
+                BasicYModifier { SiblingConstraint(30f) }
+            )
+        }
+    })
 
     init {
+        val wardrobeContainer: UIComponent
+
+        playerWardrobeContainer.layout {
+            mountWithProxy("player") { player() }
+
+            wardrobeContainer = box(wardrobeButtonContainerModifier) {
+                mountWithProxy("wardrobe_2") { wardrobeButton() }
+            }
+        }
+
         bindConstraints(isCompact) { compact ->
             if (compact) {
-                x = if (EssentialConfig.closerMenuSidebar) {
-                    basicXConstraint { (topButtonAndMultiplayer.getLeft() / 2) - (it.getWidth() / 2) }.coerceIn(
-                        basicXConstraint { topButtonAndMultiplayer.getLeft() - (player.getWidth() / 2) - (wardrobeButton.getWidth() / 2) - PauseMenuDisplay.maxSpaceBetweenSides },
-                        17.pixels(alignOutside = true) boundTo topButtonAndMultiplayer,
-                    )
-                } else {
-                    basicXConstraint { (topButtonAndMultiplayer.getLeft() / 2) - (it.getWidth() / 2) }
+                x = basicXConstraint { (topButtonAndMultiplayer.getLeft() / 2) - (it.getWidth() / 2) }
                         .coerceAtMost(17.pixels(alignOutside = true) boundTo topButtonAndMultiplayer)
-                }
                 y = 0.pixels boundTo player
                 width = 100.percent boundTo player
                 height = ChildBasedSizeConstraint()
@@ -159,7 +174,8 @@ class LeftSideBar(
             }
         }
 
-        player.constrain { x = CenterConstraint() boundTo wardrobeButton }
+        // we use a container here so the wardrobe button's vanilla proxy position changes do not affect this
+        player.constrain { x = CenterConstraint() boundTo wardrobeContainer }
 
         val saleName = currentSale.map {
             (it?.name?.uppercase() ?: "")

@@ -28,6 +28,7 @@ import kotlinx.serialization.modules.polymorphic
 @Serializable(with = CosmeticProperty.TheSerializer::class)
 sealed class CosmeticProperty {
 
+    @Deprecated(ID_DEPRECATION_MESSAGE)
     abstract val id: String?
     @Deprecated(ENABLED_DEPRECATION_MESSAGE)
     abstract val enabled: Boolean
@@ -36,6 +37,7 @@ sealed class CosmeticProperty {
     @SerialName("__unknown__")
     @Serializable
     data class Unknown(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -50,11 +52,12 @@ sealed class CosmeticProperty {
     @SerialName("ARMOR_HANDLING")
     @Serializable
     data class ArmorHandling(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
-    ) : CosmeticProperty() {
+    ) : CosmeticProperty(), IdShouldBeSelf {
 
         @Transient
         override val type: CosmeticPropertyType = CosmeticPropertyType.ARMOR_HANDLING
@@ -71,11 +74,12 @@ sealed class CosmeticProperty {
     @SerialName("ARMOR_HANDLING_V2")
     @Serializable
     data class ArmorHandlingV2(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
-    ) : CosmeticProperty() {
+    ) : CosmeticProperty(), IdShouldBeSelf {
 
         @Transient
         override val type: CosmeticPropertyType = CosmeticPropertyType.ARMOR_HANDLING_V2
@@ -89,11 +93,12 @@ sealed class CosmeticProperty {
     @SerialName("COSMETIC_BONE_HIDING")
     @Serializable
     data class CosmeticBoneHiding(
+        @Suppress("OVERRIDE_DEPRECATION")
         override val id: String,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
-    ) : CosmeticProperty() {
+    ) : CosmeticProperty(), IdIsTarget {
 
         @Transient
         override val type: CosmeticPropertyType = CosmeticPropertyType.COSMETIC_BONE_HIDING
@@ -110,6 +115,7 @@ sealed class CosmeticProperty {
     @SerialName("POSITION_RANGE")
     @Serializable
     data class PositionRange(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -133,11 +139,12 @@ sealed class CosmeticProperty {
     @SerialName("EXTERNAL_HIDDEN_BONE")
     @Serializable
     data class ExternalHiddenBone(
+        @Suppress("OVERRIDE_DEPRECATION")
         override val id: String,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
         val data: Data
-    ) : CosmeticProperty() {
+    ) : CosmeticProperty(), IdIsTarget {
 
         @Transient
         override val type: CosmeticPropertyType = CosmeticPropertyType.EXTERNAL_HIDDEN_BONE
@@ -175,6 +182,7 @@ sealed class CosmeticProperty {
     @SerialName("INTERRUPTS_EMOTE")
     @Serializable
     data class InterruptsEmote(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -201,6 +209,7 @@ sealed class CosmeticProperty {
     @SerialName("ALL_OTHER_COSMETIC_OR_ITEM_HIDING")
     @Serializable
     data class HidesAllOtherCosmeticsOrItems(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -233,6 +242,7 @@ sealed class CosmeticProperty {
     @SerialName("LOCKS_PLAYER_ROTATION")
     @Serializable
     data class LocksPlayerRotation(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -252,6 +262,7 @@ sealed class CosmeticProperty {
     @SerialName("REQUIRES_UNLOCK_ACTION")
     @Serializable
     data class RequiresUnlockAction(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -298,6 +309,7 @@ sealed class CosmeticProperty {
     @SerialName("PREVIEW_RESET_TIME")
     @Serializable
     data class PreviewResetTime(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -316,6 +328,7 @@ sealed class CosmeticProperty {
     @SerialName("LOCALIZATION")
     @Serializable
     data class Localization(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -334,6 +347,7 @@ sealed class CosmeticProperty {
     @SerialName("TRANSITION_DELAY")
     @Serializable
     data class TransitionDelay(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -352,6 +366,7 @@ sealed class CosmeticProperty {
     @SerialName("VARIANTS")
     @Serializable
     data class Variants(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -377,6 +392,7 @@ sealed class CosmeticProperty {
     @SerialName("DEFAULT_SIDE")
     @Serializable
     data class DefaultSide(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -395,6 +411,7 @@ sealed class CosmeticProperty {
     @SerialName("MUTUALLY_EXCLUSIVE")
     @Serializable
     data class MutuallyExclusive(
+        @Deprecated(ID_DEPRECATION_MESSAGE)
         override val id: String?,
         @Deprecated(ENABLED_DEPRECATION_MESSAGE)
         override val enabled: Boolean,
@@ -409,6 +426,21 @@ sealed class CosmeticProperty {
             val slots: Set<CosmeticSlot> = emptySet(),
         )
     }
+
+    /**
+     * Marks a property type which uses the [id] value in some way.
+     * Any type which implements this must implement one of its sub-type, specifying the way in which it is used.
+     */
+    sealed interface UsesId
+    /**
+     * Marks a property type for which the [id] value should match the id of the cosmetic on which it is declared.
+     * A diagnostics error is emitted when this is not the case.
+     */
+    sealed interface IdShouldBeSelf : UsesId
+    /**
+     * Marks a property type for which the [id] value declares the cosmetic it affects.
+     */
+    sealed interface IdIsTarget : UsesId
 
     object TheSerializer : FallbackPolymorphicSerializer<CosmeticProperty>(CosmeticProperty::class, "type", "__type", "__unknown__") {
         override val module = SerializersModule {
@@ -434,6 +466,7 @@ sealed class CosmeticProperty {
     }
 
     companion object {
+        private const val ID_DEPRECATION_MESSAGE = "Only valid for a small sub-set of properties, see [UsesId]. Should be `\"UNUSED\"` for all others."
         private const val ENABLED_DEPRECATION_MESSAGE = "Use [Cosmetic.properties]/[Cosmetic.disabledProperties] instead of explicitly checking this property. It will be removed eventually."
 
         val json by lazy { // lazy to prevent initialization cycle in serializers

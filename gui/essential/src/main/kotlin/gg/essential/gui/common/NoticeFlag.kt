@@ -19,6 +19,8 @@ import gg.essential.elementa.constraints.ChildBasedSizeConstraint
 import gg.essential.elementa.constraints.SiblingConstraint
 import gg.essential.elementa.dsl.*
 import gg.essential.elementa.effects.OutlineEffect
+import gg.essential.elementa.events.UIClickEvent
+import gg.essential.elementa.state.toConstraint
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.shadow.EssentialUIText
 import gg.essential.gui.image.ImageFactory
@@ -27,14 +29,18 @@ import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.color.toConstraint
 import gg.essential.gui.elementa.state.v2.combinators.and
 import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.memo
+import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toV1
+import java.awt.Color
 
 abstract class NoticeFlag(
     style: State<MenuButton.Style>,
 ) : UIBlock() {
 
-    private val backgroundColor = style.map { it.buttonColor }
+    val backgroundHidden = mutableStateOf(stateOf(false))
+    private val backgroundColor = memo { if (backgroundHidden()()) Color(0, 0, 0, 0) else style().buttonColor }
     private val highlightColor = backgroundColor.map { it.brighter() }
     private val shadowColor = backgroundColor.map { it.darker() }
     private val hasLeft = style.map { OutlineEffect.Side.Left in it.sides }
@@ -89,6 +95,12 @@ abstract class NoticeFlag(
             color = backgroundColor.toConstraint()
         }
     }
+
+    fun runAction(){
+        fireClickEvent(UIClickEvent(
+            getLeft(), getTop(), 0, this, this, 1
+        ))
+    }
 }
 
 class TextFlag(
@@ -127,14 +139,16 @@ class TextFlag(
 
 class IconFlag(
     style: State<MenuButton.Style>,
-    image: State<ImageFactory>,
+    // image is not a state as none of our current uses require dynamic icons
+    // if this changes in future see [NoticeFlagProxy.drawBehaviourFromComponentState] as it will require adjustment
+    image: ImageFactory,
 ) : NoticeFlag(style) {
 
     init {
         setWidth((100.percent boundTo contentContainer) + 7.pixels)
 
         contentContainer.layout(Modifier.alignHorizontal(Alignment.Center)) {
-            icon(image.toV1(this@IconFlag), Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(EssentialPalette.BLACK))
+            icon(image, Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(EssentialPalette.BLACK))
         }
     }
 }

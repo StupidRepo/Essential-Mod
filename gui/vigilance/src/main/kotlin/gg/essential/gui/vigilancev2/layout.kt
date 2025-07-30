@@ -55,8 +55,8 @@ fun LayoutScope.vigilanceContent(
         box(Modifier.fillHeight().fillRemainingWidth()) {
             settingsCategoryScroller = settingsCategory(categories, currentCategoryName, searchState)
 
-            scrollGradient(settingsCategoryScroller, true, Modifier.height(gradientHeight))
-            scrollGradient(settingsCategoryScroller, false, Modifier.height(gradientHeight))
+            scrollGradient(settingsCategoryScroller, true, gradientHeight)
+            scrollGradient(settingsCategoryScroller, false, gradientHeight)
         }
 
         settingsCategoryScroller.setVerticalScrollBarComponent(mainScrollbar, true)

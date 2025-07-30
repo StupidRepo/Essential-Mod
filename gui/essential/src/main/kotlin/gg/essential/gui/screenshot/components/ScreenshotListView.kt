@@ -206,7 +206,7 @@ abstract class ScreenshotListView(
                 true
             }
             Tab.UPLOADED -> {
-                metadata?.mediaId != null
+                metadata?.ownedMediaId != null
             }
             Tab.LIKED -> {
                 metadata?.favorite ?: false

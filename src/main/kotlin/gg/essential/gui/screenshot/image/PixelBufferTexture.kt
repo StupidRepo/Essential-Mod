@@ -65,7 +65,13 @@ class PixelBufferTexture(debugLabel: String, image: PixelBuffer) :
             //#elseif MC>=12105
             //$$ glTexture = RenderSystem.getDevice().createTexture(debugLabel, TextureFormat.RGBA8, imageWidth, imageHeight, 1)
             //#else
-            glTextureId = GL11.glGenTextures()
+            // Note: Must allocate via GlStateManager because the vanilla method also deallocates via GlStateManager
+            //       and GlStateManager does some internal counting on newer versions.
+            //#if MC>=11600
+            //$$ glTextureId = GlStateManager.genTexture()
+            //#else
+            glTextureId = GlStateManager.generateTexture()
+            //#endif
             //#endif
         }
     }

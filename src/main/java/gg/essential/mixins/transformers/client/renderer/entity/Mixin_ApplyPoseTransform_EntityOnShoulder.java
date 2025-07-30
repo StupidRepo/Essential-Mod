@@ -43,7 +43,9 @@ import static dev.folomeev.kotgl.matrix.matrices.mutables.MutableMatrices.timesS
 //#if MC>=11600
 //$$ import gg.essential.mixins.impl.util.math.Matrix4fExt;
 //$$ import com.mojang.blaze3d.matrix.MatrixStack;
+//$$ import net.minecraft.util.math.vector.Matrix3f;
 //$$ import static dev.folomeev.kotgl.matrix.matrices.mutables.MutableMatrices.times;
+//$$ import static gg.essential.util.ExtensionsKt.setKotgl;
 //#endif
 
 @Mixin(LayerEntityOnShoulder.class)
@@ -83,6 +85,9 @@ public abstract class Mixin_ApplyPoseTransform_EntityOnShoulder {
         }
         //#if MC>=11600
         //$$ GLUtil.INSTANCE.glMultMatrix(matrixStack, modelMatrix, 1 / 16f);
+        //$$ Matrix3f normalMatrix = new Matrix3f();
+        //$$ setKotgl(normalMatrix, uMatrixStack.peek().getNormal());
+        //$$ matrixStack.getLast().getNormal().mul(normalMatrix);
         //#else
         GLUtil.INSTANCE.glMultMatrix(modelMatrix, scale);
         //#endif

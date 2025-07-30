@@ -29,6 +29,7 @@ import net.minecraft.util.Identifier
 //   - `class` -> `object`
 //   - `nextFrame` is called automatically via `RenderTickEvent.Pre`
 //   - save and restore projection matrix
+//   - split drawImmediate() functionality into `drawImmediate()` and `drawToTexture()` as the latter is reused by essential
 /**
  * Allows rendering of raw OpenGL into [DrawContext] by drawing to a temporary texture which is then submitted as a
  * plain textured quad to [DrawContext].
@@ -43,17 +44,29 @@ import net.minecraft.util.Identifier
 internal object AdvancedDrawContext : AutoCloseable {
     private var allocatedProjectionMatrix: ProjectionMatrix2? = null
 
-    private val textureAllocator = TemporaryTextureAllocator {
+    val textureAllocator = TemporaryTextureAllocator {
         allocatedProjectionMatrix?.close()
         allocatedProjectionMatrix = null
     }
 
     fun drawImmediate(context: DrawContext, block: (UMatrixStack) -> Unit) {
-        val scaleFactor = UResolution.scaleFactor.toFloat()
         val width = UResolution.viewportWidth
         val height = UResolution.viewportHeight
 
         val texture = textureAllocator.allocate(width, height)
+
+        drawToTexture(texture, block)
+
+        draw(context, texture)
+    }
+
+    fun drawToTexture(
+        texture: TemporaryTextureAllocator.TextureAllocation,
+        block: (UMatrixStack) -> Unit
+    ) {
+        val width = texture.width
+        val height = texture.height
+        val scaleFactor = UResolution.scaleFactor.toFloat()
 
         var projectionMatrix = allocatedProjectionMatrix
         if (projectionMatrix == null) {
@@ -81,8 +94,6 @@ internal object AdvancedDrawContext : AutoCloseable {
 
         @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
         RenderSystem.setProjectionMatrix(orgProjectionMatrixBuffer, orgProjectionType)
-
-        draw(context, texture)
     }
 
     fun draw(context: DrawContext, texture: TemporaryTextureAllocator.TextureAllocation) {

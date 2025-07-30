@@ -64,6 +64,16 @@ abstract class SingletonPropertyConfiguration<P : CosmeticProperty>(
 
     abstract fun LayoutScope.layout(property: P)
 
-    protected fun CosmeticProperty.update(property: P) = cosmeticsDataWithChanges.updateCosmeticProperty(cosmetic.id, this, property)
+    protected fun CosmeticProperty.update(property: P) {
+        var newProperty = property
+        @Suppress("DEPRECATION", "UNCHECKED_CAST")
+        if (newProperty is CosmeticProperty.IdShouldBeSelf && newProperty.id != cosmetic.id) {
+            newProperty = when (val p = property as CosmeticProperty.IdShouldBeSelf) {
+                is CosmeticProperty.ArmorHandling -> p.copy(id = cosmetic.id) as P
+                is CosmeticProperty.ArmorHandlingV2 -> p.copy(id = cosmetic.id) as P
+            }
+        }
+        cosmeticsDataWithChanges.updateCosmeticProperty(cosmetic.id, this, newProperty)
+    }
 
 }

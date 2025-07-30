@@ -14,12 +14,16 @@ package gg.essential.util
 import gg.essential.model.util.Color
 import gg.essential.universal.UGraphics
 import gg.essential.util.image.GpuTexture
+import gg.essential.util.image.bitmap.Bitmap
+import gg.essential.util.image.bitmap.MutableBitmap
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL11.GL_DEPTH_COMPONENT
 import org.lwjgl.opengl.GL11.GL_FLOAT
 import org.lwjgl.opengl.GL11.GL_RGBA
 import org.lwjgl.opengl.GL30
+import org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE
+import java.nio.ByteBuffer
 
 //#if MC>=12105
 //$$ import com.mojang.blaze3d.opengl.GlStateManager
@@ -138,6 +142,41 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
         return result
     }
 
+    override fun readPixelColors(x: Int, y: Int, width: Int, height: Int): Bitmap {
+        val prevReadFrameBufferBinding = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
+        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, colorReadFrameBuffer)
+        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, glId, 0)
+        val result = glReadPixelColors(x, y, width, height)
+        glFramebufferTexture2D(GL30.GL_READ_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, 0, 0)
+        glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFrameBufferBinding)
+        return result
+    }
+
+    private class ByteBufferBitmap(
+        override val width: Int,
+        override val height: Int,
+        private val byteBuffer: ByteBuffer
+    ) : Bitmap {
+
+        override fun get(x: Int, y: Int): Color {
+            val index = (y * width + x) * 4
+
+            return Color(
+                r = byteBuffer.get(index).toUByte(),
+                g = byteBuffer.get(index + 1).toUByte(),
+                b = byteBuffer.get(index + 2).toUByte(),
+                a = byteBuffer.get(index + 3).toUByte()
+            )
+        }
+
+        override fun mutableCopy(): MutableBitmap {
+            val copy = Bitmap.ofSize(width, height)
+            copy.set(0, 0, width, height, this)
+            return copy
+        }
+
+    }
+
     companion object {
         private val colorReadFrameBuffer by lazy { glGenFramebuffers() }
         private val colorWriteFrameBuffer by lazy { glGenFramebuffers() }
@@ -155,6 +194,25 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
             glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFrameBufferBinding)
             glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFrameBufferBinding)
         }
+
+        private fun glReadPixelColors(x: Int, y: Int, width: Int, height: Int): Bitmap {
+            val byteBuffer = BufferUtils.createByteBuffer(width * height * 4)
+            GL11.glReadPixels(
+                x,
+                y,
+                width,
+                height,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                byteBuffer,
+            )
+            return ByteBufferBitmap(
+                width = width,
+                height = height,
+                byteBuffer = byteBuffer
+            )
+        }
+
         private val tmpFloatBuffer = BufferUtils.createFloatBuffer(4)
 
         private fun glReadPixelColor(x: Int, y: Int): Color {
@@ -170,9 +228,9 @@ abstract class GlGpuTexture(private val format: GpuTexture.Format) : GpuTexture 
             return with(tmpFloatBuffer) {
                 Color(
                     r = (get(0) * 255).toUInt().toUByte(),
-                    g = (get(0) * 255).toUInt().toUByte(),
-                    b = (get(0) * 255).toUInt().toUByte(),
-                    a = (get(0) * 255).toUInt().toUByte(),
+                    g = (get(1) * 255).toUInt().toUByte(),
+                    b = (get(2) * 255).toUInt().toUByte(),
+                    a = (get(3) * 255).toUInt().toUByte(),
                 )
             }
         }

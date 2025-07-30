@@ -379,7 +379,7 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
 
             subcategory("Date & Time") {
                 selector(timeFormatState) {
-                    name = "Timestamps Format"
+                    name = "Timestamps format"
                     description = "Choose between using 12 or 24 hour time for dates/timestamps in Essential menus."
                     options = listOf("12 Hour", "24 Hour")
                 }
@@ -509,17 +509,6 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                     description = "Choose the layout of the Essential buttons on the main and pause menu."
                     options = listOf("Full", "Minimal", "Off")
                 }
-                switch(showQuickActionBarState) {
-                    name = "Quick actions"
-                    description =
-                        "Shows the quick action bar in the main and pause menu. Quickly toggle notifications, cosmetics, and fullscreen."
-                    visible = essentialMenuLayoutState.map { it == 0 }
-                }
-                switch(closerMenuSidebarState) {
-                    name = "Wide-screen menu placement"
-                    description = "Moves the minimal Essential menu closer to the Minecraft menu."
-                    visible = essentialMenuLayoutState.map { it == 1 }
-                }
                 switch(useVanillaButtonForRetexturing) {
                     name = "Use Minecraft button texture"
                     description = "Uses Minecraft’s button texture on Essential main and pause menu buttons. If you have a resource pack equipped, it will use the resource pack’s button texture."
@@ -605,7 +594,7 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                     options = listOf("3 seconds", "5 seconds", "7 seconds")
                 }
                 switch(screenshotSoundsState) {
-                    name = "Screenshot Sounds"
+                    name = "Screenshot sounds"
                     description = "Plays a capture sound when taking a screenshot."
                 }
                 switch(enableVanillaScreenshotMessageState) {

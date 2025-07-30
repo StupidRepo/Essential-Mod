@@ -17,6 +17,7 @@ import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.mod.Model
+import gg.essential.mod.cosmetics.settings.CosmeticProperty
 import gg.essential.model.BedrockModel
 import gg.essential.model.file.AnimationFile
 import gg.essential.model.file.ParticlesFile
@@ -35,6 +36,8 @@ fun diagnose(modelLoader: ModelLoader, cosmetic: Cosmetic): State<List<Diagnosti
         // metadata failed to load, can't do any further checks until that's fixed
         return stateOf(existingDiagnostics)
     }
+
+    val generalDiagnostics = diagnoseCosmeticGenerally(cosmetic)
 
     val variants = cosmetic.variants?.map { it.name } ?: listOf("")
     val variantsAndSkins = variants.flatMap { variant ->
@@ -107,11 +110,34 @@ fun diagnose(modelLoader: ModelLoader, cosmetic: Cosmetic): State<List<Diagnosti
             }
         }
 
-        existingDiagnostics + diagnostics
+        existingDiagnostics + generalDiagnostics + diagnostics
     }
 }
 
 data class VariantAndSkin(val variant: String, val skin: Model)
+
+private fun diagnoseCosmeticGenerally(cosmetic: Cosmetic): List<Diagnostic> {
+    val diagnostics = mutableListOf<Diagnostic>()
+
+    for (property in cosmetic.properties) {
+        if (property is CosmeticProperty.UsesId) {
+            @Suppress("DEPRECATION")
+            val propertyId = property.id
+            when (property) {
+                is CosmeticProperty.IdShouldBeSelf -> if (propertyId != cosmetic.id) {
+                    val msg = "Expected `id` of `${property.type}` to be `${cosmetic.id}` but was `${propertyId}`."
+                    diagnostics.add(Diagnostic.error(msg, file = "settings.json"))
+                }
+                is CosmeticProperty.IdIsTarget -> {
+                    // TODO could check if target exists, but we don't currently have an good way to get all cosmetics here
+                }
+                else -> throw AssertionError("Type ${property.javaClass} should implement one of the above interfaces.")
+            }
+        }
+    }
+
+    return diagnostics
+}
 
 private fun diagnoseModel(model: BedrockModel): List<Diagnostic> {
     val diagnostics = model.diagnostics.toMutableList()

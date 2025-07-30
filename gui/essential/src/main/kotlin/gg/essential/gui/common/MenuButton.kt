@@ -32,6 +32,8 @@ import gg.essential.gui.common.shadow.EssentialUIText
 import gg.essential.gui.common.shadow.ShadowIcon
 import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.combinators.zip
+import gg.essential.gui.elementa.state.v2.mutableStateOf
+import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.layoutdsl.LayoutScope
 import gg.essential.gui.layoutdsl.Modifier
@@ -86,7 +88,7 @@ class MenuButton @JvmOverloads constructor(
 
     val hoveredStyleOverrides = BasicState(false) // For manually activating hovered style
     private val tooltipHover = hoveredState()
-    private val styleHover = hoveredState() or hoveredStyleOverrides
+    val styleHover = hoveredState() or hoveredStyleOverrides
     private val collapsed = BasicState(false).map { it }
     private val enabledState = BasicState(true).map { it }
     private var collapsedWidth = 0f
@@ -109,7 +111,7 @@ class MenuButton @JvmOverloads constructor(
     }
     val isTruncated = textState.zip(labelState).map { (text, label) -> text != label }
 
-    private val styleState =
+    val styleState =
         styleHover.zip(enabledState).zip(this.defaultStyle.zip(this.hoverStyle.zip(this.disabledStyle))).map { (hoveredEnabled, styles) ->
             val (hovered, enabled) = hoveredEnabled
             val (standardStyle, hoveredDisableStyles) = styles
@@ -136,6 +138,8 @@ class MenuButton @JvmOverloads constructor(
 
     // For accessing enabled state value
     val enabled by ReadOnlyState(enabledState)
+
+    var drawsBackground = mutableStateOf(stateOf(true))
 
     @JvmOverloads
     constructor(
@@ -398,7 +402,7 @@ class MenuButton @JvmOverloads constructor(
         beforeDraw(matrixStack)
 
         val style = styleState.get()
-        if (style.buttonColor.alpha != 0) {
+        if (drawsBackground.getUntracked().getUntracked() && style.buttonColor.alpha != 0) {
             if (shouldBeRetextured ?: (Window.of(this) == platform.pauseMenuDisplayWindow)) {
                 val hovered = styleHover.get()
                 val (type, texture) = ButtonTextures.currentTexture(hovered)
@@ -410,6 +414,7 @@ class MenuButton @JvmOverloads constructor(
                     // enabled, which is handled in `drawTexturedButton`.
                     // - DARK_GRAY is our default button state.
                     // - GRAY is our default hover state.
+                    // This check is mirrored in [MenuButtonProxy.requiresTinting()], be sure to replicate changes there
                     val isDefaultOrHoveredBaseColor = style.buttonColor == (if (hovered) GRAY else DARK_GRAY).buttonColor
 
                     drawTexturedButton(

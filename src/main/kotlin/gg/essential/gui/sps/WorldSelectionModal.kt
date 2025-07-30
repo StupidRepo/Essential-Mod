@@ -67,12 +67,14 @@ import gg.essential.util.findChildrenOfType
 import gg.essential.gui.util.hoveredState
 import gg.essential.handlers.PauseMenuDisplay
 import gg.essential.network.connectionmanager.sps.SPSSessionSource
+import gg.essential.util.formatDate
 import gg.essential.vigilance.utils.onLeftClick
 import net.minecraft.client.gui.GuiCreateWorld
 import net.minecraft.world.storage.WorldSummary
 import java.awt.Color
-import java.text.DateFormat
+import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 import java.util.*
 
 //#if MC<=11809
@@ -92,7 +94,7 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
     private val selectedWorld: State<WorldSummary?> = BasicState(null)
 
     init {
-        titleText = "Select World"
+        titleText = "Select world to host"
         primaryButtonText = "Next"
         bindConfirmAvailable(selectedWorld.map { it != null })
 
@@ -171,14 +173,14 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
             .whenHovered(
                 Modifier
                     .color(EssentialPalette.GRAY_BUTTON_HOVER)
-                    .outline(EssentialPalette.GRAY_BUTTON_HOVER_OUTLINE, 1f, drawInsideChildren = true),
+                    .outline(EssentialPalette.GRAY_OUTLINE_BUTTON_OUTLINE_HOVER, 1f, drawInsideChildren = true),
                 Modifier
                     .color(EssentialPalette.GRAY_BUTTON)
                     .outline(EssentialPalette.GRAY_BUTTON_HOVER, 1f, drawInsideChildren = true)
             )
         ) {
             text("Create New World", Modifier
-                .color(EssentialPalette.TEXT)
+                .color(EssentialPalette.TEXT_HIGHLIGHT)
                 .hoverColor(EssentialPalette.TEXT_HIGHLIGHT)
                 .shadow(EssentialPalette.COMPONENT_BACKGROUND)
             )
@@ -251,8 +253,21 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
         } childOf info
 
         private val lastPlayed = let {
-            val date = Date.from(Instant.ofEpochMilli(worldSummary.lastTimePlayed))
-            DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(date)
+            val lastTime = Instant.ofEpochMilli(worldSummary.lastTimePlayed)
+            val lastDate = lastTime.atZone(ZoneId.systemDefault()).toLocalDate()
+            val currentTime = Instant.now()
+            val durationBetween = Duration.between(lastTime, currentTime)
+            when {
+                durationBetween < Duration.ofMinutes(1) -> "${durationBetween.seconds} seconds ago"
+                durationBetween < Duration.ofMinutes(2) -> "1 minute ago"
+                durationBetween < Duration.ofHours(1) -> "${durationBetween.toMinutes()} minutes ago"
+                durationBetween < Duration.ofHours(2) -> "1 hour ago"
+                durationBetween < Duration.ofDays(1) -> "${durationBetween.toHours()} hours ago"
+                durationBetween < Duration.ofDays(2) -> "1 day ago"
+                durationBetween <= Duration.ofDays(7) -> "${durationBetween.toDays()} days ago"
+                durationBetween <= Duration.ofDays(356) -> formatDate(lastDate, false)
+                else -> formatDate(lastDate, true)
+            }
         }
 
         //#if MC>=11202
@@ -267,7 +282,7 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
         //#endif
 
         private val description by EssentialUIText(
-            "$lastPlayed - $versionName",
+            "$versionName - $lastPlayed",
             shadowColor = EssentialPalette.TEXT_SHADOW,
             truncateIfTooSmall = true,
         ).constrain {
@@ -282,11 +297,7 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
                 height = 31.pixels
                 color = hoveredState().zip(selected).map { (hovered, selected) ->
                     if (selected) {
-                        if (hovered) {
-                            EssentialPalette.COMPONENT_SELECTED_HOVER
-                        } else {
-                            EssentialPalette.COMPONENT_SELECTED
-                        }
+                        EssentialPalette.GRAY_OUTLINE_BUTTON_OUTLINE
                     } else if (hovered) {
                         EssentialPalette.GRAY_BUTTON_HOVER
                     } else {
@@ -297,13 +308,9 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
                 hoveredState().zip(selected).map {
                     val (hovered, selected) = it
                     if (selected) {
-                        if (hovered) {
-                            EssentialPalette.COMPONENT_SELECTED_HOVER_OUTLINE
-                        } else {
-                            EssentialPalette.COMPONENT_SELECTED_OUTLINE
-                        }
+                        EssentialPalette.TEXT_HIGHLIGHT
                     } else if (hovered) {
-                        EssentialPalette.GRAY_BUTTON_HOVER_OUTLINE
+                        EssentialPalette.GRAY_OUTLINE_BUTTON_OUTLINE_HOVER
                     } else {
                         EssentialPalette.GRAY_BUTTON_HOVER
                     }

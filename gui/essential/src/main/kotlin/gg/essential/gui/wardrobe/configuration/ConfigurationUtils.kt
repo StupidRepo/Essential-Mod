@@ -15,7 +15,7 @@ import gg.essential.elementa.components.Window
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.ContextOptionMenu
 import gg.essential.gui.common.EssentialDropDown
-import gg.essential.gui.common.MenuButton
+import gg.essential.gui.common.OutlineButtonStyle
 import gg.essential.gui.common.input.StateTextInput
 import gg.essential.gui.common.input.essentialDoubleInput
 import gg.essential.gui.common.input.essentialFloatInput
@@ -119,8 +119,8 @@ object ConfigurationUtils {
                         contentText = "Failed to parse image"
                         contentTextColor = EssentialPalette.TEXT_MID_GRAY
                         primaryButtonText = "Retry"
-                        primaryButtonStyle = MenuButton.DARK_GRAY
-                        primaryButtonHoverStyle = MenuButton.GRAY
+                        primaryButtonStyle = OutlineButtonStyle.GRAY.defaultStyle
+                        primaryButtonHoverStyle = OutlineButtonStyle.GRAY.hoveredStyle
                     }.onPrimaryAction {
                         chooseIcon(future)
                     }.configureLayout {
