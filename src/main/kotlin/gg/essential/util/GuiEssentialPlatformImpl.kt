@@ -57,7 +57,7 @@ import gg.essential.gui.wardrobe.WardrobeCategory
 import gg.essential.handlers.EssentialSoundManager
 import gg.essential.handlers.GameProfileManager
 import gg.essential.handlers.MojangSkinManager
-import gg.essential.handlers.PauseMenuDisplay
+import gg.essential.handlers.discord.DiscordIntegration
 import gg.essential.key.EssentialKeybindingRegistry
 import gg.essential.mod.Skin
 import gg.essential.mod.cosmetics.CosmeticSlot
@@ -72,6 +72,7 @@ import gg.essential.network.connectionmanager.features.DisabledFeaturesManager
 import gg.essential.network.connectionmanager.media.IScreenshotManager
 import gg.essential.network.connectionmanager.notices.INoticesManager
 import gg.essential.network.connectionmanager.skins.SkinsManager
+import gg.essential.sps.SpsAddress
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UImage
 import gg.essential.universal.UScreen
@@ -219,9 +220,6 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
     override val config: GuiEssentialPlatform.Config
         get() = EssentialConfig
 
-    override val pauseMenuDisplayWindow: Window
-        get() = PauseMenuDisplay.window
-
     override val mcProtocolVersion: Int
         get() = MinecraftUtils.currentProtocolVersion
 
@@ -236,8 +234,8 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
 
     override fun currentServerType(): ServerType? {
         val minecraft = Minecraft.getMinecraft()
-        val spsManager = Essential.getInstance().connectionManager.spsManager
 
+        val spsManager = Essential.getInstance().connectionManager.spsManager
         val localSpsSession = spsManager.localSession
         if (localSpsSession != null) {
             return ServerType.SPS.Host(localSpsSession.hostUUID)
@@ -261,7 +259,7 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         //$$ }
         //#endif
 
-        val remoteSpsHost = spsManager.getHostFromSpsAddress(serverData.serverIP)
+        val remoteSpsHost = SpsAddress.parse(serverData.serverIP)?.host
         if (remoteSpsHost != null) {
             return ServerType.SPS.Guest(remoteSpsHost)
         }
@@ -405,6 +403,8 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         ui.holdOnto(refHolder)
         return ui
     }
+
+    override fun shouldHideNotificationForHost(uuid: UUID): Boolean = DiscordIntegration.partyManager.shouldHideNotificationForHost(uuid)
 
     override fun openWardrobe(highlight: ItemId?) {
         val openedScreen = GuiUtil.openedScreen()

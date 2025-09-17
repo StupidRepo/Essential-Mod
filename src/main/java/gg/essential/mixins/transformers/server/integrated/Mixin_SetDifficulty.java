@@ -32,7 +32,7 @@ public abstract class Mixin_SetDifficulty {
     private static final String SET_DIFFICULTY = "Lnet/minecraft/world/storage/WorldInfo;setDifficulty(Lnet/minecraft/world/EnumDifficulty;)V";
     //#endif
 
-    @Inject(method = "setDifficultyForAllWorlds", at = @At(value = "INVOKE", target = SET_DIFFICULTY, shift = At.Shift.AFTER))
+    @Inject(method = "setDifficultyForAllWorlds", at = @At(value = "INVOKE", target = SET_DIFFICULTY), cancellable = true)
     public void onSetDifficulty(CallbackInfo ci, @Local(argsOnly = true) EnumDifficulty difficulty) {
         ExtensionsKt.getExecutor(UMinecraft.getMinecraft()).execute(() -> {
             SPSManager sps = Essential.getInstance().getConnectionManager().getSpsManager();

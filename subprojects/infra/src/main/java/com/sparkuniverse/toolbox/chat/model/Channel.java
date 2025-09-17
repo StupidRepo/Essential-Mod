@@ -55,11 +55,14 @@ public final class Channel {
     @SerializedName("i")
     private boolean muted;
 
+    @SerializedName("joined_at")
+    public final long joinedAt;
+
     public Channel(
             final long id, @NotNull final ChannelType type, @NotNull final String name, @Nullable final String topic,
             @Nullable final ChannelSettings settings, @NotNull final Set<UUID> members,
             @NotNull final CreatedInfo createdInfo, @Nullable final ClosedInfo closedInfo,
-            final boolean muted
+            final boolean muted, final long joinedAt
     ) {
         this.id = id;
         this.type = type;
@@ -70,6 +73,7 @@ public final class Channel {
         this.createdInfo = createdInfo;
         this.closedInfo = closedInfo;
         this.muted = muted;
+        this.joinedAt = joinedAt;
     }
 
     public long getId() {
@@ -108,6 +112,10 @@ public final class Channel {
 
     public boolean isMuted() {
         return this.muted;
+    }
+
+    public long getJoinedAt() {
+        return this.joinedAt;
     }
 
     public void setName(@NotNull final String name) {

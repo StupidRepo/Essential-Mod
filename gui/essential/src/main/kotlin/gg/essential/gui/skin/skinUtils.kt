@@ -119,7 +119,7 @@ private class SkinReceivedNotificationComponent(uuid: UUID, username: String) : 
                 spacer(height = 2f)
                 row(Modifier.childBasedMaxHeight(), verticalAlignment = Alignment.End) {
                     spacer(width = 1f)
-                    CachedAvatarImage.ofUUID(uuid)(Modifier.alignVertical(Alignment.Start).width(8f).heightAspect(1f).shadow(EssentialPalette.TEXT_SHADOW_LIGHT))
+                    CachedAvatarImage.create(uuid)(Modifier.alignVertical(Alignment.Start).shadow(EssentialPalette.TEXT_SHADOW_LIGHT))
                     spacer(width = 5f)
                     text(username)
                 }

@@ -26,16 +26,16 @@ public class ServerProfileStatusPacket extends Packet {
     private final UUID uuid;
 
     @SerializedName("b")
-    @Nullable
+    @NotNull
     private final ProfileStatus status;
 
     private final @Nullable Long lastOnlineTimestamp;
 
-    public ServerProfileStatusPacket(final @NotNull UUID uuid, final @Nullable ProfileStatus profileStatus) {
+    public ServerProfileStatusPacket(final @NotNull UUID uuid, final @NotNull ProfileStatus profileStatus) {
         this(uuid, profileStatus, (Long) null);
     }
 
-    public ServerProfileStatusPacket(@NotNull final UUID uuid, @Nullable final ProfileStatus status, final @Nullable Long lastOnlineTimestamp) {
+    public ServerProfileStatusPacket(@NotNull final UUID uuid, @NotNull final ProfileStatus status, final @Nullable Long lastOnlineTimestamp) {
         this.uuid = uuid;
         this.status = status;
         this.lastOnlineTimestamp = lastOnlineTimestamp;
@@ -46,7 +46,7 @@ public class ServerProfileStatusPacket extends Packet {
         return this.uuid;
     }
 
-    @Nullable
+    @NotNull
     public ProfileStatus getStatus() {
         return this.status;
     }

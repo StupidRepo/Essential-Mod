@@ -112,7 +112,7 @@ fun InfraEssentialAsset.toMod() = EssentialAsset(url, checksum)
 fun InfraCosmeticOutfit.toMod() = CosmeticOutfit(
     id,
     name,
-    OutfitSkin.deserialize(skinTexture),
+    skinTexture?.let { Skin.fromInfra(it) },
     skinId,
     equippedCosmetics.mapKeys { it.key.toMod() }.toMutableMap(),
     cosmeticSettings.toModSetting().toMutableMap(),

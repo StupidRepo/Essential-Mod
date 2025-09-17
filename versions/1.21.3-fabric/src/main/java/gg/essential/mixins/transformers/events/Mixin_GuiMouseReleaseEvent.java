@@ -30,7 +30,7 @@ public class Mixin_GuiMouseReleaseEvent {
     //#endif
 
     @Inject(method = "onMouseButton", at = @At(value = "INVOKE", target = MOUSE_RELEASED))
-    private void onMouseClicked(CallbackInfo ci, @Local(ordinal = 0) Screen screen) {
-        Essential.EVENT_BUS.post(new GuiMouseReleaseEvent(screen));
+    private void onMouseClicked(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local(ordinal = 1, argsOnly = true) int button) {
+        Essential.EVENT_BUS.post(new GuiMouseReleaseEvent(screen, button));
     }
 }

@@ -52,7 +52,6 @@ class CoinsManager(val connectionManager: CMConnection) : NetworkedManager {
 
     private val referenceHolder = ReferenceHolderImpl()
     private var currentCodeValidationJob: Job? = null
-    private var isClaimingCoins = false
 
     // Actual data
     private val mutableCoins: MutableState<Int> = mutableStateOf(0)
@@ -69,6 +68,7 @@ class CoinsManager(val connectionManager: CMConnection) : NetworkedManager {
 
     // This is in the coins manager because we could receive the purchase modal when we are not in the wardrobe, and it needs to be able to access this
     val areCoinsVisuallyFrozen = mutableStateOf(false)
+    val isClaimingCoins = mutableStateOf(false)
 
     // Derived data
     val creatorCode = stateBy { (creatorCodeConfigured() ?: creatorCodeNonPersistent()).uppercase() }
@@ -206,7 +206,7 @@ class CoinsManager(val connectionManager: CMConnection) : NetworkedManager {
         // If we are currently claiming coins, we might receive a top-up packet before we get the claim confirmation, so we handle all balance updates during claiming as claim top-ups.
         if (topUpAmount != null) {
             // If we aren't in the middle of a claim
-            if (!isClaimingCoins) {
+            if (!isClaimingCoins.getUntracked()) {
                 val manager = platform.createModalManager()
                 manager.queueModal(
                     // Make the modal first as it disables coins animations
@@ -215,7 +215,7 @@ class CoinsManager(val connectionManager: CMConnection) : NetworkedManager {
                 )
             } else {
                 // Otherwise, this is a claim top-up packet, so we finish the claiming process
-                isClaimingCoins = false
+                isClaimingCoins.set(false)
                 mutableCoins.set(coins)
             }
         } else {
@@ -239,7 +239,7 @@ class CoinsManager(val connectionManager: CMConnection) : NetworkedManager {
         // We only try to claim if they don't have coins and if they haven't spent any coins yet. (Basically new user)
         if (coins.get() != 0 || coinsSpent.get() != 0) return
 
-        isClaimingCoins = true
+        isClaimingCoins.set(true)
         // Freeze coins until we get a response to prevent the balance packet we receive as a response from animating them
         areCoinsVisuallyFrozen.set(true)
 
@@ -258,7 +258,7 @@ class CoinsManager(val connectionManager: CMConnection) : NetworkedManager {
                 LOGGER.error("ClientCheckoutClaimCoinsPacket gave invalid response!")
             }
             areCoinsVisuallyFrozen.set(false) // Unfreeze if unsuccessful
-            isClaimingCoins = false
+            isClaimingCoins.set(false)
         }
     }
 

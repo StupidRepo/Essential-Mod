@@ -19,6 +19,8 @@ import dev.folomeev.kotgl.matrix.vectors.vec4
 import dev.folomeev.kotgl.matrix.vectors.vecUnitY
 import dev.folomeev.kotgl.matrix.vectors.vecUnitZ
 import dev.folomeev.kotgl.matrix.vectors.vecZero
+import gg.essential.model.backend.RenderBackend
+import gg.essential.model.bones.BakedAnimations
 import gg.essential.model.file.AnimationFile
 import gg.essential.model.file.KeyframeSerializer
 import gg.essential.model.file.KeyframesSerializer
@@ -35,6 +37,7 @@ import kotlin.math.PI
 class ModelAnimationState(
     val entity: MolangQueryEntity,
     val parentLocator: ParticleSystem.Locator,
+    private val parentTextureSource: () -> RenderBackend.Texture?,
 ) {
     val active: MutableList<AnimationState> = mutableListOf()
     val pendingEvents: MutableList<Event> = mutableListOf()
@@ -50,7 +53,7 @@ class ModelAnimationState(
 
         animation.effects.values.forEach { list ->
             list.forEach { event ->
-                val name = (event as? Animation.LocatableEvent)?.locator?.boxName
+                val name = (event as? Animation.LocatableEvent)?.locator
                 if (name != null && name !in locators) {
                     locators[name] = BoneLocator(vec3(), Quaternion.Identity, vec3())
                 }
@@ -58,24 +61,14 @@ class ModelAnimationState(
         }
     }
 
-    private fun findAndResetBones(bone: Bone, map: MutableMap<String, Bone>) {
-        map[bone.boxName] = bone
-        bone.resetAnimationOffsets(false)
-        if (bone.childModels != null) {
-            for (childModel in bone.childModels) {
-                findAndResetBones(childModel, map)
-            }
-        }
-    }
-
-    fun apply(model: Bone) {
-        val bones = mutableMapOf<String, Bone>()
-        findAndResetBones(model, bones)
-
+    fun bake(bones: Bones): BakedAnimations {
+        val bakedBones = mutableListOf<BakedAnimations.BakedBone>()
 
         for (state in active) {
             for ((boneName, channels) in state.animation.bones) {
-                val bone = bones[boneName] ?: continue
+                val id = (bones[boneName] ?: continue).id
+                val bone = bakedBones.find { it.boneId == id }
+                    ?: BakedAnimations.BakedBone(id).also { bakedBones.add(it) }
                 channels.relativeTo.rotation?.let { relativeTo ->
                     bone.gimbal = true
                     bone.worldGimbal = relativeTo == "world"
@@ -97,6 +90,12 @@ class ModelAnimationState(
                 }
             }
         }
+
+        val entityRotation =
+            if (bakedBones.any { it.worldGimbal }) entity.locator.rotation
+            else Quaternion.Identity
+
+        return BakedAnimations(bakedBones, entityRotation)
     }
 
     /** Whether there are any locators that still need to be updated via [updateLocators] for this frame. */
@@ -202,15 +201,16 @@ class ModelAnimationState(
                             nextLifeTime,
                             entity,
                             event.effect,
-                            event.locator?.boxName?.let { locators[it] } ?: parentLocator,
+                            event.locator?.let { locators[it] } ?: parentLocator,
                             event.preEffectScript,
+                            parentTextureSource,
                         )
                         is Animation.SoundEvent -> SoundEvent(
                             entity,
                             nextLifeTime,
                             entity,
                             event.effect,
-                            event.locator?.boxName?.let { locators[it] } ?: parentLocator,
+                            event.locator?.let { locators[it] } ?: parentLocator,
                         )
                     })
                 }
@@ -263,9 +263,10 @@ class ModelAnimationState(
         override val timeSource: MolangQueryTime,
         override val time: Float,
         override val sourceEntity: MolangQueryEntity,
-        val effect: ParticleEffect,
+        val effect: ParticleEffectWithReferencedEffects,
         val locator: ParticleSystem.Locator,
-        val preEffectScript: MolangExpression?,
+        val preEffectScript: Molang?,
+        val textureSource: () -> RenderBackend.Texture?,
     ) : Event
 
     data class SoundEvent(
@@ -303,12 +304,11 @@ data class Animation(
 ) {
     val affectsPose: Boolean = affectsPoseParts.isNotEmpty()
 
-
     constructor(
         name: String,
         file: AnimationFile.Animation,
         bones: Bones,
-        particleEffects: Map<String, ParticleEffect>,
+        particleEffects: Map<String, ParticleEffectWithReferencedEffects>,
         soundEffects: Map<String, SoundEffect>,
     ) : this(
         name,
@@ -321,7 +321,7 @@ data class Animation(
                 for (config in effects) {
                     eventsAtTime.add(ParticleEvent(
                         particleEffects[config.effect] ?: continue,
-                        config.locator?.let { bones[it] },
+                        config.locator,
                         config.preEffectScript,
                     ))
                 }
@@ -331,7 +331,7 @@ data class Animation(
                 for (config in effects) {
                     eventsAtTime.add(SoundEvent(
                         soundEffects[config.effect] ?: continue,
-                        config.locator?.let { bones[it] },
+                        config.locator
                     ))
                 }
             }
@@ -341,21 +341,22 @@ data class Animation(
         },
     )
 
+    /** Consider deep equality of instances as [Animation.equals] has functionality in [ModelInstance.switchModel] */
     sealed interface Event
 
     sealed interface LocatableEvent : Event {
-        val locator: Bone?
+        val locator: String?
     }
 
     data class ParticleEvent(
-        val effect: ParticleEffect,
-        override val locator: Bone?,
-        val preEffectScript: MolangExpression?,
+        val effect: ParticleEffectWithReferencedEffects,
+        override val locator: String?,
+        val preEffectScript: Molang?,
     ) : Event, LocatableEvent
 
     data class SoundEvent(
         val effect: SoundEffect,
-        override val locator: Bone?,
+        override val locator: String?,
     ) : Event, LocatableEvent
 
     companion object {

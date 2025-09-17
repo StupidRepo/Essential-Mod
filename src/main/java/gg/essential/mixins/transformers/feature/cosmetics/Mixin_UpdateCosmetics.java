@@ -29,9 +29,17 @@ import static gg.essential.cosmetics.events.CosmeticEventDispatcher.dispatchEven
 @Mixin(RenderGlobal.class)
 public abstract class Mixin_UpdateCosmetics {
     //#if NEOFORGE
+    //#if MC>=12106
+    //$$ private static final String MAIN_PASS_LAMBDA = "lambda$addMainPass$3";
+    //#else
     //$$ private static final String MAIN_PASS_LAMBDA = "lambda$addMainPass$2";
+    //#endif
     //#elseif FORGE
+    //#if MC>=12106
+    //$$ private static final String MAIN_PASS_LAMBDA = "lambda$addMainPass$2";
+    //#else
     //$$ private static final String MAIN_PASS_LAMBDA = "lambda$addMainPass$1";
+    //#endif
     //#else
     private static final String MAIN_PASS_LAMBDA = "method_62214";
     //#endif

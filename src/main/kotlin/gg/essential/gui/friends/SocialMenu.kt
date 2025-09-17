@@ -58,7 +58,7 @@ class SocialMenu @JvmOverloads constructor(
 ), GuiRequiresTOS {
 
     private val connectionManager = Essential.getInstance().connectionManager
-    private val spsManager = connectionManager.spsManager
+    private val referenceHolder = ReferenceHolderImpl()
 
     val isScreenOpen = screenOpen
 
@@ -130,6 +130,9 @@ class SocialMenu @JvmOverloads constructor(
                     }
                 }
             }
+        }
+
+        effect(referenceHolder) {
         }
     }
 
@@ -371,10 +374,9 @@ class SocialMenu @JvmOverloads constructor(
             ) {
                 // We don't want to show anyone currently in the group here
                 val potentialFriends = socialStateManager.relationshipStates.getObservableFriendList()
-                    .toStateV2List()
-                    .filter {
-                        !channel.members.contains(it)
-                    }
+                        .toStateV2List()
+                        .filter { !channel.members.contains(it) }
+
 
                 GuiUtil.pushModal { manager ->
                     createAddFriendsToGroupModal(manager, potentialFriends).onPrimaryAction { users ->
@@ -432,7 +434,7 @@ class SocialMenu @JvmOverloads constructor(
         }
 
         UUIDUtil.getName(user).thenAcceptOnMainThread {
-            val isSps = spsManager.remoteSessions.any { it.hostUUID == user }
+            val isSps = connectionManager.spsManager.remoteSessions.any { it.hostUUID == user }
             GuiUtil.pushModal { manager ->
                 ConfirmJoinModal(manager, it, isSps).onPrimaryAction {
                     if (!socialStateManager.statusStates.joinSession(user)) {
@@ -445,15 +447,15 @@ class SocialMenu @JvmOverloads constructor(
 
     fun handleInvitePlayers(users: Set<UUID>, name: String) {
         val currentServerData = UMinecraft.getMinecraft().currentServerData
-        if (hasLocalSession()) {
+
+        val spsManager = connectionManager.spsManager
+        if (spsManager.localSession != null) {
             spsManager.reinviteUsers(users)
             InviteFriendsModal.sendInviteNotification(name)
         } else if (currentServerData != null) {
             connectionManager.socialManager.reinviteFriendsOnServer(currentServerData.serverIP, users)
         }
     }
-
-    private fun hasLocalSession() = spsManager.localSession != null
 
     private fun isBlocked(uuid: UUID) = uuid in socialStateManager.relationshipStates.getObservableBlockedList()
 

@@ -23,8 +23,12 @@ import gg.essential.elementa.utils.ObservableAddEvent
 import gg.essential.elementa.utils.ObservableClearEvent
 import gg.essential.elementa.utils.ObservableList
 import gg.essential.elementa.utils.ObservableRemoveEvent
+import gg.essential.gui.elementa.state.v2.effect
 import gg.essential.gui.elementa.state.v2.toV1
+import gg.essential.gui.elementa.state.v2.toV2
 import kotlin.reflect.KProperty
+
+import gg.essential.gui.elementa.state.v2.State as StateV2
 
 fun <T : UIComponent, S> T.bindConstraints(state: State<S>, config: UIConstraints.(S) -> Unit) = apply {
     state.onSetValueAndNow {
@@ -39,22 +43,20 @@ fun <T : UIComponent, S> T.bindConstraints(state: gg.essential.gui.elementa.stat
     }
 }
 
+@Deprecated("Use StateV2 version instead")
 fun <T : UIComponent> T.bindParent(
     parent: UIComponent,
     state: State<Boolean>,
     delayed: Boolean = false,
     index: Int? = null
-) =
-    bindParent(state.map {
-        if (it) parent else null
-    }, delayed, index)
+) = bindParent(parent, state.toV2(), delayed, index)
 
 fun <T : UIComponent> T.bindParent(
     parent: UIComponent,
-    state: gg.essential.gui.elementa.state.v2.State<Boolean>,
+    state: StateV2<Boolean>,
     delayed: Boolean = false,
     index: Int? = null
-) = bindParent(parent, state.toV1(parent), delayed, index)
+) = bindParent({ if (state()) parent else null }, delayed, index)
 
 fun <T : UIComponent> T.bindEffect(effect: Effect, state: State<Boolean>, delayed: Boolean = true) = apply {
     state.onSetValueAndNow {
@@ -78,26 +80,31 @@ fun <T : UIComponent> T.bindEffect(effect: Effect, state: State<Boolean>, delaye
 fun <T : UIComponent> T.bindEffect(effect: Effect, state: gg.essential.gui.elementa.state.v2.State<Boolean>, delayed: Boolean = true) =
     bindEffect(effect, state.toV1(this), delayed)
 
-fun <T : UIComponent> T.bindParent(state: State<UIComponent?>, delayed: Boolean = false, index: Int? = null) = apply {
-    state.onSetValueAndNow { parent ->
-        val handleStateUpdate = {
-            if (this.hasParent && this.parent != parent) {
-                this.parent.removeChild(this)
+@Deprecated("Use StateV2 version instead")
+fun <T : UIComponent> T.bindParent(state: State<UIComponent?>, delayed: Boolean = false, index: Int? = null) =
+    bindParent(state.toV2(), delayed, index)
+
+fun <T : UIComponent> T.bindParent(state: StateV2<UIComponent?>, delayed: Boolean = false, index: Int? = null) = apply {
+    effect(this) {
+        val parent = state()
+        fun handleStateUpdate(newParent: UIComponent?) {
+            if (this@apply.hasParent && this@apply.parent != newParent) {
+                this@apply.parent.removeChild(this@apply)
             }
-            if (parent != null && this !in parent.children) {
+            if (newParent != null && this@apply !in newParent.children) {
                 if (index != null) {
-                    parent.insertChildAt(this, index)
+                    newParent.insertChildAt(this@apply, index)
                 } else {
-                    parent.addChild(this)
+                    newParent.addChild(this@apply)
                 }
             }
         }
         if (delayed) {
             Window.enqueueRenderOperation {
-                handleStateUpdate()
+                handleStateUpdate(parent)
             }
         } else {
-            handleStateUpdate()
+            handleStateUpdate(parent)
         }
     }
 }

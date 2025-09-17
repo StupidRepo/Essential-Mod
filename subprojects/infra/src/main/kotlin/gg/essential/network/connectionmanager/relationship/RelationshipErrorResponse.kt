@@ -25,7 +25,8 @@ enum class RelationshipErrorResponse {
     TARGET_TYPE_INCOMING_SLOT_LIMIT,
     TARGET_PRIVACY_SETTING_FRIEND_OF_FRIENDS,
     TARGET_PRIVACY_SETTING_NO_ONE,
-    TARGET_NOT_EXIST;
+    TARGET_NOT_EXIST,
+    ;
 
     companion object {
         @JvmStatic

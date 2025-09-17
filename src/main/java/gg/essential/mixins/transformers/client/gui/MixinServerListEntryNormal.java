@@ -13,7 +13,6 @@ package gg.essential.mixins.transformers.client.gui;
 
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.sugar.Local;
-import gg.essential.Essential;
 import gg.essential.elementa.components.UIImage;
 import gg.essential.gui.EssentialPalette;
 import gg.essential.gui.multiplayer.DividerServerListEntry;
@@ -22,7 +21,7 @@ import gg.essential.gui.multiplayer.FriendsIndicator;
 import gg.essential.mixins.ext.client.gui.GuiMultiplayerExt;
 import gg.essential.mixins.ext.client.gui.ServerListEntryNormalExt;
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager;
-import gg.essential.network.connectionmanager.sps.SPSManager;
+import gg.essential.sps.SpsAddress;
 import gg.essential.universal.UMatrixStack;
 import gg.essential.universal.UMinecraft;
 import gg.essential.util.UUIDUtil;
@@ -45,7 +44,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Locale;
-import java.util.UUID;
 
 import static gg.essential.mixins.ext.client.multiplayer.ServerDataExtKt.getExt;
 
@@ -225,10 +223,9 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
             }
 
             if ("SPS".equals(region)) {
-                SPSManager spsManager = Essential.getInstance().getConnectionManager().getSpsManager();
-                UUID hostUuid = spsManager.getHostFromSpsAddress(this.server.serverIP);
-                if (hostUuid != null) {
-                    region = UUIDUtil.getName(hostUuid).join();
+                SpsAddress spsAddress = SpsAddress.parse(this.server.serverIP);
+                if (spsAddress != null) {
+                    region = UUIDUtil.getName(spsAddress.getHost()).join();
                 }
             }
 

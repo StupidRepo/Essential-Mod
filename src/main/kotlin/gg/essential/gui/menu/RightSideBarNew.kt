@@ -57,6 +57,7 @@ import gg.essential.gui.util.pollingStateV2
 import gg.essential.gui.wardrobe.Wardrobe
 import gg.essential.handlers.PauseMenuDisplay
 import gg.essential.network.connectionmanager.sps.SPSSessionSource
+import gg.essential.sps.SpsAddress
 import gg.essential.universal.UMinecraft
 import gg.essential.util.AutoUpdate
 import gg.essential.util.CachedAvatarImage
@@ -74,8 +75,7 @@ class RightSideBarNew(
     val connectionManager = Essential.getInstance().connectionManager
     private val isMinimalV1 = isMinimal.toV1(this)
     private val isHostingWorld = pollingStateV2 {
-        connectionManager.spsManager.localSession != null ||
-                false
+        connectionManager.spsManager.localSession != null
     }
     // Host button is being removed from the singleplayer menu for now until the new panel is released
     private val hostable = menuType == PauseMenuDisplay.MenuType.MAIN
@@ -83,7 +83,7 @@ class RightSideBarNew(
 
     private val hasInviteButton = memo {
         val currentServer = UMinecraft.getMinecraft().currentServerData
-        val isSpsServer = currentServer?.let { connectionManager.spsManager.isSpsAddress(it.serverIP) } ?: false
+        val isSpsServer = currentServer?.let { SpsAddress.parse(it.serverIP) } != null
         (!hostable && !isSpsServer) || isHostingWorld()
     }
     private val worldSettingsVisible = isHostingWorld
@@ -141,9 +141,9 @@ class RightSideBarNew(
                 }
                 if_({ !hostableOrHasInviteButton() }) {
                     buttonPlaceholder() // offset the invite/host button placeholder if it is not visible
-                    if_({ isMinimal() && !worldSettingsVisible() }) {
-                        buttonPlaceholder() // offset the world settings button placeholder if it is not visible
-                    }
+                }
+                if_({ isMinimal() && !worldSettingsVisible() }) {
+                    buttonPlaceholder() // offset the world settings button placeholder if it is not visible
                 }
             }
         }

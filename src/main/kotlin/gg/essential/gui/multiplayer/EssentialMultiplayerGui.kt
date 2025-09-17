@@ -31,6 +31,7 @@ import gg.essential.gui.common.TextFlag
 import gg.essential.gui.common.modal.ConfirmDenyModal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.elementa.VanillaButtonConstraint.Companion.constrainTo
+import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.modals.TOSModal
@@ -88,6 +89,7 @@ class EssentialMultiplayerGui {
 
     private lateinit var essentialServerList: EssentialServerSelectionList
 
+    private val refHolder = ReferenceHolderImpl()
     private val connectionManager = Essential.getInstance().connectionManager
 
     // fixme remove lateinit after feature flags are cleaned up
@@ -395,6 +397,8 @@ class EssentialMultiplayerGui {
         //#endif
     }
 
+    init {
+    }
     fun updateSpsSessions() {
         if (!EssentialConfig.essentialFull) return
         if (EssentialConfig.currentMultiplayerTab == 1) {

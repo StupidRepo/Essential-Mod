@@ -21,6 +21,7 @@ import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPac
 import gg.essential.connectionmanager.common.packet.upnp.*;
 import gg.essential.data.SPSData;
 import gg.essential.event.network.server.ServerLeaveEvent;
+import gg.essential.event.render.RenderTickEvent;
 import gg.essential.event.sps.PlayerJoinSessionEvent;
 import gg.essential.event.sps.PlayerLeaveSessionEvent;
 import gg.essential.event.sps.SPSStartEvent;
@@ -40,6 +41,7 @@ import gg.essential.network.connectionmanager.queue.PacketQueue;
 import gg.essential.network.connectionmanager.queue.SequentialPacketQueue;
 import gg.essential.sps.ResourcePackSharingHttpServer;
 import gg.essential.sps.WindowTitleManager;
+import gg.essential.sps.SpsAddress;
 import gg.essential.universal.UMinecraft;
 import gg.essential.upnp.UPnPPrivacy;
 import gg.essential.upnp.model.UPnPSession;
@@ -84,15 +86,12 @@ import static gg.essential.util.HelpersKt.textTranslatable;
 //$$ import net.minecraft.client.resources.I18n;
 //#endif
 
-import static gg.essential.sps.ConstantsKt.SPS_TLD;
 import static gg.essential.util.ExtensionsKt.getExecutor;
 
 /**
  * SinglePlayer Sharing Manager
  */
 public class SPSManager extends StateCallbackManager<IStatusManager> implements NetworkedManager {
-
-    public static final String SPS_SERVER_TLD = SPS_TLD;
 
     @NotNull
     private final ConnectionManager connectionManager;
@@ -151,34 +150,12 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         Runtime.getRuntime().addShutdownHook(new Thread(this::closeLocalSession)); // cleaning up UPnP if we can
     }
 
-    @NotNull
-    public String getSpsAddress(@NotNull UUID hostUUID) {
-        return hostUUID.toString() + SPS_SERVER_TLD;
-    }
-
     public GameType getCurrentGameMode() {
         return currentGameMode;
     }
 
     public boolean isAllowCheats() {
         return allowCheats;
-    }
-
-    public boolean isSpsAddress(String address) {
-        return address.endsWith(SPS_SERVER_TLD);
-    }
-
-    @Nullable
-    public UUID getHostFromSpsAddress(@NotNull String address) {
-        if (!address.endsWith(SPS_SERVER_TLD)) {
-            return null;
-        }
-        address = address.substring(0, address.length() - SPS_SERVER_TLD.length());
-        try {
-            return UUID.fromString(address);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
     }
 
     @Nullable
@@ -378,7 +355,7 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             connectionManager.getIceManager().setVoicePort(voicePort);
         }
 
-        String address = getSpsAddress(UUIDUtil.getClientUUID());
+        String address = new SpsAddress(UUIDUtil.getClientUUID()).toString();
 
         this.updateLocalSession(address, 0);
 
@@ -446,6 +423,18 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(EssentialCommandRegistry.INSTANCE::unregisterSPSHostCommands);
 
         this.updateQueue.enqueue(new ClientUPnPSessionClosePacket());
+
+        ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(WindowTitleManager.INSTANCE::updateTitle);
+    }
+
+    @Subscribe
+    private void checkIfClosedByThirdParty(RenderTickEvent event) {
+        if (localSession == null) return;
+
+        IntegratedServer server = Minecraft.getMinecraft().getIntegratedServer();
+        if (server == null || !server.getPublic()) {
+            closeLocalSession();
+        }
     }
 
     private static String cpuInfo() {
@@ -812,7 +801,7 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
                 // side, but this one feels most appropriate given it also matches the meaning of the url.
                 // The resource pack hash is included because MC caches resource packs by url and we don't want it to
                 // have re-download the whole thing every time when merely switching between two packs.
-                String url = "http://" + UUIDUtil.getClientUUID() + SPS_SERVER_TLD + "/" + packInfo.getChecksum();
+                String url = "http://" + new SpsAddress(UUIDUtil.getClientUUID()) + "/" + packInfo.getChecksum();
                 setServerResourcePack(url, packInfo.getChecksum());
             }
         }

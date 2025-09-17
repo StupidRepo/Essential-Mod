@@ -42,7 +42,7 @@ public abstract class Mixin_NettyIceServer implements NetworkSystemExt {
     private ChannelHandler networkedChannelInitializer;
 
     @Unique
-    private SocketAddress iceEndpoint;
+    private ChannelFuture iceEndpoint;
 
     // We want to re-use the same channel initializer for ICE as we use for regular LAN.
     // But since that initializer is an anonymous inner class, the easiest way to get hold if it is by just capturing
@@ -59,7 +59,7 @@ public abstract class Mixin_NettyIceServer implements NetworkSystemExt {
     public SocketAddress essential$getIceEndpoint() {
         //noinspection SynchronizeOnNonFinalField
         synchronized (this.endpoints) {
-            if (this.iceEndpoint == null) {
+            if (this.iceEndpoint == null || !this.iceEndpoint.channel().isActive()) {
                 ChannelFuture channelFuture = new ServerBootstrap()
                     .channel(LocalServerChannel.class)
                     .childHandler(this.networkedChannelInitializer)
@@ -68,9 +68,9 @@ public abstract class Mixin_NettyIceServer implements NetworkSystemExt {
                     .bind()
                     .syncUninterruptibly();
                 this.endpoints.add(channelFuture);
-                this.iceEndpoint = channelFuture.channel().localAddress();
+                this.iceEndpoint = channelFuture;
             }
-            return this.iceEndpoint;
+            return this.iceEndpoint.channel().localAddress();
         }
     }
 }

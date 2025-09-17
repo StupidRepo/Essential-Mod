@@ -11,12 +11,16 @@
  */
 package gg.essential.gui.proxies
 
+import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
+import gg.essential.elementa.components.Window
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.layoutdsl.LayoutScope
 import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.box
+import gg.essential.handlers.OptionsScreenOverlay
+import gg.essential.handlers.PauseMenuDisplay
 import gg.essential.mixins.transformers.client.gui.GuiScreenAccessor
 import gg.essential.universal.UMinecraft
 import net.minecraft.client.gui.GuiScreen
@@ -26,20 +30,44 @@ class ScreenWithProxiesHandler(
     private val buttonIds: Map<String, Int>,
     private val flagIds: Map<String, Int>,
     private val playerIds: Map<String, Int>,
+    private val initialLayout: (Window) -> Unit,
 ) {
     private val proxyIds = buttonIds.keys + flagIds.keys + playerIds.keys
     private val access = screen as GuiScreenAccessor
 
     fun initGui() {
-        // for reasoning see [EssentialProxyElement.init]
+        val proxies = mutableListOf<EssentialProxyElement<*>>()
+        buttonIds.mapTo(proxies) { MenuButtonProxy(it.key, it.value) }
+        flagIds.mapTo(proxies) { NoticeFlagProxy(it.key, it.value) }
+        playerIds.mapTo(proxies) { UIPlayerProxy(it.key, it.value) }
+
+        // Note: We must not move the buttons when FancyMenu is doing their identification pass that expects
+        // consistent x y positions from which it derives the button id
         // for values see fancy menu github:
         // v2 https://github.com/Keksuccino/FancyMenu/blob/4b85ac0906d8b1862312779d1efe5ec48b8dec31/src/main/java/de/keksuccino/fancymenu/menu/button/ButtonCache.java#L126
         // v3 https://github.com/Keksuccino/FancyMenu/blob/57564b4891ab83fc258377d03db8a857a39c91b8/common/src/main/java/de/keksuccino/fancymenu/customization/widget/ScreenWidgetDiscoverer.java#L42
         val isProbablyFancyMenuIdentifierPass = screen.width == 1000 && screen.height == 1000
 
-        buttonIds.forEach { addProxy(MenuButtonProxy(it.key, isProbablyFancyMenuIdentifierPass, it.value)) }
-        flagIds.forEach { addProxy(NoticeFlagProxy(it.key, isProbablyFancyMenuIdentifierPass, it.value)) }
-        playerIds.forEach { addProxy(UIPlayerProxy(it.key, isProbablyFancyMenuIdentifierPass, it.value)) }
+        if (isProbablyFancyMenuIdentifierPass) {
+            proxies.forEach(::addProxy)
+            return
+        }
+
+        val dummyWindow = Window(ElementaVersion.V10)
+
+        // Setup initial layout
+        proxies.forEach { proxiesBeingInitialized[it.essentialId] = it }
+        initialLayout(dummyWindow)
+        proxiesBeingInitialized.clear()
+        // With all components in place, invalidate any constraints that might have been queried prematurely
+        dummyWindow.invalidateCachedConstraints()
+        // Apply layout to proxies
+        proxies.forEach { it.initAfterInitialLayout() }
+
+        // Once all proxies have been positioned, add them to the Minecraft screen
+        // (we only add them after positioning them, in case a mod modifies the `addDrawableChild` method and expects
+        //  correct positioning in there already, because vanilla buttons would already be positioned too)
+        proxies.forEach { addProxy(it) }
     }
 
     private fun addProxy(proxy: EssentialProxyElement<*>) {
@@ -67,11 +95,21 @@ class ScreenWithProxiesHandler(
         /** Main / Pause Menus */
         @JvmStatic
         fun forMainMenu(screen: GuiScreen) : ScreenWithProxiesHandler =
-            ScreenWithProxiesHandler(screen, mainMenuButtons, mainMenuFlags, mainAndPauseMenuPlayers)
+            ScreenWithProxiesHandler(screen, mainMenuButtons, mainMenuFlags, mainAndPauseMenuPlayers) { window ->
+                PauseMenuDisplay().initContent(screen, window)
+            }
 
         @JvmStatic
         fun forPauseMenu(screen: GuiScreen) : ScreenWithProxiesHandler =
-            ScreenWithProxiesHandler(screen, pauseMenuButtons, pauseMenuFlags, mainAndPauseMenuPlayers)
+            ScreenWithProxiesHandler(screen, pauseMenuButtons, pauseMenuFlags, mainAndPauseMenuPlayers) { window ->
+                PauseMenuDisplay().initContent(screen, window)
+            }
+
+        @JvmStatic
+        fun forOptionsMenu(screen: GuiScreen) : ScreenWithProxiesHandler =
+            ScreenWithProxiesHandler(screen, optionsMenuButtons, emptyMap(), emptyMap()) { window ->
+                OptionsScreenOverlay().init(screen, window)
+            }
 
         fun LayoutScope.mountWithProxy(id: String, modifier: Modifier = Modifier, block: LayoutScope.() -> Unit) {
             val mounted = mutableStateOf(stateOf(true))
@@ -88,11 +126,12 @@ class ScreenWithProxiesHandler(
         @Suppress("MemberVisibilityCanBePrivate") // used in 1.18+
         fun currentProxyScreenOrNull(): ScreenWithVanillaProxyElementsExt? = UMinecraft.currentScreenObj as? ScreenWithVanillaProxyElementsExt
 
+        private val proxiesBeingInitialized = mutableMapOf<String, EssentialProxyElement<*>>()
         private fun getProxyFromCurrentScreen(id: String): EssentialProxyElement<*>? {
-            return currentProxyScreenOrNull()?.`essential$getProxyHandler`()?.getProxy(id)
+            return proxiesBeingInitialized[id] ?: currentProxyScreenOrNull()?.`essential$getProxyHandler`()?.getProxy(id)
         }
 
-        // main menu components
+        // menu components
         // the numbers are hardcoded as they are essential (heh) to allowing fancy menu to consistently identify the buttons
         // so we MUST ensure that the numbers remain the same even if elements are changed in future updates
         // if these were inconsistent (e.g. driven by index then entries changed) then exising fancy menu layouts would misidentify the buttons and break
@@ -108,6 +147,7 @@ class ScreenWithProxiesHandler(
             "pictures" to 7,
             "settings" to 8,
             "account" to 9,
+            "debug" to 15,
             )
         private val mainMenuFlags = mapOf(
             "reserved_10" to 10,
@@ -132,6 +172,10 @@ class ScreenWithProxiesHandler(
             "beta" to 11,
             "update" to 12,
             "message" to 13,
+        )
+
+        private val optionsMenuButtons = mapOf(
+            "settings" to 1,
         )
     }
 }

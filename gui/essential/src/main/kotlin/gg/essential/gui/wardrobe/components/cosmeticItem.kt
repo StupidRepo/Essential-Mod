@@ -85,7 +85,6 @@ import gg.essential.gui.wardrobe.Item
 import gg.essential.gui.wardrobe.WardrobeCategory
 import gg.essential.gui.wardrobe.WardrobeState
 import gg.essential.mod.cosmetics.CosmeticSlot
-import gg.essential.mod.cosmetics.database.LOCAL_PATH
 import gg.essential.mod.cosmetics.settings.CosmeticProperty
 import gg.essential.mod.cosmetics.settings.CosmeticSetting
 import gg.essential.mod.cosmetics.settings.setting
@@ -407,7 +406,7 @@ private fun LayoutScope.diagnosticIcons(item: Item, category: WardrobeCategory, 
             Modifier.color(color),
             onLeftClick = { click ->
                 click.stopPropagation()
-                state.showingDiagnosticsFor.set(item.cosmetic.displayNames[LOCAL_PATH])
+                state.showingDiagnosticsFor.set(item.cosmetic.localPath)
             },
         )
     }

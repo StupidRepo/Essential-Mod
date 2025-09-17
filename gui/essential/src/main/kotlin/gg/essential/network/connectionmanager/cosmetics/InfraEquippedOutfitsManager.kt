@@ -30,7 +30,6 @@ import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.mod.Skin
 import gg.essential.mod.cosmetics.CAPE_DISABLED_COSMETIC_ID
 import gg.essential.mod.cosmetics.CosmeticSlot
-import gg.essential.mod.cosmetics.OutfitSkin
 import gg.essential.mod.cosmetics.settings.CosmeticSettings
 import gg.essential.network.CMConnection
 import gg.essential.network.connectionmanager.NetworkedManager
@@ -87,13 +86,13 @@ class InfraEquippedOutfitsManager(
         }
         connectionManager.registerPacketHandler<ServerCosmeticsSkinTexturePacket> { packet ->
             val oldOutfit = infraOutfits[packet.uuid] ?: InfraOutfit.EMPTY
-            val skin = OutfitSkin.deserialize(packet.skinTexture)?.skin
+            val skin = packet.skinTexture?.let { Skin.fromInfra(it) }
             update(packet.uuid, oldOutfit.copy(skin = skin))
         }
         connectionManager.registerPacketHandler<ServerCosmeticOutfitSelectedResponsePacket> { packet ->
             val equippedCosmetics = packet.equippedCosmetics ?: emptyMap()
             val cosmeticSettings = packet.cosmeticSettings ?: emptyMap()
-            val skin = OutfitSkin.deserialize(packet.skinTexture)?.skin
+            val skin = packet.skinTexture?.let { Skin.fromInfra(it) }
             update(packet.uuid, InfraOutfit(equippedCosmetics.toMod(), cosmeticSettings.toModSetting(), skin))
         }
     }

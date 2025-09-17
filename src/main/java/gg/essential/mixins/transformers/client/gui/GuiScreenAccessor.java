@@ -26,6 +26,7 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 
 import java.util.List;
 
@@ -52,4 +53,9 @@ public interface GuiScreenAccessor {
     //$$ List<IGuiEventListener> essential$getChildren();
     //#endif
 
+    //#if MC>=11400
+    //#else
+    @Invoker
+    void invokeMouseReleased(int mouseX, int mouseY, int button);
+    //#endif
 }

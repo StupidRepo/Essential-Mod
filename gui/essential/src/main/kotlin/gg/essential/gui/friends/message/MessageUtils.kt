@@ -38,10 +38,6 @@ object MessageUtils {
         }
     }
 
-    fun getSentTimeStamp(messageId: Long): Long {
-        return (messageId shr 22) + messageTimeEpocMillis
-    }
-
     val markdownStyleConfig: MarkdownConfig = MarkdownConfig(
         textConfig = TextConfig(EssentialPalette.TEXT_HIGHLIGHT),
         // Design measures line height from the bottom of normal characters,
@@ -116,5 +112,4 @@ object MessageUtils {
     const val dotWidth = 3f
     const val messagePadding = 20f
 
-    const val messageTimeEpocMillis = 1609459200
 }

@@ -59,6 +59,7 @@ fun LayoutScope.notificationContent(
     trimTitle: Boolean,
     trimMessage: Boolean,
     components: Map<Slot, UIComponent> = mapOf(),
+    persistent: Boolean,
 ) {
     val customSlotModifier = Modifier.then {
         val target = this@then
@@ -158,9 +159,13 @@ fun LayoutScope.notificationContent(
         }
     }
 
-    fun LayoutScope.actions() {
+    fun LayoutScope.actions(narrowLayout: Boolean) {
         if (actionComponent != null || smallPreviewComponent != null) {
             actionColumnComponent = column(Modifier.alignVertical(Alignment.End), Arrangement.spacedBy(5f), Alignment.End) {
+                // Prevents overlap with close button
+                if (narrowLayout && persistent) {
+                    spacer(height = 8f)
+                }
                 smallPreview()
                 action()
             }
@@ -186,7 +191,7 @@ fun LayoutScope.notificationContent(
                         }
                     }
 
-                    actions()
+                    actions(false)
                 }
             }
         }
@@ -210,7 +215,7 @@ fun LayoutScope.notificationContent(
                 }
             }
 
-            actions()
+            actions(true)
         }
     }
 

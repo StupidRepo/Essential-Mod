@@ -49,6 +49,7 @@ import gg.essential.mod.cosmetics.CosmeticsSubject
 import gg.essential.mod.cosmetics.PlayerModel
 import gg.essential.mod.cosmetics.preview.PerspectiveCamera
 import gg.essential.mod.cosmetics.settings.variant
+import gg.essential.model.EnumPart
 import gg.essential.model.ModelAnimationState
 import gg.essential.model.ModelInstance
 import gg.essential.model.ParticleSystem
@@ -58,6 +59,7 @@ import gg.essential.model.Vector3
 import gg.essential.model.backend.PlayerPose
 import gg.essential.model.backend.RenderBackend
 import gg.essential.model.backend.minecraft.MinecraftRenderBackend
+import gg.essential.model.bones.BakedAnimations
 import gg.essential.model.collision.PlaneCollisionProvider
 import gg.essential.model.light.LightProvider
 import gg.essential.model.molang.MolangQueryEntity
@@ -978,7 +980,7 @@ open class UI3DPlayer(
                     null,
                     emptySet(),
                     Vector3(),
-                    null,
+                    EnumPart.values().toSet(),
                 )
 
             playerModel.render(stack, vertexConsumerProvider, playerModel.model.defaultRenderGeometry, renderMetadata)
@@ -1030,11 +1032,9 @@ open class UI3DPlayer(
             val model = CapeModel.get(texture.height)
             model.texture = texture
             model.emissiveTexture = emissiveTexture
-            model.rootBone.resetAnimationOffsets(true)
-            model.render(stack, vertexConsumerProvider, model.defaultRenderGeometry, entity, renderMetadata, entity.lifeTime)
+            model.render(stack, vertexConsumerProvider, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
             renderCapeForHoverOutline(vertexConsumerProvider, cape) {
-                model.rootBone.resetAnimationOffsets(true)
-                model.render(stack, vertexConsumerProvider, model.defaultRenderGeometry, entity, renderMetadata, entity.lifeTime)
+                model.render(stack, vertexConsumerProvider, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
             }
             model.texture = null
             model.emissiveTexture = null

@@ -33,7 +33,9 @@ import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.util.Client
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -127,14 +129,16 @@ class LocalCosmeticsData private constructor(
             changes += database.removeFiles(removedFiles.map { it.relativeTo(rootPath).toString() }.toSet())
         }
         if (addedFiles.isNotEmpty()) {
-            changes += database.addFiles(addedFiles.associate {
-                val read = suspend {
-                    withContext(Dispatchers.IO) {
-                        it.readBytes()
-                    }
+            val files = coroutineScope {
+                addedFiles.associateWith {
+                    async(Dispatchers.IO) { it.readBytes() }
+                }.mapKeys { (path, _) ->
+                    path.relativeTo(rootPath).toString()
+                }.mapValues { (_, bytes) ->
+                    suspend { bytes.await() }
                 }
-                it.relativeTo(rootPath).toString() to read
-            })
+            }
+            changes += database.addFiles(files)
         }
 
         withContext(Dispatchers.Client) {

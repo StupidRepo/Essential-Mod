@@ -53,15 +53,16 @@ import gg.essential.network.connectionmanager.profile.ProfileManager;
 import gg.essential.network.connectionmanager.relationship.RelationshipManager;
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager;
 import gg.essential.network.connectionmanager.serverdiscovery.ServerDiscoveryManager;
+import gg.essential.network.connectionmanager.skins.PlayerSkinLookup;
 import gg.essential.network.connectionmanager.skins.SkinsManager;
 import gg.essential.network.connectionmanager.social.SocialManager;
 import gg.essential.network.connectionmanager.sps.SPSManager;
 import gg.essential.network.connectionmanager.subscription.SubscriptionManager;
 import gg.essential.network.connectionmanager.telemetry.TelemetryManager;
 import gg.essential.sps.McIntegratedServerManager;
-import gg.essential.universal.UMinecraft;
 import gg.essential.util.ModLoaderUtil;
 import gg.essential.util.Multithreading;
+import gg.essential.util.USession;
 import gg.essential.util.lwjgl3.Lwjgl3Loader;
 import kotlin.Unit;
 import kotlin.collections.MapsKt;
@@ -266,7 +267,9 @@ public class ConnectionManager extends ConnectionManagerKt {
             Model model = skin.getModel();
             String hash = skin.getHash();
             String url = String.format(Locale.ROOT, GameProfileManager.SKIN_URL, hash);
-            Essential.getInstance().getSkinManager().changeSkin(UMinecraft.getMinecraft().getSession().getToken(), model, url);
+            USession session = USession.Companion.activeNow();
+            Essential.getInstance().getSkinManager().changeSkin(session.getToken(), model, url);
+            PlayerSkinLookup.INSTANCE.put(session.getUuid(), skin);
             return Unit.INSTANCE;
         });
 
@@ -280,6 +283,7 @@ public class ConnectionManager extends ConnectionManagerKt {
             this.telemetryManager::enqueue
         ));
 
+        PlayerSkinLookup.INSTANCE.register(this);
     }
 
     @NotNull

@@ -49,6 +49,7 @@ import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.studio.Tag
 import gg.essential.gui.util.hoveredState
+import gg.essential.sps.SpsAddress
 import gg.essential.universal.USound
 import gg.essential.util.*
 import gg.essential.vigilance.utils.onLeftClick
@@ -67,6 +68,8 @@ class ChannelPreview(
     val channel: Channel
 ) : UIBlock(), SearchableItem {
     val otherUser: UUID? = channel.getOtherUser()
+
+    private val cm = Essential.getInstance().connectionManager
 
     private val messengerStates = gui.socialStateManager.messengerStates
     private val latestMessageState = messengerStates.getLatestMessage(channel.id)
@@ -87,7 +90,7 @@ class ChannelPreview(
 
     val isChannelMutedState = messengerStates.getMuted(channel.id)
 
-    val latestMessageTimestamp = latestMessageState.map { ((it?.id ?: channel.id) shr 22) + MessageUtils.messageTimeEpocMillis }
+    val latestMessageTimestamp = latestMessageState.map { it?.createdAt ?: channel.joinedAt }
 
     private val doShowTimestampState = hasUnreadState.not() and latestMessageState.map { it != null }
 
@@ -101,7 +104,7 @@ class ChannelPreview(
             messengerStates.getNumUnread(channel.id).map { it.toString() },
         ) effect ShadowEffect(EssentialPalette.BLACK)
         val image = if (otherUser != null) {
-            CachedAvatarImage.ofUUID(otherUser)
+            CachedAvatarImage.create(otherUser)
         } else {
             if (channel.isAnnouncement()) {
                 EssentialPalette.ANNOUNCEMENT_ICON_8X.create()
@@ -361,7 +364,7 @@ class ChannelPreview(
     private fun Observer.pictureDescription(message: Message): String {
         var numberOfPictures = 0
         for (loopMessage in messengerStates.getMessageListState(channel.id)()
-            .sortedByDescending { MessageUtils.getSentTimeStamp(it.id) }) {
+            .sortedByDescending { it.id }) {
             if (message.sender != loopMessage.sender) {
                 break
             }
@@ -383,7 +386,7 @@ class ChannelPreview(
         }
 
         val address = url.pathSegments().getOrNull(1) ?: return stateOf("Invite")
-        val host = Essential.getInstance().connectionManager.spsManager.getHostFromSpsAddress(address)
+        val host = SpsAddress.parse(address)?.host
             ?: return stateOf(address)
 
         return stateByV2 {

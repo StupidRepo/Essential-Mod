@@ -23,8 +23,8 @@ import gg.essential.util.UDrawContext
 import net.minecraft.client.gui.GuiButton
 import java.awt.Color
 
-class MenuButtonProxy(essentialId: String, keepConsistentInitPosition: Boolean, initialPosID: Int) :
-    EssentialProxyElement<MenuButton>(essentialId, keepConsistentInitPosition, initialPosID, MenuButton::class.java) {
+class MenuButtonProxy(essentialId: String, initialPosID: Int) :
+    EssentialProxyElement<MenuButton>(essentialId, initialPosID, MenuButton::class.java) {
 
     private val tintEffect = TintVanillaButtonsEffect()
 

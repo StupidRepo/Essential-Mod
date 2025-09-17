@@ -26,7 +26,7 @@ dependencies {
     implementation(project(":utils"))
     implementation(project(":libs"))
     implementation(project(":infra"))
-    implementation(project(":cosmetics", configuration = "minecraftRuntimeElements"))
+    implementation(project(":cosmetics"))
     implementation(project(":vigilance2"))
     implementation(project(":gui:elementa"))
     implementation(project(":ice"))

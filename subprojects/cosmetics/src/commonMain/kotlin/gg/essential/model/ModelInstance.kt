@@ -21,6 +21,7 @@ import gg.essential.mod.cosmetics.settings.CosmeticSetting
 import gg.essential.mod.cosmetics.settings.setting
 import gg.essential.model.backend.PlayerPose
 import gg.essential.model.backend.RenderBackend
+import gg.essential.model.bones.BedrockModelState
 import gg.essential.model.molang.MolangQueryEntity
 import gg.essential.model.util.UMatrixStack
 import gg.essential.network.cosmetics.Cosmetic
@@ -33,7 +34,9 @@ class ModelInstance(
     val onAnimation: (String) -> Unit,
 ) {
     var locator = WearableLocator(entity.locator, wearableVisible = !state.propertyHidesEntireCosmetic(model.cosmetic.id))
-    var animationState = ModelAnimationState(entity, locator)
+    // allows new particles to reflect modelInstance texture changes even when the animationState doesn't update
+    private val textureSource = { this.model.texture }
+    var animationState = ModelAnimationState(entity, locator, textureSource)
     var textureAnimationSync = TextureAnimationSync(model.textureFrameCount)
     private var animationVariantSetting: CosmeticSetting.AnimationVariant? = state.getAnimationVariantSettingOf(model.cosmetic.id)
     var essentialAnimationSystem = EssentialAnimationSystem(model, entity, animationState, textureAnimationSync, animationTargets, animationVariantSetting, onAnimation)
@@ -60,7 +63,7 @@ class ModelInstance(
         if (newAnimations) {
             locator.isValid = false
             locator = WearableLocator(entity.locator, locator.wearableVisible)
-            animationState = ModelAnimationState(entity, locator)
+            animationState = ModelAnimationState(entity, locator, textureSource)
         }
         if (newAnimationVariant) {
             animationVariantSetting = newAnimationVariantSetting
@@ -75,7 +78,7 @@ class ModelInstance(
         get() = model.cosmetic
 
     fun computePose(basePose: PlayerPose): PlayerPose {
-        return model.computePose(basePose, animationState, entity)
+        return model.computePose(basePose, animationState)
     }
 
     /**
@@ -88,17 +91,19 @@ class ModelInstance(
     fun updateLocators(renderedPose: PlayerPose, state: CosmeticsState) {
         // Locators are fairly expensive to update, so only do it if we need to
         if (animationState.locatorsNeedUpdating()) {
-            animationState.apply(model.rootBone)
-            model.applyPose(renderedPose, entity)
-
-            // process visibility and sided-ness from cosmetic state for Locator.isVisible update
-            model.propagateVisibilityToRootBone(
+            val modelState = BedrockModelState(
+                renderedPose,
+                animationState.bake(model.bones),
+                state.getPositionAdjustment(cosmetic),
                 state.sides[cosmetic.id],
                 state.hiddenBones[cosmetic.id] ?: emptySet(),
                 EnumPart.values().toSet() - state.hiddenParts.getOrDefault(cosmetic.id, emptySet()),
             )
+            modelState.apply(model.bones)
 
             animationState.updateLocators(model.bones, 1 / 16f)
+
+            modelState.reset(model.bones)
         }
     }
 
@@ -108,20 +113,13 @@ class ModelInstance(
         geometry: RenderGeometry,
         renderMetadata: RenderMetadata,
     ) {
-        animationState.apply(model.rootBone)
-
-        for (bone in model.bones.byPart.values) {
-            if (bone.part == EnumPart.ROOT) continue
-            bone.userOffsetX = renderMetadata.positionAdjustment.x
-            bone.userOffsetY = renderMetadata.positionAdjustment.y
-            bone.userOffsetZ = renderMetadata.positionAdjustment.z
-        }
+        val bakedAnimations = animationState.bake(model.bones)
 
         model.render(
             matrixStack,
             vertexConsumerProvider,
             geometry,
-            entity,
+            bakedAnimations,
             renderMetadata,
             textureAnimationSync.getAdjustedLifetime(entity.lifeTime),
         )

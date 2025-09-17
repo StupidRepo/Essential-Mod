@@ -28,11 +28,11 @@ import gg.essential.elementa.dsl.*
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.common.shadow.EssentialUIText
+import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl
 import gg.essential.gui.elementa.state.v2.add
 import gg.essential.gui.elementa.state.v2.combinators.and
 import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.combinators.zip
-import gg.essential.gui.elementa.state.v2.filter
 import gg.essential.gui.elementa.state.v2.mapEach
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableListStateOf
@@ -47,7 +47,6 @@ import gg.essential.gui.friends.Tab
 import gg.essential.gui.friends.message.MessageInput
 import gg.essential.gui.friends.message.MessageScreen
 import gg.essential.gui.friends.message.MessageTitleBar
-import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.gui.friends.previews.ChannelPreview
 import gg.essential.gui.layoutdsl.layout
 import gg.essential.gui.notification.Notifications
@@ -68,6 +67,8 @@ class ReplyableMessageScreen(
     private val active =
         gui.chatTab.currentMessageView.map { it == this@ReplyableMessageScreen } and gui.selectedTab.map { it == Tab.CHAT }
 
+    private val refHolder = ReferenceHolderImpl()
+
     val isScreenOpen = memo { gui.isScreenOpen() && active() }
 
     private val standardBar by MessageTitleBar(this, gui).bindParent(gui.titleBar, active)
@@ -79,7 +80,7 @@ class ReplyableMessageScreen(
         y = SiblingConstraint()
         width = 100.percent
         height = FillConstraint()
-    } childOf this
+    }
 
     private val content by UIContainer().constrain {
         y = 0.pixels(alignOpposite = true)
@@ -124,10 +125,8 @@ class ReplyableMessageScreen(
             val message = messageWithIndex.value
             if (list.none { it.id == message.id }) {
                 list.add(
-                    if (message.sendState == SendState.SENDING) {
-                        message.copy(
-                            id = (kotlin.math.max(latestMessageTimestamp, message.sendTime.toEpochMilli()) + (messageWithIndex.index + 1) - MessageUtils.messageTimeEpocMillis) shl 22
-                        )
+                    if (message.sendState == SendState.Sending) {
+                        message.copy(createdAt = kotlin.math.max(latestMessageTimestamp, message.sendTime.toEpochMilli()))
                     } else {
                         message
                     }
@@ -166,9 +165,15 @@ class ReplyableMessageScreen(
             else -> 2
         }
     }
+
     init {
         if (!preview.channel.isAnnouncement()) {
-            messageInput = MessageInput(preview.titleState, replyingTo, editingMessage, this, ::sendMessage) childOf this
+            messageInput = MessageInput(preview.titleState, replyingTo, editingMessage, this, ::sendMessage)
+        }
+
+        layout {
+            scroller()
+            messageInput?.invoke()
         }
 
         gui.createRightDividerScroller(
@@ -234,7 +239,7 @@ class ReplyableMessageScreen(
         } else if (channelMessages.size < 50) {
             cm.chatManager.retrieveMessageHistory(
                 channel.id,
-                channelMessages.values.minByOrNull { it.getSentTimestamp() }?.id,
+                channelMessages.values.minByOrNull { it.id }?.id,
                 null,
                 50 - channelMessages.size,
                 null
@@ -444,15 +449,16 @@ class ReplyableMessageScreen(
         val connectionManager = Essential.getInstance().connectionManager
 
         val fakeMessage = ClientMessage(
-            (System.currentTimeMillis() - MessageUtils.messageTimeEpocMillis) shl 22, // ID (and implied send time) may be updated by fakeOutgoingMessageTimestamps()
+            fakeID,
             preview.channel,
             UUIDUtil.getClientUUID(),
             message,
-            SendState.SENDING,
+            SendState.Sending,
             replyingTo?.let {
                 MessageRef(preview.channel.id, it.id)
             },
             null,
+            Instant.now().toEpochMilli()
         )
         sendMessage(fakeMessage)
     }
@@ -467,8 +473,9 @@ class ReplyableMessageScreen(
         Essential.getInstance().connectionManager.chatManager.sendMessage(message.channel.id, trimmed, message.replyTo?.messageId, EarlyResponseHandler { packet ->
             sendQueue.removeAll { it.id == message.id }
 
-            if (packet.orElse(null) !is ServerChatChannelMessagePacket) {
-                sendQueue.add(message.copy(sendState = SendState.FAILED))
+            val response = packet.orElse(null)
+            if (response !is ServerChatChannelMessagePacket) {
+                sendQueue.add(message.copy(sendState = SendState.Failed))
             }
         })
     }
@@ -495,11 +502,11 @@ class ReplyableMessageScreen(
     }
 
     override fun retrySend(message: ClientMessage) {
-        if (message.sendState != SendState.FAILED || message.sender != UUIDUtil.getClientUUID()) {
+        if (message.sendState != SendState.Failed || message.sender != UUIDUtil.getClientUUID()) {
             throw IllegalArgumentException("Message was already sent or was not sent by the client")
         }
         sendQueue.removeAll { it.id == message.id }
-        sendMessage(message.copy(sendState = SendState.SENDING))
+        sendMessage(message.copy(sendState = SendState.Sending))
     }
 
     override fun markAllAsRead() {
@@ -527,4 +534,9 @@ class ReplyableMessageScreen(
 
     }
 
+    private companion object {
+
+        var fakeID = Long.MIN_VALUE
+            get() = field++
+    }
 }

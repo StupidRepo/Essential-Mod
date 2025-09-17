@@ -17,7 +17,6 @@ import com.sparkuniverse.toolbox.chat.model.CreatedInfo
 import com.sparkuniverse.toolbox.util.DateTime
 import gg.essential.elementa.state.BasicState
 import gg.essential.gui.common.WeakState
-import gg.essential.util.GuiEssentialPlatform
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import java.util.*
 
@@ -77,6 +76,7 @@ data class MessageRef(
             CreatedInfo(DateTime(0), null),
             null,
             false,
+            0
         )
 
         /**
@@ -88,9 +88,10 @@ data class MessageRef(
             deletedMessageFakeChannel,
             UUID(0,0),
             "Message deleted",
-            SendState.CONFIRMED,
+            SendState.Confirmed,
             null,
             null,
+            0
         )
     }
 }

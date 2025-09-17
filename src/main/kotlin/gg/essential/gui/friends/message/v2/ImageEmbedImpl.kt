@@ -343,7 +343,7 @@ class ImageEmbedImpl(
         }
     }
 
-    inner class FailedEmbed : UIBlock(EssentialPalette.getMessageColor(hoveredState() or messageWrapper.appearHovered.toV1(this@ImageEmbedImpl), false)) {
+    inner class FailedEmbed : UIBlock(EssentialPalette.getMessageColor(hoveredState() or messageWrapper.appearHovered.toV1(this@ImageEmbedImpl), false, SendState.Failed)) {
         init {
             layoutAsBox(Modifier.childBasedWidth().childBasedHeight()) {
                 column(Modifier.childBasedWidth(10f).childBasedHeight(8f), Arrangement.spacedBy(0f, FloatPosition.CENTER)) {

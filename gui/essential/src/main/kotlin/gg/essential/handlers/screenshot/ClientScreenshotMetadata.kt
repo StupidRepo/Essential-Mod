@@ -19,7 +19,7 @@ import gg.essential.lib.gson.annotations.SerializedName
 import gg.essential.media.model.Media
 import gg.essential.media.model.MediaLocationMetadata
 import gg.essential.media.model.MediaLocationType
-import gg.essential.sps.SPS_TLD
+import gg.essential.sps.SpsAddress
 import gg.essential.util.USession
 import java.nio.file.Path
 import java.util.*
@@ -66,7 +66,7 @@ data class ClientScreenshotMetadata(
 
         constructor(metadata: MediaLocationMetadata) : this(
             Type.fromNetworkType(metadata.type),
-            metadata.spsHost?.let { "$it$SPS_TLD" } ?: metadata.identifier,
+            metadata.spsHost?.let { SpsAddress(it).toString() } ?: metadata.identifier,
         )
 
         enum class Type {

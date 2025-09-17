@@ -58,7 +58,8 @@ interface IntegratedServerManager {
     fun setOpsSource(source: State<Set<UUID>>)
     fun setResourcePackSource(source: State<ServerResourcePack?>)
     fun setDifficultySource(source: MutableState<Difficulty>)
-    fun setDefaultGameModeSource(source: State<GameMode>)
+    fun setDifficultyLockedSource(source: MutableState<Boolean>)
+    fun setDefaultGameModeSource(source: MutableState<GameMode>)
     fun setCheatsEnabledSource(source: State<Boolean>)
 
     data class ServerResourcePack(val url: String, val checksum: String)

@@ -67,7 +67,7 @@ fun sendCosmeticsHiddenNotification() {
     Notifications.pushPersistentToast("Cosmetics Hidden", "Do you want to show\nyour cosmetics?", {}, {}) {
         type = NotificationType.WARNING
         uniqueId = object {}.javaClass
-        withCustomComponent(Slot.ACTION, toastButton("Show") { EssentialConfig.ownCosmeticsHidden = false })
+        withCustomComponent(Slot.ACTION, toastButton("Show") { EssentialConfig.ownCosmeticsVisibleStateWithSource.set(true to EssentialConfig.CosmeticsVisibilitySource.UserWithoutNotification) })
     }
 }
 

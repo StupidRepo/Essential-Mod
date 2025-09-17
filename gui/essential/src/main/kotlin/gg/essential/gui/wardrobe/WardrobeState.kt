@@ -213,7 +213,7 @@ class WardrobeState(
     val cosmeticItems = filteredCosmetics.mapEach { Item.CosmeticOrEmote(it) }
     val bundleItems = bundles.mapEach { it.toItem() }
     val outfitItems = outfitManager.outfits.mapEachNotNull { outfit ->
-        val skin = outfit.skin?.skin
+        val skin = outfit.skin
         val skinId = outfit.skinId
         if (skin == null || skinId == null) {
             null

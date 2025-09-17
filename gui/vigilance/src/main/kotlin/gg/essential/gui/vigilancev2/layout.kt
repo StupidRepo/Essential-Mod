@@ -16,6 +16,7 @@ import gg.essential.elementa.components.ScrollComponent
 import gg.essential.gui.common.EssentialSearchbar
 import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.elementa.state.v2.MutableState
+import gg.essential.gui.elementa.state.v2.onChange
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.vigilancev2.components.settingsCategory
 import gg.essential.gui.vigilancev2.components.vigilanceSidebar
@@ -60,6 +61,10 @@ fun LayoutScope.vigilanceContent(
         }
 
         settingsCategoryScroller.setVerticalScrollBarComponent(mainScrollbar, true)
+
+        currentCategoryName.onChange(stateScope) {
+            settingsCategoryScroller.scrollToTop(false)
+        }
     }
 
     return sidebarScroller

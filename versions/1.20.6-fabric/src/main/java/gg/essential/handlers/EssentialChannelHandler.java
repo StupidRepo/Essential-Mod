@@ -25,13 +25,20 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 //$$ import net.neoforged.bus.api.SubscribeEvent;
 //$$ import net.neoforged.fml.common.EventBusSubscriber;
 //$$ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+//#if MC>=12106
+//$$ import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
+//#endif
 //#else
 //$$ import net.minecraftforge.network.ChannelBuilder;
 //$$ import net.minecraftforge.network.SimpleChannel;
 //#endif
 
 //#if NEOFORGE
+//#if MC>=12106
+//$$ @EventBusSubscriber(modid = Essential.MODID)
+//#else
 //$$ @EventBusSubscriber(modid = Essential.MODID, bus = EventBusSubscriber.Bus.MOD)
+//#endif
 //#endif
 public class EssentialChannelHandler {
     private static final Identifier CHANNEL = HelpersKt.identifier("essential:");
@@ -57,6 +64,12 @@ public class EssentialChannelHandler {
     //$$ public static void registerWithNeoForge(RegisterPayloadHandlersEvent event) {
     //$$     event.registrar("1").optional().playBidirectional(Payload.ID, Payload.CODEC, (__, ___) -> {});
     //$$ }
+    //#if MC>=12106
+    //$$ @SubscribeEvent
+    //$$ public static void registerWithNeoForgeClient(RegisterClientPayloadHandlersEvent event) {
+    //$$     event.register(Payload.ID, (__, ___) -> {});
+    //$$ }
+    //#endif
     //#endif
 
     private static class Payload implements CustomPayload {

@@ -61,6 +61,7 @@ import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.NetworkedManager;
 import gg.essential.network.connectionmanager.chat.ChatManager;
 import gg.essential.network.connectionmanager.handler.screenshot.ServerScreenshotListPacketHandler;
+import gg.essential.sps.SpsAddress;
 import gg.essential.universal.UDesktop;
 import gg.essential.util.EssentialSounds;
 import gg.essential.util.ExtensionsKt;
@@ -101,7 +102,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -416,10 +416,11 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Step(75));
         final DateTime time = metadata.getEditTime() != null ? metadata.getEditTime() : metadata.getTime();
         final String identifier = metadata.getLocationMetadata().getIdentifier();
+        final SpsAddress spsAddress = identifier != null ? SpsAddress.parse(identifier) : null;
         connectionManager.send(new ClientMediaCreatePacket(packet.getMediaId(), username + "'s Screenshot", "Captured " + TimeFormatKt.formatDateAndTime(time.toInstant()), new MediaMetadata(
             metadata.getAuthorId(),
             time,
-            new MediaLocationMetadata(metadata.getLocationMetadata().getType().toNetworkType(), identifier, identifier == null ? null : connectionManager.getSpsManager().getHostFromSpsAddress(identifier)),
+            new MediaLocationMetadata(metadata.getLocationMetadata().getType().toNetworkType(), identifier, spsAddress == null ? null : spsAddress.getHost()),
             metadata.getFavorite(),
             metadata.getEdited()
         )), packetOptional -> {
@@ -440,12 +441,9 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         ClientScreenshotMetadata.Location.Type type = ClientScreenshotMetadata.Location.Type.UNKNOWN;
         if (Minecraft.getMinecraft().getCurrentServerData() != null) {
             String address = Minecraft.getMinecraft().getCurrentServerData().serverIP;
-            if (connectionManager.getSpsManager().isSpsAddress(address)) {
-                UUID spsHost = connectionManager.getSpsManager().getHostFromSpsAddress(address);
-                if (spsHost != null) {
-                    identifier = address;
-                    type = ClientScreenshotMetadata.Location.Type.SHARED_WORLD;
-                }
+            if (SpsAddress.parse(address) != null) {
+                identifier = address;
+                type = ClientScreenshotMetadata.Location.Type.SHARED_WORLD;
             }
             if ("Unknown".equals(identifier)) {
                 type = ClientScreenshotMetadata.Location.Type.MULTIPLAYER;

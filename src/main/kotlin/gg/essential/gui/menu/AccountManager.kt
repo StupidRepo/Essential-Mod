@@ -12,7 +12,6 @@
 package gg.essential.gui.menu
 
 import gg.essential.Essential
-import gg.essential.elementa.state.State
 import gg.essential.elementa.utils.ObservableList
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.account.factory.InitialSessionFactory
@@ -27,7 +26,6 @@ import gg.essential.gui.elementa.state.v2.await
 import gg.essential.gui.elementa.state.v2.awaitValue
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.toListState
-import gg.essential.gui.menu.full.FullAccountSwitcher
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.error
 import gg.essential.gui.notification.iconAndMarkdownBody
@@ -57,8 +55,6 @@ class AccountManager {
     private val originalAccountsMutable = mutableStateOf<List<AccountInfo>>(listOf())
     val allAccounts: ListState<AccountInfo> = allAccountsMutable.toListState()
     val originalAccounts: ListState<AccountInfo> = originalAccountsMutable.toListState()
-
-    fun getFullAccountSwitcher(collapsed: State<Boolean>) = FullAccountSwitcher(accountsList, collapsed, this)
 
     init {
         USession.active.onSetValueAndNow(referenceHolder) {

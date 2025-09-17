@@ -53,7 +53,9 @@ import gg.essential.key.EssentialKeybindingRegistry;
 import gg.essential.lib.gson.Gson;
 import gg.essential.lib.gson.GsonBuilder;
 import gg.essential.network.connectionmanager.ConnectionManager;
+import gg.essential.network.connectionmanager.skins.PlayerSkinLookup;
 import gg.essential.sps.McIntegratedServerManager;
+import gg.essential.sps.WindowTitleManager;
 import gg.essential.universal.UMinecraft;
 import gg.essential.util.*;
 import gg.essential.util.crash.StacktraceDeobfuscator;
@@ -205,6 +207,8 @@ public class Essential implements EssentialAPI {
         loadSessionFactories();
         this.connectionManager.start();
 
+        PlayerSkinLookup.INSTANCE.supplySkinFromGame(USession.Companion.activeNow().getUuid(), skinManager.getActiveSkin());
+
         dispatchStaticInitializers();
     }
 
@@ -288,6 +292,7 @@ public class Essential implements EssentialAPI {
         //#endif
 
         imageCache = new FileImageCache(new File(getBaseDir(), "image-cache"), 1, TimeUnit.HOURS, true);
+        PlayerSkinLookup.INSTANCE.loadCache(getBaseDir().toPath().resolve("cache"));
 
         EVENT_BUS.register(EssentialCommandRegistry.INSTANCE);
         getKeybindingRegistry().refreshBinds(); // config is ready now, time to refresh which bindings we actually want
@@ -296,7 +301,6 @@ public class Essential implements EssentialAPI {
         registerListener(MinecraftUtils.INSTANCE);
         registerListenerRequiresEssential(new ServerStatusHandler());
         registerListener(GuiUtil.INSTANCE);
-        registerListener(OverlayManagerImpl.Events.INSTANCE);
         //#if MC>=12106
         //$$ registerListener(AdvancedDrawContext.INSTANCE);
         //#endif
@@ -333,6 +337,7 @@ public class Essential implements EssentialAPI {
         if (OnboardingData.hasAcceptedTos()) {
             EVENT_BUS.post(new TosAcceptedEvent());
         }
+        WindowTitleManager.INSTANCE.register();
 
         //#if MC<11400
         // Patcher screenshot manager conflicts with ours, so we disable it

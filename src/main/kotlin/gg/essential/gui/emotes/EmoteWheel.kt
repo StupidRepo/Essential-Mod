@@ -24,6 +24,7 @@ import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.components.Window
 import gg.essential.elementa.state.BasicState
 import gg.essential.elementa.utils.withAlpha
+import gg.essential.event.render.RenderTickEvent
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.MenuButton
 import gg.essential.gui.common.sendEmotesDisabledNotification
@@ -69,6 +70,7 @@ import gg.essential.mod.cosmetics.settings.CosmeticProperty
 import gg.essential.mod.cosmetics.settings.CosmeticSetting
 import gg.essential.mod.cosmetics.settings.CosmeticSettingType
 import gg.essential.model.BedrockModel
+import gg.essential.model.PlayerMolangQuery
 import gg.essential.model.util.PlayerPoseManager
 import gg.essential.network.connectionmanager.cosmetics.AssetLoader
 import gg.essential.network.connectionmanager.cosmetics.removeSingletonSettingType
@@ -87,7 +89,9 @@ import gg.essential.util.setPerspective
 import gg.essential.util.textLiteral
 import gg.essential.util.toState
 import gg.essential.vigilance.utils.onLeftClick
+import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.entity.AbstractClientPlayer
+import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.EnumAction
 import net.minecraft.item.ItemStack
 import java.util.concurrent.TimeUnit
@@ -252,6 +256,52 @@ class EmoteWheel : WindowScreen(
         return false
     }
 
+
+    /**
+     * Handles the delay between an emote starting and ending, unequipping the current emote after the delay.
+     * The handler listens to the render tick event, checking if enough time has passed in game ticks, this lets it account
+     * for game pausing and slowed tick times.
+     */
+    private class EmoteUnequipDelayHandler(
+        private val endDelayInSeconds: Float,
+        private val invocationId: Int,
+        player: EntityPlayer
+    ) {
+
+        // Use PlayerMolangQuery to get the time of the player in seconds, which respects game pause time
+        private val timeQuery: () -> Float = PlayerMolangQuery(player)::time
+
+        private val startTime: Float = timeQuery()
+
+        init {
+            if (startTime.isNaN()) {
+                unequipCurrentEmote() // unequip immediately and don't register
+            } else {
+                Essential.EVENT_BUS.register(this)
+            }
+        }
+
+        private fun unequip() {
+            unequipCurrentEmote()
+            Essential.EVENT_BUS.unregister(this)
+        }
+
+        @Subscribe
+        fun renderTickListener(event: RenderTickEvent) {
+            if (!event.isPre) return
+
+            if (latestInvocation != invocationId) {
+                // stop this handler if the emote was changed
+                Essential.EVENT_BUS.unregister(this)
+                return
+            }
+
+            if (timeQuery() - startTime >= endDelayInSeconds) {
+                unequip()
+            }
+        }
+    }
+
     companion object {
         private const val emoteTransitionTimeMs = 0L
 
@@ -406,18 +456,20 @@ class EmoteWheel : WindowScreen(
                 }
 
                 val invocationId = ++latestInvocation
+                val player = UPlayer.getPlayer()
                 if (animLength != Float.POSITIVE_INFINITY) { // Non-looping emote
-                    // Once emote has finished its animation, unequip it
-                    Multithreading.scheduleOnMainThread({
-                        if (invocationId == latestInvocation) {
-                            unequipCurrentEmote()
-                        }
-                    }, ((animLength - PlayerPoseManager.transitionTime) * 1000).toLong(), TimeUnit.MILLISECONDS)
+                    if (player != null) {
+                        // Once emote has finished its animation, unequip it
+                        EmoteUnequipDelayHandler(animLength - PlayerPoseManager.transitionTime, invocationId, player)
+                    } else {
+                        // If we can't get the player, just unequip immediately, this shouldn't normally occur
+                        unequipCurrentEmote()
+                    }
                 } else if (!emote.cosmetic.emoteInterruptionTriggers.movement) { // Movement doesn't cancel this emote and it loops
 
                     UKeyboard.getKeyName(UMinecraft.getSettings().keyBindSneak)?.let { keybind ->
                         //#if MC>=11202
-                        UPlayer.getPlayer()?.sendStatusMessage(textLiteral("Press $keybind to Stop Emote"), true)
+                        player?.sendStatusMessage(textLiteral("Press $keybind to Stop Emote"), true)
                         //#else
                         //$$ UMinecraft.getMinecraft().ingameGUI.setRecordPlaying(textLiteral("Press $keybind to Stop Emote"), false)
                         //#endif

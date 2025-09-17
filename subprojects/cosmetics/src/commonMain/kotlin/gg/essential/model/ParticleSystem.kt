@@ -37,6 +37,7 @@ import dev.folomeev.kotgl.matrix.vectors.vecUnitX
 import dev.folomeev.kotgl.matrix.vectors.vecUnitY
 import dev.folomeev.kotgl.matrix.vectors.vecUnitZ
 import dev.folomeev.kotgl.matrix.vectors.vecZero
+import gg.essential.model.backend.RenderBackend
 import gg.essential.model.collision.CollisionProvider
 import gg.essential.model.file.ParticleEffectComponents
 import gg.essential.model.file.ParticleEffectComponents.ParticleAppearanceBillboard.Direction.Custom
@@ -44,11 +45,11 @@ import gg.essential.model.file.ParticleEffectComponents.ParticleAppearanceBillbo
 import gg.essential.model.file.ParticleEffectComponents.ParticleAppearanceBillboard.FacingCameraMode.*
 import gg.essential.model.file.ParticlesFile
 import gg.essential.model.molang.MolangContext
-import gg.essential.model.molang.MolangExpression
 import gg.essential.model.molang.MolangQuery
 import gg.essential.model.util.Color
 import gg.essential.model.light.Light
 import gg.essential.model.light.LightProvider
+import gg.essential.model.molang.Molang
 import gg.essential.model.molang.MolangQueryEntity
 import gg.essential.model.molang.MolangQueryTime
 import gg.essential.model.molang.Variables
@@ -108,7 +109,7 @@ class ParticleSystem(
             particles.add(particle)
 
             val effect = particle.emitter.effect
-            val renderPass = effect.renderPass
+            val renderPass = particle.renderPass
             if (renderPass != null) {
                 if (effect.components.particleAppearanceBillboard != null) {
                     billboardRenderPasses.getOrPut(renderPass, ::mutableSetOf).add(particle)
@@ -120,7 +121,7 @@ class ParticleSystem(
             val particle = particles.set(index, null) ?: throw IndexOutOfBoundsException()
 
             val effect = particle.emitter.effect
-            val renderPass = effect.renderPass
+            val renderPass = particle.renderPass
             if (renderPass != null) {
                 if (effect.components.particleAppearanceBillboard != null) {
                     val renderPassSet = billboardRenderPasses.getValue(renderPass)
@@ -137,13 +138,15 @@ class ParticleSystem(
 
     fun spawn(event: ModelAnimationState.ParticleEvent) {
         val universe = universes.getOrPut(event.timeSource) { Universe(event.timeSource) }
+        val (position, rotation) = event.locator.positionAndRotation // more performant to get together
         val emitter = Emitter(
             this,
             universe,
             event.effect,
+            event.textureSource,
             event.sourceEntity,
-            event.locator.position,
-            event.locator.rotation,
+            position,
+            rotation,
             vec3(),
             event.locator,
             vec3(),
@@ -276,7 +279,8 @@ class ParticleSystem(
     private class Emitter(
         val system: ParticleSystem,
         val universe: Universe,
-        val effect: ParticleEffect,
+        val effectRef: ParticleEffectWithReferencedEffects,
+        val textureSource: () -> RenderBackend.Texture?,
         val sourceEntity: MolangQueryEntity,
         /** Global position of the emitter. Updated each frame if alive and bound to a locator. */
         var position: Vec3,
@@ -289,6 +293,8 @@ class ParticleSystem(
         /** Offset of this emitter from the locator position in local space. */
         val locatorOffset: Vec3?,
     ) {
+
+        val effect = effectRef.particleEffect
         private val components = effect.components
         private val curveVariables = CurveVariables({ molang }, effect.curves)
         private val variables = VariablesMap().fallbackBackTo(curveVariables)
@@ -373,8 +379,10 @@ class ParticleSystem(
             components.emitterInitialization?.perUpdateExpression?.eval(molang)
 
             if (locator != null) {
-                position = locator.position
-                rotation = locator.rotation
+                // more performant to get them together
+                val posRot = locator.positionAndRotation
+                position = posRot.first
+                rotation = posRot.second
                 velocity = locator.velocity
                 if (locatorOffset != null) {
                     position = position.plus(locatorOffset.rotateBy(rotation))
@@ -482,7 +490,7 @@ class ParticleSystem(
             }
 
             event.particle?.let { config ->
-                val targetEffect = effect.referencedEffects[config.effect] ?: return@let
+                val targetEffectRef = effectRef.getOtherParticleByReference(config.effect) ?: return@let
                 // TODO: docs say about "particle" that we should be "creating the emitter if it doesn't already exist"
                 //       but how are we supposed to determine whether an emitter "at the event location" already
                 //       exists in the first place? just going to create a new one each time for now
@@ -490,7 +498,8 @@ class ParticleSystem(
                     Emitter(
                         system,
                         universe,
-                        targetEffect,
+                        targetEffectRef,
+                        textureSource,
                         sourceEntity,
                         particle?.globalPosition ?: position,
                         rotation,
@@ -504,7 +513,8 @@ class ParticleSystem(
                     Emitter(
                         system,
                         universe,
-                        targetEffect,
+                        targetEffectRef,
+                        textureSource,
                         sourceEntity,
                         particle?.globalPosition ?: position,
                         Quaternion.Identity,
@@ -524,7 +534,7 @@ class ParticleSystem(
             }
 
             event.sound?.let { config ->
-                val targetSound = effect.referencedSounds[config.event] ?: return@let
+                val targetSound = effectRef.referencedSounds[config.event] ?: return@let
                 system.playSound(ModelAnimationState.SoundEvent(
                     universe.timeSource,
                     universe.lastUpdate - timeSince,
@@ -556,6 +566,7 @@ class ParticleSystem(
         /** This is the locator describing the space in which this particle is simulated if it is not global. */
         val localSpace: Locator?,
     ) {
+        val renderPass = emitter.effect.renderPass(emitter.textureSource)
         private val components = emitter.effect.components
         val curveVariables = CurveVariables({ molang }, emitter.effect.curves)
         private val variables = VariablesMap()
@@ -1129,7 +1140,7 @@ private fun reflect(vec: Vec3, norm: Vec3) =
 
 private fun Pair<Float, Float>.toVec2() = mutableVec2(first, second)
 
-private fun Pair<MolangExpression, MolangExpression>.eval(context: MolangContext) =
+private fun Pair<Molang, Molang>.eval(context: MolangContext) =
     mutableVec2(first.eval(context), second.eval(context))
 
 private class CurveVariables(

@@ -66,7 +66,7 @@ import java.util.Set;
 import net.minecraft.client.renderer.entity.RenderLivingBase;
 //#endif
 
-//#if FORGE
+//#if FORGE && MC<11700
 import net.minecraftforge.fml.common.eventhandler.Event;
 import net.minecraftforge.fml.common.eventhandler.EventBus;
 //#endif
@@ -236,8 +236,20 @@ public abstract class MixinRenderPlayer
         //$$ MatrixStack stack = new MatrixStack();
         //#if MC>=12102
         //$$ PlayerEntityRenderState state = this.createRenderState();
+        //$$
+        //$$ // store and override the player yaw values with our own
+        //$$ var oldYaw = player.bodyYaw;
+        //$$ var oldPrevYaw = player.prevBodyYaw;
+        //$$ player.bodyYaw = yaw;
+        //$$ player.prevBodyYaw = yaw;
+        //$$
+        //$$ // process the transforms with our modified yaw
         //$$ this.updateRenderState(player, state, partialTicks);
         //$$ this.setupTransforms(state, stack, state.bodyYaw, state.baseScale);
+        //$$
+        //$$ // reset the yaw to the original value
+        //$$ player.bodyYaw = oldYaw;
+        //$$ player.prevBodyYaw = oldPrevYaw;
         //#else
         //$$ this.applyRotations(
         //$$     player, stack, player.ticksExisted + partialTicks, yaw, partialTicks

@@ -55,7 +55,7 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
     protected void onHandle(@NotNull final ConnectionManager connectionManager, @NotNull final ServerChatChannelMessagePacket packet) {
         final ChatManager chatManager = connectionManager.getChatManager();
 
-        List<@NotNull Message> sortedMessages = Arrays.stream(packet.getMessages()).sorted(Comparator.comparing(message -> ExtensionsKt.getSentTimestamp((Message) message)).reversed()).collect(Collectors.toList());
+        List<@NotNull Message> sortedMessages = Arrays.stream(packet.getMessages()).sorted(Comparator.comparing(message -> ((Message) message).getCreatedAt()).reversed()).collect(Collectors.toList());
         for (@NotNull final Message message : sortedMessages) {
             final Optional<Channel> channelOptional = chatManager.getChannel(message.getChannelId());
             if (!channelOptional.isPresent()) {

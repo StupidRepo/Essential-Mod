@@ -20,7 +20,6 @@ import gg.essential.elementa.utils.OptionsKt;
 import gg.essential.event.client.ClientTickEvent;
 import gg.essential.gui.emotes.EmoteWheel;
 import gg.essential.gui.friends.SocialMenu;
-import gg.essential.gui.overlay.EphemeralLayer;
 import gg.essential.gui.overlay.Layer;
 import gg.essential.gui.overlay.OverlayManagerImpl;
 import gg.essential.gui.screenshot.components.ScreenshotBrowser;
@@ -137,10 +136,11 @@ public class EssentialKeybindingRegistry {
         int cosmeticToggleKey = UKeyboard.KEY_NONE;
         cosmetics_visibility_toggle = new EssentialKeybinding("COSMETICS_VISIBILITY_TOGGLE", CATEGORY, cosmeticToggleKey, false).withInitialPress(() -> {
             if (OverlayManagerImpl.INSTANCE.getFocusedLayer() == null
-                    && !(OverlayManagerImpl.INSTANCE.getHoveredLayer() instanceof EphemeralLayer)
                     && !EssentialConfig.INSTANCE.getDisableCosmetics()
             ) {
-                Essential.getInstance().getConnectionManager().getCosmeticsManager().toggleOwnCosmeticVisibility(true);
+                EssentialConfig.INSTANCE.getOwnCosmeticsVisibleStateWithSource().set(pair ->
+                        new kotlin.Pair<>(!pair.component1(), EssentialConfig.CosmeticsVisibilitySource.UserWithNotification)
+                );
             }
         });
 

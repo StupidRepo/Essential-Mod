@@ -43,7 +43,6 @@ import net.minecraft.client.gui.GuiButton
 
 abstract class EssentialProxyElement<T : UIComponent>(
     val essentialId: String,
-    keepConsistentInitPosition: Boolean,
     initialPosID: Int,
     private val clazz: Class<T>,
     private val expectedText: String = "<essential_$essentialId>",
@@ -58,16 +57,6 @@ abstract class EssentialProxyElement<T : UIComponent>(
     191852507 /* random starting id offset to avoid conflicts */ + initialPosID , initialPosID * 2, initialPosID, 20, 20, expectedText
     //#endif
 ) {
-
-    init {
-        // Immediately apply the last known position so e.g. the fancy menu editor in <1.18, which never draws the
-        // button, can still read a sensible value.
-        // Note: We however must not move the button when FancyMenu is doing their identification pass that expects
-        // consistent x y positions from which it derives the button id (see isProbablyFancyMenuIdentifierPass).
-        if (!keepConsistentInitPosition) {
-            applyFallbackPositionState()
-        }
-    }
 
     protected val drawBehaviourState: MutableState<ProxyDrawBehaviour> = mutableStateOf(ProxyDrawBehaviour.ESSENTIAL_DRAWS)
     protected val drawBehaviour: ProxyDrawBehaviour get() = drawBehaviourState.getUntracked()
@@ -94,6 +83,17 @@ abstract class EssentialProxyElement<T : UIComponent>(
         essentialContainerMountingState = mountingControl
 
         mountingControl.set(State { drawBehaviourState() != ProxyDrawBehaviour.PROXY_DRAWS })
+    }
+
+    fun initAfterInitialLayout() {
+        // Apply position of Essential component to proxy
+        updateProxyStateWhileNotInControl()
+
+        // Detach from Essential component again (a dummy one is used for initial layout)
+        // Intentionally not resetting `positionStateSetByEssential` so we can recognize when a mod moves the button
+        // during screen initialization.
+        essentialContainer = null
+        essentialContainerMountingState = null
     }
 
     private var needsToDrawOnce = true

@@ -13,7 +13,7 @@ package gg.essential.mixins.transformers.feature.sps;
 
 import gg.essential.Essential;
 import gg.essential.network.connectionmanager.ice.IceManager;
-import gg.essential.network.connectionmanager.sps.SPSManager;
+import gg.essential.sps.SpsAddress;
 import gg.essential.sps.quic.jvm.UtilKt;
 import net.minecraft.util.HttpUtil;
 import org.spongepowered.asm.mixin.Mixin;
@@ -37,7 +37,7 @@ public class Mixin_ResolveSpsResourcePackUrl {
     @Unique
     //#endif
     private static URL resolveSpsUrl(URL url) throws MalformedURLException {
-        if (!url.getHost().endsWith(SPSManager.SPS_SERVER_TLD)) {
+        if (SpsAddress.parse(url.getHost()) == null) {
             return url;
         }
 

@@ -110,8 +110,8 @@ public class EssentialModelRenderer implements LayerRenderer<AbstractClientPlaye
         //#endif
 
         //#if MC<11400
-        if (cState.isSneaking() && parts == null) {
-            matrixStack.translate(0.0F, 0.2F, 0.0F); // from LayerCustomHead
+        if (cState.isSneaking() && parts == null && !pose.getChild()) {
+            matrixStack.translate(0.0F, 0.2F, 0.0F); // from ModelPlayer.render
         }
         //#endif
 

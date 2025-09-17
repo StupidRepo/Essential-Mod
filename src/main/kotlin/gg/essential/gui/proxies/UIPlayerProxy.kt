@@ -13,8 +13,8 @@ package gg.essential.gui.proxies
 
 import gg.essential.gui.common.UIPlayer
 
-class UIPlayerProxy(essentialId: String, keepConsistentInitPosition: Boolean, initialPosID: Int) :
-    EssentialProxyElement<UIPlayer>(essentialId, keepConsistentInitPosition, initialPosID, UIPlayer::class.java) {
+class UIPlayerProxy(essentialId: String, initialPosID: Int) :
+    EssentialProxyElement<UIPlayer>(essentialId, initialPosID, UIPlayer::class.java) {
 
     override fun UIPlayer.click() {}
 

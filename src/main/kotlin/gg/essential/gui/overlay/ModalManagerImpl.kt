@@ -76,7 +76,7 @@ class ModalManagerImpl(
     }
 
     private fun createAndSetupLayer(): Layer {
-        return overlayManager.createPersistentLayer(LayerPriority.Modal).apply {
+        return overlayManager.addLayer(LayerPriority.Modal).apply {
             UIBlock(backgroundColor).constrain {
                 x = 0.pixels
                 y = 0.pixels

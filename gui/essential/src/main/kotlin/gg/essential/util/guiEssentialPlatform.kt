@@ -13,7 +13,6 @@ package gg.essential.util
 
 import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPacket
 import gg.essential.cosmetics.EquippedCosmetic
-import gg.essential.elementa.components.Window
 import gg.essential.gui.common.UIPlayer
 import gg.essential.gui.common.modal.Modal
 import gg.essential.gui.elementa.essentialmarkdown.EssentialMarkdown
@@ -50,6 +49,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Path
+import java.util.UUID
 import kotlin.jvm.Throws
 
 interface GuiEssentialPlatform {
@@ -99,7 +99,6 @@ interface GuiEssentialPlatform {
 
     val essentialBaseDir: Path
     val config: Config
-    val pauseMenuDisplayWindow: Window
 
     val mcProtocolVersion: Int
     val mcGameVersion: String
@@ -153,6 +152,9 @@ interface GuiEssentialPlatform {
         sounds: State<Float>? = null,
         skinTextureOverride: UIdentifier? = null,
     ): UIPlayer
+
+    // TODO move DiscordIntegration to :gui:essential project
+    fun shouldHideNotificationForHost(uuid: UUID): Boolean
 
     fun openWardrobe(highlight: ItemId? = null)
 

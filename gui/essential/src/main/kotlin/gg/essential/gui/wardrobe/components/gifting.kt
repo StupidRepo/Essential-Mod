@@ -21,7 +21,6 @@ import gg.essential.connectionmanager.common.packet.response.ResponseActionPacke
 import gg.essential.cosmetics.CosmeticId
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.dsl.minus
-import gg.essential.elementa.dsl.plus
 import gg.essential.elementa.dsl.provideDelegate
 import gg.essential.elementa.utils.ObservableList
 import gg.essential.gui.EssentialPalette
@@ -89,14 +88,17 @@ fun openGiftModal(item: Item.CosmeticOrEmote, state: WardrobeState) {
     }
 
     // Get all friends except those who already own the item to gift
-    val allFriends = platform.createSocialStates().relationships.getObservableFriendList()
+    val socialStates = platform.createSocialStates()
+    val allFriends = socialStates.relationships.getObservableFriendList()
     val validFriends = mutableListStateOf<UUID>()
     val loadingFriends = mutableStateOf(allFriends.isNotEmpty())
 
     platform.cmConnection.send(ClientCosmeticBulkRequestUnlockStatePacket(allFriends.toSet(), item.cosmetic.id)) { maybePacket ->
         ServerCosmeticBulkRequestUnlockStateResponsePacket::class.java // FIXME workaround for feature-flag-processor eating the packet
         when (val packet = maybePacket.orElse(null)) {
-            is ServerCosmeticBulkRequestUnlockStateResponsePacket -> validFriends.addAll(packet.unlockStates.filter { !it.value }.keys.toList())
+            is ServerCosmeticBulkRequestUnlockStateResponsePacket -> {
+                validFriends.addAll(packet.unlockStates.filter { !it.value }.keys.toList())
+            }
             else -> {
                 showErrorToast("Something went wrong, please try again.")
                 val prefix = (packet as? ResponseActionPacket)?.let { "$it - " } ?: ""

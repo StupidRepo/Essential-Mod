@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MinecraftServer.class)
 public abstract class Mixin_SetGameType {
 
-    @Inject(method = "setGameType", at = @At(value = "TAIL"))
+    @Inject(method = "setGameType", at = @At(value = "HEAD"), cancellable = true)
     public void onSetGameType(GameType gameMode, CallbackInfo ci) {
         ExtensionsKt.getExecutor(UMinecraft.getMinecraft()).execute(() -> {
             SPSManager sps = Essential.getInstance().getConnectionManager().getSpsManager();

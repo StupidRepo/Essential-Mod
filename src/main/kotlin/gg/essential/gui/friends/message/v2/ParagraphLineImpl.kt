@@ -12,7 +12,6 @@
 package gg.essential.gui.friends.message.v2
 
 import gg.essential.elementa.components.UIContainer
-import gg.essential.elementa.components.Window
 import gg.essential.elementa.constraints.AspectConstraint
 import gg.essential.elementa.constraints.CenterConstraint
 import gg.essential.elementa.constraints.ChildBasedMaxSizeConstraint
@@ -29,6 +28,7 @@ import gg.essential.gui.common.modal.OpenLinkModal
 import gg.essential.gui.elementa.essentialmarkdown.EssentialMarkdown
 import gg.essential.gui.elementa.essentialmarkdown.drawables.HeaderDrawable
 import gg.essential.gui.friends.message.MessageUtils
+import gg.essential.gui.layoutdsl.color
 import gg.essential.util.hiddenChildOf
 import gg.essential.util.isAnnouncement
 import java.net.URI
@@ -47,7 +47,7 @@ class ParagraphLineImpl(
     private val cleanedText = messageContent
 
     private val markdownConfig = when {
-        message.sendState == SendState.FAILED -> MessageUtils.failedMessageMarkdownConfig
+        message.sendState == SendState.Failed -> MessageUtils.failedMessageMarkdownConfig
         message.channel.isAnnouncement() -> MessageUtils.fullMarkdownConfig
         wrapper.sentByClient -> MessageUtils.outgoingMessageMarkdownConfig
         else -> MessageUtils.incomingMessageMarkdownConfig
@@ -60,7 +60,7 @@ class ParagraphLineImpl(
         height = AspectConstraint()
     }.onActiveClick {
         wrapper.retrySend()
-    }.bindParent(this, BasicState(wrapper.message.sendState == SendState.FAILED && wrapper.sentByClient))
+    }.bindParent(this, BasicState(wrapper.message.sendState == SendState.Failed && wrapper.sentByClient))
 
     // This component contains the same content as visibleMessageComponent
     // and is hidden from the component tree to prevent rendering. It is used
@@ -89,15 +89,15 @@ class ParagraphLineImpl(
     ).constrain {
         width = 100.percent
         color = when (message.sendState) {
-            SendState.CONFIRMED -> {
+            SendState.Confirmed -> {
                 if (wrapper.sentByClient) {
                     EssentialPalette.SENT_MESSAGE_TEXT
                 } else {
                     EssentialPalette.RECEIVED_MESSAGE_TEXT
                 }
             }
-            SendState.SENDING -> EssentialPalette.PENDING_MESSAGE_TEXT
-            SendState.FAILED -> EssentialPalette.FAILED_MESSAGE_TEXT
+            SendState.Sending -> EssentialPalette.PENDING_MESSAGE_TEXT
+            SendState.Failed -> EssentialPalette.FAILED_MESSAGE_TEXT
         }.toConstraint()
     } childOf messageContainer
 
@@ -114,8 +114,6 @@ class ParagraphLineImpl(
         }
 
         visibleMessageComponent.onLinkClicked { event ->
-            // FIXME workaround for EM-1830
-            Window.of(this).mouseRelease()
             try {
                 OpenLinkModal.openUrl(URI.create(event.url))
                 event.stopImmediatePropagation()

@@ -86,7 +86,8 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     private val opsSourceState = mutableStateOf<State<Set<UUID>>?>(null)
     private val resourcePackSourceState = mutableStateOf<State<ServerResourcePack?>?>(null)
     private val difficultySourceState = mutableStateOf<MutableState<Difficulty>?>(null)
-    private val defaultGameModeSourceState = mutableStateOf<State<GameMode>?>(null)
+    private val difficultyLockedSourceState = mutableStateOf<MutableState<Boolean>?>(null)
+    private val defaultGameModeSourceState = mutableStateOf<MutableState<GameMode>?>(null)
     private val cheatsEnabledSourceState = mutableStateOf<State<Boolean>?>(null)
     private var openToLanUpdateJob: Job? = null
     private var whitelistUpdateJob: Job? = null
@@ -208,11 +209,27 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
             val difficulty = (difficultySourceState() ?: return@effect)()
 
             server.coroutineScope.launch {
+                isDifficultyControlledByState = false
                 //#if MC>=11600
                 //$$ server.setDifficultyForAllWorlds(difficulty.toMc(), true)
                 //#else
                 server.setDifficultyForAllWorlds(difficulty.toMc())
                 //#endif
+                isDifficultyControlledByState = true
+            }
+        }
+
+        effect(refHolder) {
+            val difficultyLocked = (difficultyLockedSourceState() ?: return@effect)()
+
+            server.coroutineScope.launch {
+                isDifficultyLockedControlledByState = false
+                //#if MC>=11600
+                //$$ server.setDifficultyLocked(difficultyLocked )
+                //#else
+                server.worlds.filterNotNull().forEach { it.worldInfo.isDifficultyLocked = difficultyLocked }
+                //#endif
+                isDifficultyLockedControlledByState = true
             }
         }
 
@@ -220,6 +237,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
             val gameMode = (defaultGameModeSourceState() ?: return@effect)()
 
             server.coroutineScope.launch {
+                isDefaultGameModeControlledByState = false
                 // TODO this doesn't set the default game mode (at least on 1.12.2)
                 //  it sets the gamemode which is applied to everyone who joins, regardless of whether they've joined
                 //  or even changed their gamemode before
@@ -230,6 +248,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
                 //#else
                 server.playerList.setGameType(gameMode.toMc())
                 //#endif
+                isDefaultGameModeControlledByState = true
             }
         }
 
@@ -257,7 +276,8 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     override fun setOpsSource(source: State<Set<UUID>>) = opsSourceState.set(source.memo())
     override fun setResourcePackSource(source: State<ServerResourcePack?>) = resourcePackSourceState.set(source.memo())
     override fun setDifficultySource(source: MutableState<Difficulty>) = difficultySourceState.set(source.memo().withSetter { source.set(it) })
-    override fun setDefaultGameModeSource(source: State<GameMode>) = defaultGameModeSourceState.set(source.memo())
+    override fun setDifficultyLockedSource(source: MutableState<Boolean>) = difficultyLockedSourceState.set(source.memo().withSetter { source.set(it) })
+    override fun setDefaultGameModeSource(source: MutableState<GameMode>) = defaultGameModeSourceState.set(source.memo().withSetter { source.set(it) })
     override fun setCheatsEnabledSource(source: State<Boolean>) = cheatsEnabledSourceState.set(source.memo())
 
     override val whitelist: State<Set<UUID>?> = State { whitelistSourceState()?.invoke() }
@@ -339,6 +359,16 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
             mutableStatusResponseJson.set(statusJson)
         }
     }
+
+    // These serve dual purpose:
+    // 1. Once true, they prevent the server from changing its own state, instead calling the updateServerX methods
+    //    below which delegate the change requests to the configured MutableState.
+    // 2. When the server state is to be modified because our State changed, they are temporarily set to false so the
+    //    redirection in point 1 is skipped and the actual server state is properly updated.
+    var isDifficultyControlledByState: Boolean = false
+    var isDifficultyLockedControlledByState: Boolean = false
+    var isDefaultGameModeControlledByState: Boolean = false
+
 }
 
 fun Difficulty.toMc(): McDifficulty = McDifficulty.getDifficultyEnum(ordinal)

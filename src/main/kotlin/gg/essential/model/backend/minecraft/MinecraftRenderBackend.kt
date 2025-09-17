@@ -153,7 +153,7 @@ object MinecraftRenderBackend : RenderBackend {
     //$$             renderPass.setVertexBuffer(0, vertexBuffer)
     //$$             renderPass.setIndexBuffer(indexBuffer, indexType)
                 //#if MC>=12106
-                //$$ renderPass.drawIndexed(0, 0, buffer.drawParameters.comp_751(), 1)
+                //$$ renderPass.drawIndexed(0, 0, buffer.drawParameters.indexCount(), 1)
                 //#else
                 //$$ renderPass.drawIndexed(0, buffer.drawParameters.indexCount())
                 //#endif
@@ -558,10 +558,8 @@ object MinecraftRenderBackend : RenderBackend {
                 Blend -> BlendState.ALPHA
             }.activate()
             //#if MC<11700
-            if (renderPass.material == Cutout) {
-                GlStateManager.enableAlpha()
-                GlStateManager.alphaFunc(GL11.GL_GREATER, 0.5f)
-            }
+            GlStateManager.enableAlpha()
+            GlStateManager.alphaFunc(GL11.GL_GREATER, if (renderPass.material == Cutout) 0.5f else 0.0f)
             //#endif
             UGraphics.bindTexture(0, texture.identifier)
             if (!prevCull) GlStateManager.enableCull()
@@ -577,10 +575,8 @@ object MinecraftRenderBackend : RenderBackend {
             @Suppress("DEPRECATION")
             prevBlend.activate()
             //#if MC<11700
-            if (renderPass.material == Cutout) {
-                if (!prevAlphaTest) GlStateManager.disableAlpha()
-                GlStateManager.alphaFunc(prevAlphaTestFunc, prevAlphaTestRef)
-            }
+            if (!prevAlphaTest) GlStateManager.disableAlpha()
+            GlStateManager.alphaFunc(prevAlphaTestFunc, prevAlphaTestRef)
             //#endif
             //#endif
         }

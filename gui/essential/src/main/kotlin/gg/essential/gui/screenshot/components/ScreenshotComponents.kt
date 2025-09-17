@@ -15,9 +15,8 @@ import gg.essential.elementa.components.*
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.screenshot.ScreenshotId
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
-import gg.essential.sps.SPS_TLD
+import gg.essential.sps.SpsAddress
 import gg.essential.util.UuidNameLookup
-import java.util.*
 
 //metadata is null when it does not exist. It is automatically created at the first time its needed (such as to set favorite or upload)
 data class ScreenshotProperties(val id: ScreenshotId, var metadata: ClientScreenshotMetadata?) {
@@ -29,10 +28,7 @@ data class ScreenshotProperties(val id: ScreenshotId, var metadata: ClientScreen
             matchAgainst.add(UuidNameLookup.getName(metadata.authorId).getNow(null) ?: "")
             val identifier = metadata.locationMetadata.identifier
             if (identifier != null) {
-                // FIXME dedupe sps address parsing
-                val host = try {
-                    if (identifier.endsWith(SPS_TLD)) UUID.fromString(identifier.removeSuffix(SPS_TLD)) else null
-                } catch (e: IllegalArgumentException) { null }
+                val host = SpsAddress.parse(identifier)?.host
                 if (host != null) {
                     matchAgainst.add(UuidNameLookup.getName(host).getNow(null) ?: "")
                 }

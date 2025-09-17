@@ -20,6 +20,7 @@ import gg.essential.mod.cosmetics.CosmeticSlot
 import gg.essential.mod.cosmetics.CosmeticTier
 import gg.essential.mod.cosmetics.CosmeticType
 import gg.essential.mod.cosmetics.SkinLayer
+import gg.essential.mod.cosmetics.database.LOCAL_PATH
 import gg.essential.mod.cosmetics.settings.CosmeticProperty
 import gg.essential.mod.cosmetics.settings.CosmeticPropertyType
 import gg.essential.mod.cosmetics.settings.CosmeticSetting
@@ -81,6 +82,9 @@ data class Cosmetic(
 
     val displayName: String
         get() = displayNames["en_us"] ?: id
+
+    val localPath: String
+        get() = displayNames[LOCAL_PATH] ?: "<$id>"
 
     val isLegacy: Boolean
         get() = "LEGACY" in tags

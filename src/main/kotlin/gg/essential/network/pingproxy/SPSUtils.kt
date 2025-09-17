@@ -18,12 +18,13 @@ import gg.essential.connectionmanager.common.packet.pingproxy.ClientPingProxyPac
 import gg.essential.connectionmanager.common.packet.pingproxy.ServerPingProxyResponsePacket
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.mutableStateOf
+import gg.essential.sps.SpsAddress
 import gg.essential.util.MinecraftUtils
 import java.util.*
 
 fun fetchWorldNameFromSPSHost(uuid: UUID): State<String?> {
     val connectionManager = Essential.getInstance().connectionManager
-    val address = connectionManager.spsManager.getSpsAddress(uuid)
+    val address = SpsAddress(uuid).toString()
 
     val worldName = mutableStateOf<String?>(null)
     connectionManager.send(ClientPingProxyPacket(address, 25565, MinecraftUtils.currentProtocolVersion)) { maybePacket: Optional<Packet> ->

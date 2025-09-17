@@ -67,6 +67,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static gg.essential.gui.elementa.state.v2.ListKt.clear;
+
 public class ProfileManager extends StateCallbackManager<IStatusManager> implements NetworkedManager, SubscriptionManager.Listener {
     @NotNull
     private final ConnectionManager connectionManager;
@@ -162,12 +164,7 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
         return Optional.ofNullable(this.trustedHosts.get(id));
     }
 
-    public void setPlayerStatus(@NotNull final UUID uuid, @Nullable final ProfileStatus status, @Nullable final Long timestamp) {
-        if (status == null) {
-            this.removePlayerStatus(uuid);
-            return;
-        }
-
+    public void setPlayerStatus(@NotNull final UUID uuid, @NotNull final ProfileStatus status, @Nullable final Long timestamp) {
         final ProfileStatus put = this.statuses.put(uuid, status);
 
         if (put == ProfileStatus.OFFLINE && status == ProfileStatus.ONLINE && connectionManager.getRelationshipManager().isFriend(uuid) && EssentialConfig.INSTANCE.getFriendConnectionStatus()) {
@@ -244,13 +241,6 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
     private void updateTrustedHostState() {
         trustedHostsState.set(trustedHosts.values().stream().flatMap(trustedHost -> trustedHost.getDomains().stream()).collect(Collectors.toSet()));
         userTrustedHostsState.set(trustedHosts.values().stream().filter(trustedHost -> trustedHost.getProfileId() != null).flatMap(trustedHost -> trustedHost.getDomains().stream()).collect(Collectors.toSet()));
-    }
-
-    public void removePlayerStatus(@NotNull final UUID uuid) {
-        this.statuses.remove(uuid);
-        for (IStatusManager statusManager : getCallbacks()) {
-            statusManager.refreshActivity(uuid);
-        }
     }
 
     public void removePlayerActivity(@NotNull final UUID uuid) {

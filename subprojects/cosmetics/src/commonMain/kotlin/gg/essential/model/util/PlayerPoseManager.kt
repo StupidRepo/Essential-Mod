@@ -168,11 +168,11 @@ class PlayerPoseManager(
             // Construct a fake animation state so we can hold the most recently active animation
             // even after it is over
             // (so we can smoothly interpolate away from it)
-            val animationState = ModelAnimationState(instance.animationState.entity, ParticleSystem.Locator.Zero)
+            val animationState = ModelAnimationState(instance.animationState.entity, ParticleSystem.Locator.Zero) { null }
             latestAnimation?.let { animationState.active.add(it) }
             // Compute the pose for this model based on the neutral pose (i.e. suppressing
             // input/base/vanilla pose)
-            val modelPose = instance.model.computePose(PlayerPose.neutral(), animationState, entity)
+            val modelPose = instance.model.computePose(PlayerPose.neutral(), animationState)
             // but keep the base pose for those parts that were not affected by the animation
             val affectedParts =
                 animationState.active.flatMapTo(mutableSetOf()) { it.animation.affectsPoseParts }

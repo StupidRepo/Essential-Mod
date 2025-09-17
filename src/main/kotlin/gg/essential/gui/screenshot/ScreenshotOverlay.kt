@@ -57,7 +57,7 @@ import gg.essential.gui.layoutdsl.layoutAsColumn
 import gg.essential.gui.layoutdsl.row
 import gg.essential.gui.modals.NotAuthenticatedModal
 import gg.essential.gui.modals.TOSModal
-import gg.essential.gui.notification.Notifications
+import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
 import gg.essential.gui.screenshot.ScreenshotOverlay.animating
 import gg.essential.gui.screenshot.components.ScreenshotBrowser
@@ -79,9 +79,54 @@ import java.awt.Color
 import java.io.File
 
 object ScreenshotOverlay {
-    private val layer = GuiUtil.createPersistentLayer(LayerPriority.Notifications)
-    private val window: Window = layer.window
     var animating = true
+
+    fun pauseAll() {
+        animating = false
+    }
+
+    fun resumeAll() {
+        animating = true
+    }
+
+    /** see [Layer.rendered] */
+    private var rendered: Boolean = true
+        set(value) {
+            field = value
+            instance?.layer?.rendered = value
+        }
+
+    fun hide() {
+        rendered = false
+    }
+
+    fun show() {
+        rendered = true
+    }
+
+    internal var instance: ScreenshotOverlayInstance? = null
+    private fun instance(): ScreenshotOverlayInstance {
+        return instance ?: run {
+            val layer = GuiUtil.addLayer(LayerPriority.Notifications)
+            layer.rendered = rendered
+            layer.window.addUpdateFunc { _, _ ->
+                if (layer.window.children.isEmpty()) {
+                    GuiUtil.removeLayer(layer)
+                    instance = null
+                }
+            }
+            ScreenshotOverlayInstance(layer)
+        }.also { instance = it }
+    }
+
+    fun push(file: File) = instance().push(file)
+    fun hasActiveNotifications(): Boolean = instance?.layer?.window?.children?.isNotEmpty() ?: false
+    fun clearScreenshot(screenshotToast: ScreenshotToast) = instance?.clearScreenshot(screenshotToast)
+    fun delete(file: File) = instance?.delete(file)
+}
+
+internal class ScreenshotOverlayInstance(val layer: Layer) {
+    private val window = layer.window
 
     fun push(file: File) {
         pushToast(ScreenshotPreviewToast(file))
@@ -108,26 +153,6 @@ object ScreenshotOverlay {
                 }
             }
         }
-    }
-
-    fun pauseAll() {
-        animating = false
-    }
-
-    fun resumeAll() {
-        animating = true
-    }
-
-    fun hide() {
-        layer.rendered = false
-    }
-
-    fun show() {
-        layer.rendered = true
-    }
-
-    fun hasActiveNotifications(): Boolean {
-        return window.children.size > 0
     }
 
     /**

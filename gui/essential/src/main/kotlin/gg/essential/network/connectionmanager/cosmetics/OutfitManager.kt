@@ -38,7 +38,6 @@ import gg.essential.gui.elementa.state.v2.toListState
 import gg.essential.mod.Skin
 import gg.essential.mod.cosmetics.CosmeticOutfit
 import gg.essential.mod.cosmetics.CosmeticSlot
-import gg.essential.mod.cosmetics.OutfitSkin
 import gg.essential.mod.cosmetics.settings.CosmeticSetting
 import gg.essential.network.CMConnection
 import gg.essential.network.connectionmanager.NetworkedManager
@@ -76,7 +75,7 @@ class OutfitManager(
                 .thenByDescending { it.createdAt.toEpochMilli() }
         ).map { item ->
             val skin = skins[item.skinId]
-            item.copy(skin = if (skin == null) null else OutfitSkin(skin, true))
+            item.copy(skin = skin)
         }
     }.toListState()
 
@@ -93,7 +92,7 @@ class OutfitManager(
     }
     val equippedSkin = stateBy {
         val selected = selectedOutfitId()
-        outfits().find { it.id == selected }?.skin?.skin
+        outfits().find { it.id == selected }?.skin
     }
 
     private var flushSelectedOutfitJob: Job? = null
@@ -117,7 +116,7 @@ class OutfitManager(
         val actuallyEquippedCosmetics = memo {
             var cosmetics = equippedOwnedCosmetics()
             val settings = equippedOwnedCosmeticsSettings()
-            if (EssentialConfig.ownCosmeticsHiddenState()) {
+            if (!EssentialConfig.ownCosmeticsVisibleState()) {
                 cosmetics = cosmetics.filterKeys { it == CosmeticSlot.ICON || it == CosmeticSlot.EMOTE }
             }
             val skin = equippedSkin()

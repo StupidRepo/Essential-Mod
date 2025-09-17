@@ -21,16 +21,22 @@ import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.common.constraints.CenterPixelConstraint
 import gg.essential.gui.common.shadow.EssentialUIText
-import gg.essential.gui.common.shadow.ShadowEffect
 import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.friends.SocialMenu
+import gg.essential.gui.layoutdsl.LayoutScope
+import gg.essential.gui.layoutdsl.Modifier
+import gg.essential.gui.layoutdsl.heightAspect
+import gg.essential.gui.layoutdsl.layout
+import gg.essential.gui.layoutdsl.shadow
+import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.util.hoveredState
 import gg.essential.universal.USound
 import gg.essential.util.*
 import gg.essential.vigilance.utils.onLeftClick
-import java.awt.Color
 import java.util.*
+
 
 class MessageTitleBar(
     private val messageScreen: MessageScreen,
@@ -81,7 +87,9 @@ class MessageTitleBar(
             filter = { it != UUIDUtil.getClientUUID() }
         ) { uuid ->
             Member(uuid).also { member ->
-                member.bindHoverEssentialTooltip(UUIDUtil.getNameAsState(uuid, "Loading..."))
+                member.bindHoverEssentialTooltip(memo {
+                    UUIDUtil.nameState(uuid, "Loading...")()
+                }.toV1(member))
             }
         }
 
@@ -167,12 +175,6 @@ class MessageTitleBar(
 
     inner class Member(private val member: UUID) : UIContainer() {
 
-        private val head = CachedAvatarImage.ofUUID(member).constrain {
-            y = CenterConstraint()
-            height = 16.pixels
-            width = AspectConstraint()
-        } childOf this
-
         init {
             constrain {
                 width = ChildBasedSizeConstraint()
@@ -181,7 +183,10 @@ class MessageTitleBar(
                 y = CenterPixelConstraint()
             }
 
-            head.effect(ShadowEffect(Color.BLACK))
+            layout {
+                val headModifier = Modifier.width(16f).heightAspect(1f).shadow()
+                head(headModifier)
+            }
 
             this.onMouseClick {
                 if (it.mouseButton > 1) {
@@ -200,5 +205,10 @@ class MessageTitleBar(
                 }
             }
         }
+
+        private fun LayoutScope.head(modifier: Modifier = Modifier) {
+            CachedAvatarImage.create(member)(modifier)
+        }
+
     }
 }

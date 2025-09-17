@@ -27,6 +27,7 @@ import gg.essential.lib.gson.JsonPrimitive;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.NetworkedManager;
 import gg.essential.network.connectionmanager.queue.SequentialPacketQueue;
+import gg.essential.sps.SpsAddress;
 import gg.essential.universal.UMinecraft;
 import gg.essential.util.ModLoaderUtil;
 import gg.essential.util.Multithreading;
@@ -54,7 +55,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static gg.essential.network.connectionmanager.telemetry.TelemetryManagerKt.*;
@@ -198,10 +198,10 @@ public class TelemetryManager implements NetworkedManager {
 
     @Subscribe
     public void onServerJoin(ServerJoinEvent event) {
-        UUID spsHost = connectionManager.getSpsManager().getHostFromSpsAddress(event.getServerData().serverIP);
-        if (spsHost != null) {
+        SpsAddress spsAddress = SpsAddress.parse(event.getServerData().serverIP);
+        if (spsAddress != null) {
             enqueue(new ClientTelemetryPacket("SPS_JOIN", new HashMap<String, Object>() {{
-                put("host", spsHost);
+                put("host", spsAddress.getHost());
             }}));
         }
     }

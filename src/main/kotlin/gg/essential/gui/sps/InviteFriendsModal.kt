@@ -20,7 +20,7 @@ import gg.essential.elementa.dsl.*
 import gg.essential.elementa.state.BasicState
 import gg.essential.elementa.state.State
 import gg.essential.event.essential.InitMainMenuEvent
-import gg.essential.event.network.server.SingleplayerJoinEvent
+import gg.essential.event.render.RenderTickEvent
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.common.modal.ConfirmDenyModal
@@ -74,7 +74,9 @@ object InviteFriendsModal {
     ): ConfirmDenyModal {
 
         val spsManager = Essential.getInstance().connectionManager.spsManager
-        val integratedServer = getMinecraft().integratedServer.takeIf { getMinecraft().isIntegratedServerRunning }
+        val integratedServer =
+            if (worldSummary != null) null
+            else getMinecraft().integratedServer.takeIf { getMinecraft().isIntegratedServerRunning }
         val worldPath = integratedServer?.worldDirectory ?: worldSummary!!.worldDirectory
         //#if MC>=11602
         //$$ val info = integratedServer?.getWorld(World.OVERWORLD)?.worldInfo as IServerWorldInfo?
@@ -427,9 +429,6 @@ object InviteFriendsModal {
             requiresButtonPress = false
         }.onPrimaryAction { newInvites ->
             if (worldSummary != null) {
-                // We need an SPS session running before updating invites and invoking callback, so we do that in the SinglePlayerJoinEvent
-                Essential.EVENT_BUS.register(PostSingleplayerOpenHandler(newInvites, onComplete))
-
                 //#if MC>=12004
                 //$$ getMinecraft().createIntegratedServerLoader().start(worldSummary.name) { GuiUtil.openScreen { TitleScreen() } }
                 //#elseif MC>=11900
@@ -439,6 +438,9 @@ object InviteFriendsModal {
                 //#else
                 getMinecraft().launchIntegratedServer(worldSummary.fileName, worldSummary.displayName, null)
                 //#endif
+
+                // We need an SPS session running before updating invites and invoking callback, so we do that in the SinglePlayerJoinEvent
+                Essential.EVENT_BUS.register(PostSingleplayerOpenHandler(newInvites, onComplete))
             } else {
                 if (MinecraftUtils.isHostingSPS()) {
                     // Invite existing invited players that weren't already re-invited
@@ -503,7 +505,12 @@ object InviteFriendsModal {
 
     class PostSingleplayerOpenHandler(private val currentInvites: Set<UUID>, private val callback: () -> Unit) {
         @Subscribe
-        private fun onSingleplayerJoinEvent(event: SingleplayerJoinEvent) {
+        private fun checkIfWorldHasLoaded(event: RenderTickEvent) {
+            //#if MC<11600
+            @Suppress("SENSELESS_COMPARISON") // Forge applies an inappropriate NonNullByDefault
+            //#endif
+            if (getMinecraft().world == null) return // not yet
+
             Essential.EVENT_BUS.unregister(this)
 
             val spsManager = Essential.getInstance().connectionManager.spsManager

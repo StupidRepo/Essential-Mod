@@ -24,7 +24,7 @@ import gg.essential.elementa.state.BasicState
 import gg.essential.event.network.server.ServerLeaveEvent
 import gg.essential.event.render.RenderTickEvent
 import gg.essential.gui.common.UI3DPlayer
-import gg.essential.gui.overlay.EphemeralLayer
+import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
 import gg.essential.gui.overlay.OverlayManagerImpl
 import gg.essential.mod.cosmetics.CosmeticSlot
@@ -46,7 +46,7 @@ class EmoteEventListeners {
     private var hurtTime by Delegates.notNull<Int>()
 
     private val cosmeticsManager = Essential.getInstance().connectionManager.cosmeticsManager
-    private var layer: EphemeralLayer? = null
+    private var layer: Layer? = null
     private var emoteActiveSince: Pair<CosmeticId, Long>? = null
     private var mostRecentEmote: String? = null
 
@@ -116,7 +116,7 @@ class EmoteEventListeners {
     private fun showEmotePreview() {
         if (layer != null || !EssentialConfig.emotePreview) return;
 
-        layer = OverlayManagerImpl.createEphemeralLayer(LayerPriority.BelowScreenContent).apply {
+        layer = OverlayManagerImpl.addLayer(LayerPriority.BelowScreenContent).apply {
             val previewContainer by UIContainer().constrain {
                 x = 17.pixels
                 y = 20.pixels
@@ -151,7 +151,7 @@ class EmoteEventListeners {
 
         Multithreading.scheduleOnMainThread({
             layer?.let {
-                it.window.clearChildren()
+                OverlayManagerImpl.removeLayer(it)
                 layer = null
             }
         }, delay, TimeUnit.MILLISECONDS)

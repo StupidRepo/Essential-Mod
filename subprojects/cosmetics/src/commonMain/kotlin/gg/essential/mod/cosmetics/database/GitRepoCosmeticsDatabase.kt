@@ -83,12 +83,19 @@ class GitRepoCosmeticsDatabase(
             throw UnsupportedOperationException("Can only fetch base64 data: urls")
         }
         base64Decode(url.removePrefix(dataUrlBase64Prefix))
-    }
+    },
+    private val json: Json = Json {
+        prettyPrint = true
+        serializersModule = CosmeticProperty.TheSerializer.module + CosmeticSetting.TheSerializer.module
+    },
 ) : CosmeticsDatabase {
 
     private val files = mutableMapOf<Path, suspend () -> ByteArray>()
+    private val filesByFolders = mutableMapOf<Path, MutableSet<Path>>()
     private val fileObservers = mutableMapOf<Path, Observers>()
+    private val observedFiles = mutableMapOf<Path, MutableSet<Path>>()
     private val folderObservers = mutableMapOf<Path, Observers>()
+    private val observedFolders = mutableMapOf<Path, MutableSet<Path>>()
 
     private val categories = mutableMapOf<CosmeticCategoryId, CosmeticCategory>()
     private val types = mutableMapOf<CosmeticTypeId, CosmeticType>()
@@ -122,6 +129,16 @@ class GitRepoCosmeticsDatabase(
         val newPaths = files.mapKeys { Path.of(it.key) }
 
         this.files.putAll(newPaths)
+        for (path in newPaths.keys) {
+            var parent = path.parent
+            while (true) {
+                filesByFolders.getOrPut(parent) { mutableSetOf() }.add(path)
+                if (parent.isEmpty()) {
+                    break
+                }
+                parent = parent.parent
+            }
+        }
 
         for ((file, read) in newPaths) {
             if (file.str.endsWith(".category-metadata.json")) {
@@ -160,6 +177,22 @@ class GitRepoCosmeticsDatabase(
         }
 
         removedFiles.forEach { this.files.remove(it) }
+        for (path in removedFiles) {
+            var parent = path.parent
+            while (true) {
+                val entries = filesByFolders[parent]
+                if (entries != null) {
+                    entries.remove(path)
+                    if (entries.isEmpty()) {
+                        filesByFolders.remove(parent)
+                    }
+                }
+                if (parent.isEmpty()) {
+                    break
+                }
+                parent = parent.parent
+            }
+        }
 
         return updateFiles(removedFiles)
     }
@@ -322,7 +355,7 @@ class GitRepoCosmeticsDatabase(
         if (metadataFile !in files) return null
         return try {
             val fileAccess = FileAccessImpl(metadataFile) { categories }
-            fileAccess.loadCategory(metadataFile, assetFromPath)
+            fileAccess.loadCategory(json, metadataFile, assetFromPath)
         } catch (e: Exception) {
             Exception("Failed to load category at $metadataFile", e).printStackTrace()
             null
@@ -333,7 +366,7 @@ class GitRepoCosmeticsDatabase(
         if (metadataFile !in files) return null
         return try {
             val fileAccess = FileAccessImpl(metadataFile) { types }
-            fileAccess.loadType(metadataFile)
+            fileAccess.loadType(json, metadataFile)
         } catch (e: Exception) {
             Exception("Failed to load type at $metadataFile", e).printStackTrace()
             null
@@ -344,7 +377,7 @@ class GitRepoCosmeticsDatabase(
         if (metadataFile !in files) return null
         return try {
             val fileAccess = FileAccessImpl(metadataFile) { bundles }
-            fileAccess.loadBundle(metadataFile)
+            fileAccess.loadBundle(json, metadataFile)
         } catch (e: Exception) {
             Exception("Failed to load bundle at $metadataFile", e).printStackTrace()
             null
@@ -355,7 +388,7 @@ class GitRepoCosmeticsDatabase(
         if (metadataFile !in files) return null
         return try {
             val fileAccess = FileAccessImpl(metadataFile) { featuredPageCollections }
-            fileAccess.loadFeaturedPageCollection(metadataFile)
+            fileAccess.loadFeaturedPageCollection(json, metadataFile)
         } catch (e: Exception) {
             Exception("Failed to load featured page collection at $metadataFile", e).printStackTrace()
             null
@@ -366,7 +399,7 @@ class GitRepoCosmeticsDatabase(
         if (metadataFile !in files) return null
         return try {
             val fileAccess = FileAccessImpl(metadataFile) { implicitOwnerships }
-            fileAccess.loadImplicitOwnership(metadataFile)
+            fileAccess.loadImplicitOwnership(json, metadataFile)
         } catch (e: Exception) {
             Exception("Failed to load implicit ownership at $metadataFile", e).printStackTrace()
             null
@@ -377,7 +410,7 @@ class GitRepoCosmeticsDatabase(
         if (metadataFile !in files) return null
         return try {
             val fileAccess = FileAccessImpl(metadataFile) { cosmetics }
-            fileAccess.loadCosmetic(metadataFile, assetFromPath) { typeId -> types[typeId] }
+            fileAccess.loadCosmetic(json, metadataFile, assetFromPath) { typeId -> types[typeId] }
         } catch (e: Exception) {
             Exception("Failed to load cosmetic at $metadataFile", e).printStackTrace()
             makeErrorCosmetic(metadataFile, Cosmetic.Diagnostic.fatal(
@@ -843,24 +876,36 @@ class GitRepoCosmeticsDatabase(
         private val selector: Observers.() -> MutableSet<Path>,
     ) : FileAccess {
         init {
-            fileObservers.values.removeAll {
-                it.selector().remove(observer)
-                it.isEmpty()
+            for (path in observedFiles.remove(observer) ?: emptySet()) {
+                val observers = fileObservers[path]
+                if (observers != null) {
+                    observers.selector().remove(observer)
+                    if (observers.isEmpty()) {
+                        fileObservers.remove(path)
+                    }
+                }
             }
-            folderObservers.values.removeAll {
-                it.selector().remove(observer)
-                it.isEmpty()
+            for (path in observedFolders.remove(observer) ?: emptySet()) {
+                val observers = folderObservers[path]
+                if (observers != null) {
+                    observers.selector().remove(observer)
+                    if (observers.isEmpty()) {
+                        folderObservers.remove(path)
+                    }
+                }
             }
         }
 
         override fun file(path: Path): (suspend () -> ByteArray)? {
             fileObservers.getOrPut(path, ::Observers).selector().add(observer)
+            observedFiles.getOrPut(observer, ::mutableSetOf).add(path)
             return files[path]
         }
 
-        override fun files(folder: Path): List<Path> {
+        override fun files(folder: Path): Collection<Path> {
             folderObservers.getOrPut(folder, ::Observers).selector().add(observer)
-            return files.keys.filter { it.isIn(folder) }
+            observedFolders.getOrPut(observer, ::mutableSetOf).add(folder)
+            return filesByFolders[folder] ?: emptySet()
         }
     }
 
@@ -1054,11 +1099,6 @@ const val LOCAL_PATH = "local_path"
 
 private val dataUrlBase64Prefix = "data:;base64,"
 
-private val json = Json {
-    prettyPrint = true
-    serializersModule = CosmeticProperty.TheSerializer.module + CosmeticSetting.TheSerializer.module
-}
-
 private val jsonWithIgnoreUnknownKeys = Json {
     prettyPrint = true
     serializersModule = CosmeticProperty.TheSerializer.module + CosmeticSetting.TheSerializer.module
@@ -1109,10 +1149,10 @@ private value class Path private constructor(val str: String) {
 
 private interface FileAccess {
     fun file(path: Path): (suspend () -> ByteArray)?
-    fun files(folder: Path): List<Path>
+    fun files(folder: Path): Collection<Path>
 }
 
-private suspend fun FileAccess.loadCategory(metadataFile: Path, assetBuilder: AssetBuilder): CosmeticCategory {
+private suspend fun FileAccess.loadCategory(json: Json, metadataFile: Path, assetBuilder: AssetBuilder): CosmeticCategory {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     val metadata = json.decodeFromString<GitRepoCosmeticsDatabase.CategoryMetadata>(metadataJson().decodeToString())
     val id = metadata.id
@@ -1143,7 +1183,7 @@ private suspend fun FileAccess.loadCategory(metadataFile: Path, assetBuilder: As
     )
 }
 
-private suspend fun FileAccess.loadType(metadataFile: Path): CosmeticType {
+private suspend fun FileAccess.loadType(json: Json, metadataFile: Path): CosmeticType {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     val metadata = json.decodeFromString<GitRepoCosmeticsDatabase.TypeMetadata>(metadataJson().decodeToString())
     return CosmeticType(
@@ -1154,7 +1194,7 @@ private suspend fun FileAccess.loadType(metadataFile: Path): CosmeticType {
     )
 }
 
-private suspend fun FileAccess.loadBundle(metadataFile: Path): CosmeticBundle {
+private suspend fun FileAccess.loadBundle(json: Json, metadataFile: Path): CosmeticBundle {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     val metadata = json.decodeFromString<GitRepoCosmeticsDatabase.BundleMetadata>(metadataJson().decodeToString())
     return CosmeticBundle(
@@ -1169,7 +1209,7 @@ private suspend fun FileAccess.loadBundle(metadataFile: Path): CosmeticBundle {
     )
 }
 
-private suspend fun FileAccess.loadFeaturedPageCollection(metadataFile: Path): FeaturedPageCollection {
+private suspend fun FileAccess.loadFeaturedPageCollection(json: Json, metadataFile: Path): FeaturedPageCollection {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     val metadata = json.decodeFromString<GitRepoCosmeticsDatabase.FeaturedPageCollectionMetadata>(metadataJson().decodeToString())
     return FeaturedPageCollection(
@@ -1179,12 +1219,12 @@ private suspend fun FileAccess.loadFeaturedPageCollection(metadataFile: Path): F
     )
 }
 
-private suspend fun FileAccess.loadImplicitOwnership(metadataFile: Path): ImplicitOwnership {
+private suspend fun FileAccess.loadImplicitOwnership(json: Json, metadataFile: Path): ImplicitOwnership {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     return json.decodeFromString<ImplicitOwnership>(metadataJson().decodeToString())
 }
 
-private suspend fun FileAccess.loadCosmetic(metadataFile: Path, assetBuilder: AssetBuilder, getType: (id: CosmeticTypeId) -> CosmeticType?): Cosmetic {
+private suspend fun FileAccess.loadCosmetic(json: Json, metadataFile: Path, assetBuilder: AssetBuilder, getType: (id: CosmeticTypeId) -> CosmeticType?): Cosmetic {
     val metadataJson = file(metadataFile) ?: throw NoSuchElementException(metadataFile.toString())
     val metadataUnknownVersion = jsonWithIgnoreUnknownKeys.decodeFromString<GitRepoCosmeticsDatabase.CosmeticMetadataVUnknown>(metadataJson().decodeToString())
     val metadata: GitRepoCosmeticsDatabase.CosmeticMetadataV0

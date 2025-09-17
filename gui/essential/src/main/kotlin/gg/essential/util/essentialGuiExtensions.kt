@@ -15,8 +15,11 @@ import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.ScrollComponent
 import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.components.UIContainer
+import gg.essential.elementa.components.UIImage
 import gg.essential.elementa.components.UIText
 import gg.essential.elementa.components.Window
+import gg.essential.elementa.components.image.DefaultLoadingImage
+import gg.essential.elementa.components.image.ImageProvider
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.constraints.animation.*
 import gg.essential.elementa.dsl.*
@@ -37,6 +40,7 @@ import gg.essential.gui.elementa.state.v2.*
 import gg.essential.gui.elementa.state.v2.State as StateV2
 import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.utils.toState
+import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.util.hoveredState
 import gg.essential.gui.util.isComponentInParentChain
@@ -71,6 +75,10 @@ fun <T : UIComponent> T.animateColor(
     time: Float = .3f,
     strategy: AnimationStrategy = Animations.OUT_EXP
 ): T = animateColor(color.toConstraint(), time, strategy)
+
+fun UIImage.toImageFactory(loadingImage: ImageProvider = DefaultLoadingImage): ImageFactory {
+    return ImageFactory { UIImage(CompletableFuture.completedFuture(null), loadingImage).also { supply(it) } }
+}
 
 fun UIComponent.createLayoutDslTooltip(
     position: EssentialTooltip.Position = EssentialTooltip.Position.BELOW,

@@ -14,10 +14,10 @@ package gg.essential.handlers;
 import com.google.common.base.Suppliers;
 import gg.essential.Essential;
 import gg.essential.event.client.ReAuthEvent;
-import gg.essential.mod.Model;
 import gg.essential.mod.Skin;
 import gg.essential.util.DispatchersKt;
 import gg.essential.util.SkinKt;
+import gg.essential.util.USession;
 import kotlinx.coroutines.Dispatchers;
 import me.kbrewster.eventbus.Subscribe;
 import net.minecraft.client.Minecraft;
@@ -60,7 +60,13 @@ public class McMojangSkinManager extends MojangSkinManager {
                 .stream()
                 .findFirst()
                 .map(SkinKt::propertyToSkin)
-                .orElse(new Skin("", Model.STEVE))
+                .orElse(
+                    //#if MC>=11903
+                    //$$ Skin.Companion.defaultFor(USession.Companion.activeNow().getUuid())
+                    //#else
+                    Skin.Companion.defaultPre1_19_3For(USession.Companion.activeNow().getUuid())
+                    //#endif
+                )
         );
     }
 }

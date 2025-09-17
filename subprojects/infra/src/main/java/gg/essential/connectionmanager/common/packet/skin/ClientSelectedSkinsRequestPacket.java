@@ -9,14 +9,22 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
-package gg.essential.model.util
+package gg.essential.connectionmanager.common.packet.skin;
 
-expect class Instant : Comparable<Instant> {
-    fun toEpochMilli(): Long
+import gg.essential.connectionmanager.common.packet.Packet;
+
+import java.util.List;
+import java.util.UUID;
+
+public class ClientSelectedSkinsRequestPacket extends Packet {
+
+    private final List<UUID> uuids;
+
+    public ClientSelectedSkinsRequestPacket(final List<UUID> uuids) {
+        this.uuids = uuids;
+    }
+
+    public List<UUID> getUuids() {
+        return this.uuids;
+    }
 }
-
-expect fun now(): Instant
-expect fun instant(epochMillis: Long): Instant
-
-expect fun instantFromIso8601(str: String): Instant
-expect fun instantToIso8601(instant: Instant): String

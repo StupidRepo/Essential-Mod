@@ -78,4 +78,5 @@ fun RelationshipErrorResponse.showToast(uuid: UUID, name: String) = when (this) 
         Notifications.error("Error", "") {
             markdownBody("${name.colored(EssentialPalette.TEXT_HIGHLIGHT)} does not exist.")
         }
+    else -> throw AssertionError() // FIXME: Workaround for compiler bug fixed in Kotlin 2.0
 }

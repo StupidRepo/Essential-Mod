@@ -258,7 +258,7 @@ class MessageWrapperImpl(
             x = 0.pixels(alignOpposite = message.sender == UUIDUtil.getClientUUID())
         } childOf messageContainer
 
-        if (!actionButtonHitbox.hasParent && messageScreen is ReplyableMessageScreen && !message.channel.isAnnouncement() // Don't add reply button to invite embeds
+        if (!actionButtonHitbox.hasParent && messageScreen is ReplyableMessageScreen && !message.channel.isAnnouncement()
             && !(line is GiftEmbed)
             && !(line is SkinEmbed)
         ) {
@@ -360,7 +360,8 @@ class MessageWrapperImpl(
             is ParagraphLine -> {
                 val copyOption = ContextOptionMenu.Option("Copy", image = EssentialPalette.COPY_10X7) {
                     UDesktop.setClipboardString(
-                        component.selectedText.ifEmpty { component.messageContent }.trim().removePrefix("<").removeSuffix(">")
+                        component.selectedText.ifEmpty { component.messageContent }.trim().removePrefix("<")
+                            .removeSuffix(">")
                     )
                 }
                 if (sentByClient) {

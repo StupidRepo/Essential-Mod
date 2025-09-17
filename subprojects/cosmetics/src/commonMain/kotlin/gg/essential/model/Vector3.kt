@@ -322,6 +322,8 @@ data class Vector3(
     companion object {
 
         @JvmField
+        val ZERO = Vector3(0f, 0f, 0f)
+        @JvmField
         val X = Vector3(1f, 0f, 0f)
         @JvmField
         val Y = Vector3(0f, 1f, 0f)

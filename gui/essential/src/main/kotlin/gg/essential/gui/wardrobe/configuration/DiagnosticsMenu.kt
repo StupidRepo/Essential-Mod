@@ -39,7 +39,6 @@ import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.layoutdsl.wrappedText
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.wardrobe.WardrobeState
-import gg.essential.mod.cosmetics.database.LOCAL_PATH
 import gg.essential.model.util.toJavaColor
 import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
@@ -53,7 +52,7 @@ class DiagnosticsMenu(
     override fun LayoutScope.layout(modifier: Modifier) {
         scrollable(modifier, vertical = true) {
             box(Modifier.fillWidth().alignVertical(Alignment.Start)) {
-                ifNotNull({ wardrobeState.cosmetics().find { it.displayNames[LOCAL_PATH] == localPath }}) { cosmetic ->
+                ifNotNull({ wardrobeState.cosmetics().find { it.localPath == localPath }}) { cosmetic ->
                     val diagnostics = cosmetic.diagnostics
                     if (diagnostics == null) {
                         column {

@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //#endif
 public abstract class Mixin_SetDifficultyLocked {
 
-    @Inject(method = "setDifficultyLocked", at = @At(value = "TAIL"))
+    @Inject(method = "setDifficultyLocked", at = @At(value = "HEAD"), cancellable = true)
     public void onSetDifficultyLocked(CallbackInfo ci, @Local(argsOnly = true) boolean locked) {
         ExtensionsKt.getExecutor(UMinecraft.getMinecraft()).execute(() -> {
             SPSManager sps = Essential.getInstance().getConnectionManager().getSpsManager();

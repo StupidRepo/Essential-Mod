@@ -39,6 +39,8 @@ import gg.essential.gui.layoutdsl.LayoutScope
 import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.childBasedSize
 import gg.essential.gui.layoutdsl.layoutAsBox
+import gg.essential.gui.util.Tag
+import gg.essential.gui.util.getTag
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.USound
@@ -403,7 +405,7 @@ class MenuButton @JvmOverloads constructor(
 
         val style = styleState.get()
         if (drawsBackground.getUntracked().getUntracked() && style.buttonColor.alpha != 0) {
-            if (shouldBeRetextured ?: (Window.of(this) == platform.pauseMenuDisplayWindow)) {
+            if (shouldBeRetextured ?: (Window.of(this).getTag<WindowSupportsButtonRetexturingMarker>() != null)) {
                 val hovered = styleHover.get()
                 val (type, texture) = ButtonTextures.currentTexture(hovered)
 
@@ -454,6 +456,8 @@ class MenuButton @JvmOverloads constructor(
             hasRight = hasRight.get(),
         )
     }
+
+    object WindowSupportsButtonRetexturingMarker : Tag
 
     companion object {
         private val PIPELINE = URenderPipeline.builderWithDefaultShader(

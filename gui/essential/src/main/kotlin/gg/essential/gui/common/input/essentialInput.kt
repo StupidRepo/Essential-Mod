@@ -248,7 +248,8 @@ fun LayoutScope.essentialInput(
     errorMessageState: State<String?>,
     modifier: Modifier = Modifier,
     icon: ImageFactory? = null,
-) = essentialInput(input, modifier, { errorMessageState }, true, icon)
+    inputModifier: Modifier = Modifier,
+) = essentialInput(input, modifier, { errorMessageState }, true, icon, inputModifier = inputModifier)
 
 fun LayoutScope.essentialInput(
     input: AbstractTextInput,
@@ -267,6 +268,7 @@ fun LayoutScope.essentialInput(
     outlineErrorColor: Color = EssentialPalette.TEXT_WARNING,
     iconAndInputWidthPadding: Float = 5f,
     iconAndInputPadding: Float = 6f,
+    inputModifier: Modifier = Modifier,
 ) {
     val errorTextState = stateDelegatingTo(stateOf<String?>(null))
     val errorState = errorTextState.map { it != null }
@@ -308,10 +310,10 @@ fun LayoutScope.essentialInput(
                     box(Modifier.width(10f).heightAspect(1f)) {
                         image(icon, Modifier.color(iconColor).shadow(iconShadowColor))
                     }
-                    input()
+                    input(inputModifier)
                 }
             } else {
-                input(Modifier.alignVertical(Alignment.Center(true)))
+                input(Modifier.alignVertical(Alignment.Center(true)).then(inputModifier))
             }
 
             if_(errorState) {

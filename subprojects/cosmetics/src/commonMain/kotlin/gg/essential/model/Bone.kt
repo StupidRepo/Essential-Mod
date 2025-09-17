@@ -56,7 +56,7 @@ class Bone(
     var userOffsetY = 0f
     var userOffsetZ = 0f
 
-    var childScale = 1f
+    var child = false
 
     var visible: Boolean? = null // determines visibility for all bones in this tree unless overwritten in a child
     private var fullyInvisible = false // propagateVisibility has determined that we can skip this entire tree
@@ -126,7 +126,12 @@ class Bone(
     }
 
     fun applyTransform(matrixStack: UMatrixStack) {
-        matrixStack.scale(childScale, childScale, childScale)
+        if (child) {
+            val isHead = part == EnumPart.HEAD
+            val childScale = if (isHead) 0.75f else 0.5f
+            matrixStack.scale(childScale, childScale, childScale)
+            if (isHead) matrixStack.translate(0f, 8f, 0f)
+        }
         matrixStack.translate(pivotX + poseOffsetX + animOffsetX, pivotY - poseOffsetY - animOffsetY, pivotZ + poseOffsetZ + animOffsetZ)
         if (gimbal) {
             matrixStack.rotate(parentRotation.conjugate())

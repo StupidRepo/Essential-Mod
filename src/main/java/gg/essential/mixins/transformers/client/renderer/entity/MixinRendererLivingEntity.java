@@ -125,6 +125,12 @@ public abstract class MixinRendererLivingEntity<T extends EntityLivingBase> exte
         WearablesManager wearablesManager = cState.wearablesManager();
         if (wearablesManager == null) return;
 
+        if (UI3DPlayer.current != null) {
+            // For rendering the first person emote preview, the player is temporarily rotated to face the human that's
+            // sitting in front of the screen. We don't want to overwrite that.
+            return;
+        }
+
         if (wearablesManager.getState().getLocksPlayerRotation()) {
             float frozenYaw = cState.cosmeticFrozenYaw();
             // this may result in yaw de-sync between clients if one client only looks at the locked player partway through the lock

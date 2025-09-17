@@ -36,7 +36,7 @@ public class Mixin_GuiMouseReleaseEvent {
         double mouseX, double mouseY, int mouseButton, CallbackInfo ci
     ) {
         Screen screen = Minecraft.getInstance().currentScreen;
-        Essential.EVENT_BUS.post(new GuiMouseReleaseEvent(screen));
+        Essential.EVENT_BUS.post(new GuiMouseReleaseEvent(screen, mouseButton));
         if (Minecraft.getInstance().currentScreen != screen) {
             result[0] = true;
             ci.cancel(); // screen was closed, prevent the event from reaching the new screen

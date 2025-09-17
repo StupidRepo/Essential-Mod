@@ -42,6 +42,8 @@ import gg.essential.gui.util.pollingStateV2
 import gg.essential.gui.wardrobe.components.*
 import gg.essential.gui.wardrobe.configuration.*
 import gg.essential.gui.wardrobe.configuration.DiagnosticsMenu
+import gg.essential.gui.wardrobe.configuration.FeaturedPageCollectionConfiguration
+import gg.essential.gui.wardrobe.configuration.ImplicitOwnershipConfiguration
 import gg.essential.gui.wardrobe.modals.SkinModal
 import gg.essential.network.connectionmanager.telemetry.TelemetryManager
 import gg.essential.universal.UKeyboard
@@ -127,6 +129,8 @@ class Wardrobe(
     }
 
     private val mainContainerWidthState = stateDelegatingTo(stateOf(0f))
+
+    private val collapseTopBarButtonsWidth = 350f
 
     init {
         lateinit var mainContainer: UIComponent
@@ -279,7 +283,7 @@ class Wardrobe(
                 //#endif
                 Essential.getInstance().keybindingRegistry.toggleCosmetics.isKeyCode(keyCode)
                         && !EssentialConfig.disableCosmetics -> {
-                    Essential.getInstance().connectionManager.cosmeticsManager.toggleOwnCosmeticVisibility(true)
+                    EssentialConfig.ownCosmeticsVisibleStateWithSource.set { !it.first to EssentialConfig.CosmeticsVisibilitySource.UserWithNotification }
                 }
                 else -> {
                     defaultKeyBehavior(typedChar, keyCode)
@@ -304,7 +308,7 @@ class Wardrobe(
         dropDown = EssentialDropDown(
             state.filterSort.get(),
             mutableListStateOf(*WardrobeState.FilterSort.values().map { EssentialDropDown.Option(it.displayName, it) }.toTypedArray()),
-            compact = mainContainerWidthState.map { it < 350f },
+            compact = mainContainerWidthState.map { it < collapseTopBarButtonsWidth },
         )
         dropDown.selectedOption.onSetValue(dropDown) { state.filterSort.set(it.value) }
 

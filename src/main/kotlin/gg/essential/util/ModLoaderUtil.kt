@@ -375,6 +375,20 @@ object ModLoaderUtil {
         //#endif
     }
 
+    /**
+     * This method is not safe to call in early init on legacy forge.
+     * Test usage thoroughly.
+     */
+    fun getModVersion(modId: String): String? {
+        //#if FABRIC
+        //$$ return FabricLoader.getInstance().getModContainer(modId).orElse(null)?.metadata?.version?.toString()
+        //#elseif MC>=11400
+        //$$ return LoadingModList.get().mods.find { it.modId == modId }?.version?.toString()
+        //#else
+        return Loader.instance().indexedModList[modId]?.version
+        //#endif
+    }
+
     data class ModInfo(val id: String, val name: String, val path: Path?)
 
 }

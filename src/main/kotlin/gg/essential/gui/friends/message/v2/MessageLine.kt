@@ -135,7 +135,7 @@ abstract class MessageWrapper(
     val appearHovered = actionButtonHovered or dropdownOpen
 
     init {
-        if (message.sendState == SendState.SENDING) {
+        if (message.sendState == SendState.Sending) {
             effect(FadeEffect(EssentialPalette.GUI_BACKGROUND, sendingMessageAlpha))
         }
     }
@@ -180,7 +180,7 @@ sealed class MessageBubble(wrapper: MessageWrapper) : MessageLine(wrapper) {
     private val horizontalPadding = MessageUtils.messagePadding
     private val hoveredState = BasicState(false).map { it }
 
-    val colorState = EssentialPalette.getMessageColor(hoveredState or wrapper.appearHovered.toV1(this), wrapper.sentByClient).map { it }
+    val colorState = EssentialPalette.getMessageColor(hoveredState or wrapper.appearHovered.toV1(this), wrapper.sentByClient, wrapper.message.sendState).map { it }
 
     val bubble by UIBlock().constrain {
         x = 0.pixels(alignOpposite = wrapper.sentByClient)
@@ -198,7 +198,7 @@ sealed class MessageBubble(wrapper: MessageWrapper) : MessageLine(wrapper) {
         height = AspectConstraint()
         color = CopyConstraintColor() boundTo bubble
     }.apply {
-        if (wrapper.message.sendState == SendState.SENDING) {
+        if (wrapper.message.sendState == SendState.Sending) {
             effect(FadeEffect(EssentialPalette.GUI_BACKGROUND, wrapper.sendingMessageAlpha))
         }
     } childOf bubble

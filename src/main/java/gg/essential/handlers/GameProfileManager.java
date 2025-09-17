@@ -196,7 +196,7 @@ public class GameProfileManager implements SubscriptionManager.Listener {
     //$$     }
     //$$
     //$$     public static boolean hasOverwrites(Property property, Overwrites overwrites) {
-    //$$         return INSTANCES.get(property) == overwrites;
+    //$$         return overwrites.equals(INSTANCES.get(property));
     //$$     }
     //$$ }
     //#else

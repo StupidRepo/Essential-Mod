@@ -18,8 +18,8 @@ import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.effect
 import gg.essential.util.UDrawContext
 
-class NoticeFlagProxy(essentialId: String, keepConsistentInitPosition: Boolean, initialPosID: Int) :
-    EssentialProxyElement<NoticeFlag>(essentialId, keepConsistentInitPosition, initialPosID, NoticeFlag::class.java) {
+class NoticeFlagProxy(essentialId: String, initialPosID: Int) :
+    EssentialProxyElement<NoticeFlag>(essentialId, initialPosID, NoticeFlag::class.java) {
 
     private val refHolder = ReferenceHolderImpl()
 

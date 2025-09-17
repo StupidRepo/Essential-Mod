@@ -171,7 +171,7 @@ class SpsOption(
                     height = ChildBasedMaxSizeConstraint()
                 } childOf textContent
 
-                val playerHead by CachedAvatarImage.ofUUID(information.uuid).constrain {
+                val playerHead by CachedAvatarImage.create(information.uuid).constrain {
                     y = CenterConstraint()
                     width = 24.pixels
                     height = AspectConstraint(1f)

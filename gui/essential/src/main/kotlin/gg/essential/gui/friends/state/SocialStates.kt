@@ -29,6 +29,7 @@ interface SocialStates {
     val relationships: IRelationshipStates
     val messages: IMessengerStates
     val activity: IStatusStates
+
 }
 
 interface IRelationshipStates {
@@ -228,7 +229,6 @@ interface IStatusStates {
     fun getActivity(uuid: UUID): PlayerActivity
 
     fun joinSession(uuid: UUID): Boolean
-
 }
 
 interface IStatusManager {

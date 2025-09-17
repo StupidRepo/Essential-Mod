@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Pseudo
 @Mixin(targets = "net.fabricmc.fabric.impl.client.rendering.SpecialGuiElementRegistryImpl", remap = false)
 public class Mixin_FixCrashInGuiRendererInit {
-    @Inject(method = "onReady", at = @At(value = "NEW", target = "java/lang/IllegalStateException"), cancellable = true)
+    @Inject(method = "onReady", at = @At(value = "NEW", target = "java/lang/IllegalStateException"), cancellable = true, require = 0)
     private static void preventCrash(CallbackInfo ci) {
         ci.cancel();
     }

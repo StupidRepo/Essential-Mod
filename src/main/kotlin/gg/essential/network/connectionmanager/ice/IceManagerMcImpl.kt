@@ -121,7 +121,9 @@ class IceManagerMcImpl(
         CoroutinesChannelInitializer(coroutineScope, inboundChannel, outboundChannel, onClose)
 
     private inner class TelemetryImpl(private val client: UUID) : Telemetry {
-        private val sessionId = connectionsScope.async(Dispatchers.Client) { cmConnection.spsManager.sessionId }
+        private val sessionId = connectionsScope.async(Dispatchers.Client) {
+            cmConnection.spsManager.sessionId
+        }
         private val receivedPackets = AtomicInteger()
         private val receivedBytes = AtomicLong()
         private val sentPackets = AtomicInteger()

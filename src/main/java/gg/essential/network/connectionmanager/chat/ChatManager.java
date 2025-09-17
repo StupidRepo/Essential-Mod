@@ -28,7 +28,6 @@ import gg.essential.gui.elementa.state.v2.State;
 import gg.essential.gui.EssentialPalette;
 import gg.essential.gui.elementa.state.v2.StateByKt;
 import gg.essential.gui.elementa.state.v2.collections.MutableTrackedList;
-import gg.essential.gui.friends.message.MessageUtils;
 import gg.essential.gui.friends.message.v2.ClientMessage;
 import gg.essential.gui.friends.message.v2.ClientMessageKt;
 import gg.essential.gui.friends.message.v2.MessageRef;
@@ -39,6 +38,7 @@ import gg.essential.gui.notification.Notifications;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.NetworkedManager;
 import gg.essential.network.connectionmanager.StateCallbackManager;
+import gg.essential.network.connectionmanager.cosmetics.AssetLoader;
 import gg.essential.network.connectionmanager.handler.chat.ChatChannelMemberAddPacketHandler;
 import gg.essential.network.connectionmanager.handler.chat.ChatChannelMemberRemovePacketHandler;
 import gg.essential.network.connectionmanager.handler.chat.ChatChannelMessageDeletePacketHandler;
@@ -98,9 +98,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
 
     @NotNull
     private final PacketQueue mutedStateUpdateQueue, sendMessageQueue;
-
-    @NotNull
-    private final Map<Long, Message> messageMap = Maps.newConcurrentMap();
 
     /**
      * A map of channel ids to ID of the oldest message that is needed for that channel
@@ -210,7 +207,7 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         this.channels.put(channel.getId(), channel);
 
         for (UUID member : channel.getMembers()) {
-            CachedAvatarImage.ofUUID(member);
+            CachedAvatarImage.create(member, AssetLoader.Priority.Background);
         }
         ServerChatChannelMessagePacketHandler.prefetching.incrementAndGet();
         retrieveRecentMessageHistory(channel.getId(), 10, packet -> {
@@ -271,11 +268,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
     public Channel removeChannel(final long id) {
         Channel channel = this.channels.remove(id);
         ConcurrentMap<Long, Message> removed = this.channelMessages.remove(id);
-        if (removed != null) {
-            for (Long messsageId : removed.keySet()) {
-                this.messageMap.remove(messsageId);
-            }
-        }
         updateChannelListState();
         if (channel != null) {
             for (IMessengerManager iMessengerManager : getCallbacks()) {
@@ -294,7 +286,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         this.announcementChannelIds.clear();
         this.reportReasons.clear();
         this.channelEagerMessageResolverMap.clear();
-        this.messageMap.clear();
 
         for (IMessengerManager callback : getCallbacks()) {
             callback.reset();
@@ -331,15 +322,13 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
             return false;
         }
 
-        boolean previousMessageExisted = messageMap.put(message.getId(), message) != null; // Message was edited if it already existed
-
         ConcurrentMap<Long, Message> map = channelMessages.get(channelId);
         if (map == null) {
             map = Maps.newConcurrentMap();
             channelMessages.put(channelId, map);
             this.updateChannelListState();
         }
-        map.put(message.getId(), message);
+        boolean previousMessageExisted = map.put(message.getId(), message) != null; // Message was edited if it already existed
 
         for (IMessengerManager iMessengerManager : getCallbacks()) {
             iMessengerManager.messageReceived(channel, message);
@@ -375,7 +364,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
     }
 
     public void removeMessage(final long channelId, final long messageId) {
-        messageMap.remove(messageId);
         ConcurrentMap<Long, Message> channelMessages = this.channelMessages.get(channelId);
         if (channelMessages != null) {
             Message message = channelMessages.remove(messageId);
@@ -395,7 +383,8 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
             newContents,
             true,
             message.getReplyTo() == null ? null : message.getReplyTo().getMessageId(),
-            Instant.now().toEpochMilli()
+            Instant.now().toEpochMilli(),
+            message.getCreatedAt()
         );
         upsertMessageToChannel(messageCopy.getChannelId(), messageCopy);
     }
@@ -659,7 +648,8 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
             message.getContents(),
             read,
             message.getReplyTargetId(),
-            message.getLastEditTime()
+            message.getLastEditTime(),
+            message.getCreatedAt()
         );
         upsertMessageToChannel(messageCopy.getChannelId(), messageCopy);
 
@@ -702,8 +692,12 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         }
     }
 
-    public @Nullable Message getMessageById(long messageId) {
-        return messageMap.get(messageId);
+    public @Nullable Message getMessageById(long channelId, long messageId) {
+        ConcurrentMap<Long, Message> messages = channelMessages.get(channelId);
+        if (messages == null) {
+            return null;
+        }
+        return messages.get(messageId);
     }
 
     /**
@@ -714,8 +708,7 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         if (messages == null) {
             return null;
         }
-        Optional<Message> min = messages.values().stream().min(Comparator.comparingLong(value -> MessageUtils.INSTANCE.getSentTimeStamp(value.getId())));
-        return min.map(Message::getId).orElse(null);
+        return messages.values().stream().min(Comparator.comparingLong(Message::getId)).map(Message::getId).orElse(null);
     }
 
     /**
@@ -732,7 +725,7 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
             return;
         }
 
-        Message messageById = getMessageById(ref.getMessageId());
+        Message messageById = getMessageById(ref.getChannelId(), ref.getMessageId());
         if (messageById != null) {
             ref.supplyValue(ClientMessageKt.infraInstanceToClient(messageById));
             return;

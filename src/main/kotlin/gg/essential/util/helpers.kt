@@ -56,6 +56,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
+import kotlin.io.path.exists
 import kotlin.io.path.toPath
 
 //#if MC >= 11602
@@ -205,25 +206,32 @@ fun addEssentialResourcePack(consumer: Consumer<IResourcePack>) {
     //#endif
 
     val pack = when (val source = findCodeSource(Essential::class.java)) {
-        //#if MC>=11903
-        //$$ is CodeSource.Jar ->
+        is CodeSource.Jar -> {
             //#if MC>=12005
             //$$ ZipResourcePack.ZipBackedFactory(source.path.toFile()).open(info)
             //#elseif MC>=12002
             //$$ ZipResourcePack.ZipBackedFactory(source.path.toFile(), true).open("essential")
-            //#else
+            //#elseif MC>=11903
             //$$ ZipResourcePack("essential", source.path.toFile(), true)
-            //#endif
-        //$$ is CodeSource.Directory ->
-            //#if MC>=12005
-            //$$ DirectoryResourcePack(info, source.path)
             //#else
-            //$$ DirectoryResourcePack("essential", source.path, true)
+            FileResourcePack(source.path.toFile())
             //#endif
-        //#else
-        is CodeSource.Jar -> FileResourcePack(source.path.toFile())
-        is CodeSource.Directory -> FolderResourcePack(source.path.toFile())
-        //#endif
+        }
+        is CodeSource.Directory -> {
+            var path = source.path
+            if (!path.resolve("pack.mcmeta").exists()) {
+                // When running via Gradle, `path` will be versions/1.12.2-forge/build/classes/java/main
+                // but resources are stored separately at versions/1.12.2-forge/build/resources/main
+                path = path.resolve("../../../resources/main")
+            }
+            //#if MC>=12005
+            //$$ DirectoryResourcePack(info, path)
+            //#elseif MC>=11903
+            //$$ DirectoryResourcePack("essential", path, true)
+            //#else
+            FolderResourcePack(path.toFile())
+            //#endif
+        }
         null -> return
     }
     //#if MC>=11400

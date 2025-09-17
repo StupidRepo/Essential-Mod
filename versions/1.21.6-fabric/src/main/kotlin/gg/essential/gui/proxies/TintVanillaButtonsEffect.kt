@@ -165,7 +165,7 @@ class TintVanillaButtonsEffect {
             val textureManager = MinecraftClient.getInstance().textureManager
             val identifier = Identifier.of("essential", "__tmp_texture__tint_vanilla_buttons_effect")
             textureManager.registerTexture(identifier, object : AbstractTexture() {
-                init { glTextureView = texture.textureView }
+                init { glTextureView = this@Page.texture.textureView }
                 override fun close() {} // we don't want the later `destroyTexture` to close our texture
             })
 

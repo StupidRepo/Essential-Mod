@@ -46,13 +46,11 @@ import gg.essential.event.gui.InitGuiEvent
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.MenuButton
 import gg.essential.gui.common.TextFlag
-import gg.essential.gui.common.and
 import gg.essential.gui.common.bindConstraints
 import gg.essential.gui.common.bindParent
 import gg.essential.gui.common.modal.ConfirmDenyModal
 import gg.essential.gui.common.modal.Modal
 import gg.essential.gui.common.modal.configure
-import gg.essential.gui.common.not
 import gg.essential.gui.common.or
 import gg.essential.gui.elementa.VanillaButtonConstraint.Companion.constrainTo
 import gg.essential.gui.elementa.VanillaButtonGroupConstraint.Companion.constrainTo
@@ -89,10 +87,12 @@ import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.error
 import gg.essential.gui.notification.toastButton
 import gg.essential.gui.notification.warning
+import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.sps.InviteFriendsModal
 import gg.essential.gui.sps.WorldSelectionModal
+import gg.essential.gui.util.addTag
 import gg.essential.universal.UMinecraft
 import gg.essential.util.AutoUpdate
 import gg.essential.util.GuiUtil
@@ -100,6 +100,7 @@ import gg.essential.util.findButtonByLabel
 import gg.essential.gui.util.pollingState
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager
 import gg.essential.network.connectionmanager.sps.SPSSessionSource
+import gg.essential.sps.SpsAddress
 import gg.essential.universal.USound
 import gg.essential.util.FirewallUtil
 import gg.essential.util.MinecraftUtils
@@ -125,9 +126,9 @@ import java.util.*
 class PauseMenuDisplay {
 
     private val fullRightMenuPixelWidth = 104.pixels
-    private val collapsedRightMenuPixelWidth = 68.pixels
     private val rightMenuMinPadding = 5
 
+    private var layer: Layer? = null
     private var initContent = false
     private var initModals = false
 
@@ -135,6 +136,16 @@ class PauseMenuDisplay {
         initContent = true
 
         if (EssentialConfig.essentialFull) {
+            val window = GuiUtil.addLayer(LayerPriority.AboveScreenContent)
+                .also { layer = it }
+                .window
+            initContent(screen, window)
+        }
+    }
+
+    fun initContent(screen: GuiScreen, window: Window) {
+        run { // for indent
+            window.addTag(MenuButton.WindowSupportsButtonRetexturingMarker)
 
             val menuType =
                 if (screen.isMainMenu) MenuType.MAIN
@@ -171,28 +182,26 @@ class PauseMenuDisplay {
             } childOf window
 
             val isCompact = BasicState(EssentialConfig.essentialMenuLayout == 1) or bottomButton.pollingState {
-                    getRightSideMenuX(topButtonAndMultiplayer, fullRightMenuPixelWidth).getXPosition(window) +
+                    getRightSideMenuX(window, topButtonAndMultiplayer, fullRightMenuPixelWidth).getXPosition(window) +
                         fullRightMenuPixelWidth.value + rightMenuMinPadding >= window.getRight()
                 }
-
-            val collapsed = BasicState(false)
 
             val menuVisible = bottomButton.pollingState { EssentialConfig.essentialMenuLayout != 2 }
 
             val rightContainer by UIContainer().constrain {
                 height = ChildBasedMaxSizeConstraint()
-            }.bindConstraints(collapsed.zip(isCompact)) { (collapse, isCompact) ->
+            }.bindConstraints(isCompact) { isCompact ->
                 if (isCompact) {
                     x = (13.pixels(alignOpposite = true) boundTo window)
                             .coerceAtLeast((0.pixels(alignOpposite = true) boundTo topButtonAndMultiplayer) + 24.pixels).coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
                     width = ChildBasedSizeConstraint()
                 } else {
-                    width = if (collapse) collapsedRightMenuPixelWidth else fullRightMenuPixelWidth
-                    x = getRightSideMenuX(topButtonAndMultiplayer, width).coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
+                    width = fullRightMenuPixelWidth
+                    x = getRightSideMenuX(window, topButtonAndMultiplayer, width).coerceAtMost(rightMenuMinPadding.pixels(alignOpposite = true) boundTo window)
                 }
                 y = (((CenterConstraint() boundTo bottomButton) + (CenterConstraint() boundTo topButton)) / 2)
-                    .coerceAtMost(40.pixels(alignOpposite = true) boundTo window)
-                    .coerceAtLeast(28.pixels)
+                    .coerceAtMost(16.pixels(alignOpposite = true) boundTo window)
+                    .coerceAtLeast(4.pixels)
             } childOf window
 
             val leftContainer by UIContainer().constrain {
@@ -203,7 +212,7 @@ class PauseMenuDisplay {
             val accountManager = AccountManager()
             RightSideBarNew(menuType, isCompact.toV2(), menuVisible.toV2(), accountManager).bindParent(rightContainer, menuVisible)
 
-            LeftSideBar(topButtonAndMultiplayer, bottomButton, menuVisible.toV2(), collapsed.toV2(), stateOf(true), menuType, rightContainer, leftContainer, accountManager)
+            LeftSideBar(window, topButtonAndMultiplayer, bottomButton, menuVisible.toV2(), rightContainer, leftContainer)
                 .bindParent(leftContainer, menuVisible)
 
             if (menuType == MenuType.MAIN
@@ -322,7 +331,8 @@ class PauseMenuDisplay {
         // this massively simplifies re-attachment to the [EssentialProxyElement]'s and syncs our button lifecycles with those of vanilla
 
         // same as refresh() but only for screen content
-        window.clearChildren()
+        layer?.let { GuiUtil.removeLayer(it) }
+        layer = null
         initContent = false
     }
 
@@ -351,20 +361,24 @@ class PauseMenuDisplay {
     }
 
     fun refresh() {
-        window.clearChildren()
+        layer?.let { GuiUtil.removeLayer(it) }
+        layer = null
         initContent = false
         initModals = false
     }
 
-    private fun getRightSideMenuX(topButton: UIContainer, width: WidthConstraint): XConstraint {
-        return ((SiblingConstraint() boundTo topButton) - (width - RightSideBarNew.BUTTON_WIDTH.pixels) +
+    private fun getRightSideMenuX(window: Window, topButton: UIContainer, width: WidthConstraint): XConstraint {
+        return run {
+            // Keep right menu in the of middle the vanilla buttons and right side of the screen
+            //  (Right menu buttons are aligned to the right with extra space to the left so remove that extra space when aligning)
+            //  with some padding between it and the vanilla buttons
+            ((SiblingConstraint() boundTo topButton) - (width - RightSideBarNew.BUTTON_WIDTH.pixels) +
                     (((0.pixels(alignOpposite = true) boundTo window) - (0.pixels(alignOpposite = true) boundTo topButton)) / 2f - (RightSideBarNew.BUTTON_WIDTH.pixels / 2)))
                 .coerceAtLeast(SiblingConstraint(28f) boundTo topButton)
+        }
     }
 
     companion object {
-        var window: Window = GuiUtil.createPersistentLayer(LayerPriority.AboveScreenContent).window
-
         @JvmStatic
         val minWidth = 404
 
@@ -463,7 +477,18 @@ class PauseMenuDisplay {
                 return
             }
 
-            if (UMinecraft.getMinecraft().integratedServer != null) {
+
+            if (worldSummary != null) {
+                pushModalAndWarnings(showNetworkRelatedWarnings = true) { manager ->
+                    InviteFriendsModal.createWorldSettingsModal(
+                        manager,
+                        prepopulatedInvites,
+                        justStarted = true,
+                        worldSummary,
+                        source = source,
+                    )
+                }
+            } else if (UMinecraft.getMinecraft().integratedServer != null) {
                 if (MinecraftUtils.isHostingSPS()) {
                     pushModalAndWarnings(showNetworkRelatedWarnings = false) { manager ->
                         InviteFriendsModal.createSelectFriendsModal(
@@ -488,7 +513,7 @@ class PauseMenuDisplay {
                 }
             } else if (currentServerData != null) {
                 val serverAddress = currentServerData.serverIP
-                val isSPSServer = connectionManager.spsManager.isSpsAddress(serverAddress)
+                val isSPSServer = SpsAddress.parse(serverAddress) != null
                 if (isSPSServer) {
                     Notifications.warning("Only hosts can send invites", "")
                     return
@@ -499,16 +524,6 @@ class PauseMenuDisplay {
                         manager,
                         source = source,
                         onComplete = callback
-                    )
-                }
-            } else if (worldSummary != null) {
-                pushModalAndWarnings(showNetworkRelatedWarnings = true) { manager ->
-                    InviteFriendsModal.createWorldSettingsModal(
-                        manager,
-                        prepopulatedInvites,
-                        justStarted = true,
-                        worldSummary,
-                        source = source,
                     )
                 }
             } else {

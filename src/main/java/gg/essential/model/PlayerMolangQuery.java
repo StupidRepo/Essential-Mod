@@ -250,9 +250,7 @@ public class PlayerMolangQuery implements MolangQueryEntity, ParticleSystem.Loca
         return Quaternion.Companion.fromAxisAngle(vecUnitY(), (float) (Math.PI - Math.toRadians(getRenderYaw())));
     }
 
-    @NotNull
-    @Override
-    public Pair<Vec3, Quaternion> getPositionAndRotation() {
+    private @NotNull Pair<Vec3, Quaternion> calculatePositionAndRotation() {
         if (!(player instanceof AbstractClientPlayer)) {
             return new Pair<>(getBasePosition(), getBaseRotation());
         }
@@ -272,6 +270,24 @@ public class PlayerMolangQuery implements MolangQueryEntity, ParticleSystem.Loca
         Quaternion rotation = Quaternion.Companion.fromRotationMatrix(toMat3(mat));
 
         return new Pair<>(position, rotation);
+    }
+
+    private int lastAccessFrame = -1;
+    private Pair<Vec3, Quaternion> cachedPositionAndRotation = null;
+
+    @NotNull
+    @Override
+    public Pair<Vec3, Quaternion> getPositionAndRotation() {
+        if (!isWithinRenderFrame) return calculatePositionAndRotation();
+
+        // calculatePositionAndRotation() is expensive, so we will cache the result during rendering frames
+        if (cachedPositionAndRotation != null && frameCount == lastAccessFrame) {
+            return cachedPositionAndRotation;
+        }
+
+        lastAccessFrame = frameCount;
+        cachedPositionAndRotation = calculatePositionAndRotation();
+        return cachedPositionAndRotation;
     }
 
     @NotNull
@@ -295,12 +311,17 @@ public class PlayerMolangQuery implements MolangQueryEntity, ParticleSystem.Loca
 
     private static float partialTicksMenu;
     private static float partialTicksInGame;
+    private static boolean isWithinRenderFrame = false;
+    private static int frameCount;
     static {
         Essential.EVENT_BUS.register(new Object() {
             @Subscribe(priority = 1)
             private void renderWorld(RenderTickEvent event) {
                 partialTicksMenu = event.getPartialTicksMenu();
                 partialTicksInGame = event.getPartialTicksInGame();
+
+                isWithinRenderFrame = event.isPre();
+                if (isWithinRenderFrame) frameCount++;
             }
         });
     }

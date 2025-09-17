@@ -95,6 +95,7 @@ object GuiUtil : GuiUtil, OverlayManager by OverlayManagerImpl, ModalManager by 
         val screenRequiresTOS = GuiRequiresTOS::class.java.isAssignableFrom(type)
         val screenRequiresCosmetics = type == Wardrobe::class.java
         val screenRequiresAuth = screenRequiresCosmetics || type == SocialMenu::class.java
+        val screenRequiresRules = type == SocialMenu::class.java
 
         if (screenRequiresTOS && !OnboardingData.hasAcceptedTos()) {
             fun showTOS() = pushModal {

@@ -23,7 +23,7 @@ import gg.essential.gui.screenshot.components.ScreenshotProperties
 import gg.essential.gui.screenshot.image.ForkedImageClipboard
 import gg.essential.gui.sendPictureCopiedNotification
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
-import gg.essential.sps.SPS_TLD
+import gg.essential.sps.SpsAddress
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.UuidNameLookup
 import gg.essential.util.formatDate
@@ -106,7 +106,7 @@ private fun generateImageProperties(properties: ScreenshotProperties, coroutineS
             ClientScreenshotMetadata.Location.Type.MENU -> pairList.add("Menu" to stateOf(locationIdentifier))
             ClientScreenshotMetadata.Location.Type.SINGLE_PLAYER -> pairList.add("World" to stateOf(locationIdentifier))
             ClientScreenshotMetadata.Location.Type.SHARED_WORLD -> {
-                val host = try { UUID.fromString(locationIdentifier.removeSuffix(SPS_TLD)) } catch (e: IllegalArgumentException) { null }
+                val host = SpsAddress.parse(locationIdentifier)?.host
                 if (host != null) {
                     pairList.add("Location" to stateOf("Shared World"))
                     pairList.add("Host" to UuidNameLookup.nameState(host, "Loading..."))

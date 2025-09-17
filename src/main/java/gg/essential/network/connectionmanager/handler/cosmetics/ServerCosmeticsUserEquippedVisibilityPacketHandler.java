@@ -21,7 +21,7 @@ public class ServerCosmeticsUserEquippedVisibilityPacketHandler extends PacketHa
 
     @Override
     protected void onHandle(@NotNull final ConnectionManager connectionManager, @NotNull final ServerCosmeticsUserEquippedVisibilityPacket packet) {
-        EssentialConfig.INSTANCE.setOwnCosmeticsVisible(packet.getState());
+        EssentialConfig.INSTANCE.getOwnCosmeticsVisibleStateWithSource().set(new kotlin.Pair<>(packet.getState(), EssentialConfig.CosmeticsVisibilitySource.System));
     }
 
 }

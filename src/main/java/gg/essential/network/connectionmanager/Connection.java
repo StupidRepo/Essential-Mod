@@ -29,22 +29,39 @@ import org.java_websocket.client.DnsResolver;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLSocketFactory;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.GZIPOutputStream;
+
+import static gg.essential.util.ExtensionsKt.getGlobalEssentialDirectory;
 
 public class Connection extends WebSocketClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Connection.class);
 
     private static final Lazy<Function<String, SSLSocketFactory>> SSL_SOCKET_FACTORY_FACTORY = LazyKt.lazy(() -> {
         try {
@@ -101,7 +118,7 @@ public class Connection extends WebSocketClient {
     //
     @NotNull
     private final Callbacks callbacks;
-    private final ConnectionCodec codec = new ConnectionCodec();
+    private final ConnectionCodec codec = new ConnectionCodec(this::log);
 
     private int usingProtocol = 1;
     private ScheduledFuture<?> timeoutTask;
@@ -127,6 +144,8 @@ public class Connection extends WebSocketClient {
         this.usingProtocol = Integer.parseInt(serverHandshake.getFieldValue("Essential-Protocol-Version"));
 
         scheduleTimeout();
+
+        log(out -> out.printf("{\"type\": \"OPEN\", \"version\": %d}\n", usingProtocol));
 
         this.callbacks.onOpen();
     }
@@ -156,6 +175,17 @@ public class Connection extends WebSocketClient {
         }
 
         this.callbacks.onClose(new CloseInfo(code, reason, remote, knownReason));
+    }
+
+    @Override
+    public void close() {
+        log(out -> {
+            out.print("{\"type\": \"CLOSE\"}\n");
+            out.close();
+            logClosed = true;
+        });
+
+        super.close();
     }
 
     @Override
@@ -255,6 +285,92 @@ public class Connection extends WebSocketClient {
         this.timeoutTask = Multithreading.getScheduledPool().schedule(
             () -> this.close(CloseReason.SERVER_KEEP_ALIVE_TIMEOUT),
             60L, TimeUnit.SECONDS);
+    }
+
+    private static final int MAX_LOGS = 10;
+    private final Executor loggingExecutor = new LimitedExecutor(Multithreading.getPool(), 1, new ConcurrentLinkedQueue<>());
+    private PrintStream logOut;
+    private boolean logClosed;
+
+    private void log(IOConsumer<PrintStream> consumer) {
+        loggingExecutor.execute(() -> logSync(consumer));
+    }
+
+    private void logSync(IOConsumer<PrintStream> consumer) {
+        if (logClosed) return;
+
+        if (logOut == null) {
+            Path folder = getGlobalEssentialDirectory().resolve("infra-logs");
+
+            // Cleanup/compress existing files
+            cleanupLogs(folder);
+
+            // Create new file
+            Path file = folder.resolve(
+                    Instant.now().toString().replace(':', '_') // windows doesn't like colons in filenames
+                            + ".log");
+            try {
+                Files.createDirectories(folder);
+                logOut = new PrintStream(Files.newOutputStream(file));
+            } catch (IOException e) {
+                LOGGER.error("Failed to create connection log file {}", file, e);
+                return;
+            }
+        }
+
+        try {
+            consumer.accept(logOut);
+        } catch (IOException e) {
+            LOGGER.error("Failed to write to connection log file", e);
+        }
+    }
+
+    private static void cleanupLogs(Path folder) {
+        List<Path> files;
+        try (Stream<Path> stream = Files.exists(folder) ? Files.list(folder) : Stream.empty()) {
+            files = stream.sorted(Comparator.<Path, FileTime>comparing(file -> {
+                try {
+                    return Files.getLastModifiedTime(file);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to get last modified time of {}", file, e);
+                    return FileTime.from(Instant.EPOCH);
+                }
+            }).reversed()).collect(Collectors.toList());
+        } catch (IOException e) {
+            LOGGER.error("Failed to list files in {}", folder, e);
+            return;
+        }
+        int count = 0;
+        for (Path file : files) {
+            if (count >= MAX_LOGS) {
+                try {
+                    Files.delete(file);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete {}", file, e);
+                    continue;
+                }
+            } else if (file.getFileName().toString().endsWith(".log")) {
+                Path gzFile = file.resolveSibling(file.getFileName() + ".gz");
+                try (OutputStream out = Files.newOutputStream(gzFile);
+                     GZIPOutputStream gzOut = new GZIPOutputStream(out)) {
+                    Files.copy(file, gzOut);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to write compressed file {}", gzFile, e);
+                    throw new RuntimeException(e);
+                }
+                try {
+                    Files.delete(file);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete {}", file, e);
+                    continue;
+                }
+            }
+            count++;
+        }
+    }
+
+    interface IOConsumer<T> {
+        void accept(T value) throws IOException;
     }
 
     interface Callbacks {

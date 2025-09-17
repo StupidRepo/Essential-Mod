@@ -185,12 +185,12 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
                 .shadow(EssentialPalette.COMPONENT_BACKGROUND)
             )
         }.onLeftClick {
+            // `CreateWorldScreen` does some preparation when it's first opened, causing the game thread to
+            // freeze. This means that the modal will be shown until this process is finished.
+            // To remedy this, we can just close the modal before showing the create world screen.
+            this@WorldSelectionModal.close()
             //#if MC>=11900
             //$$ // Creating a `CreateWorldScreen` manually on 1.19+ is a bit more difficult.
-            //$$ // Along with that, it does some preparation when it's first opened, causing the game thread to
-            //$$ // freeze. This means that the modal will be shown until this process is finished.
-            //$$ // To remedy this, we can just close the modal before showing the create world screen.
-            //$$ this@WorldSelectionModal.close()
             //$$ CreateWorldScreen.create(MinecraftClient.getInstance(), GuiUtil.openedScreen())
             //#else
             GuiUtil.openScreen {

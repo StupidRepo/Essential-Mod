@@ -58,6 +58,7 @@
     "client.gui.MixinGuiNewChat",
     "client.gui.MixinGuiPauseMenu_ProxyButtons",
     "client.gui.MixinGuiMainMenu_ProxyButtons",
+    "client.gui.MixinGuiOptions_ProxyButtons",
     "client.gui.MixinGuiPlayerTabOverlay",
     "client.gui.MixinGuiScreen",
     "client.gui.Mixin_ScaleForMainMenu",

@@ -25,6 +25,9 @@ import gg.essential.model.EnumPart
 import gg.essential.model.RenderGeometry
 import gg.essential.model.Side
 import gg.essential.model.Vector3
+import gg.essential.model.backend.PlayerPose
+import gg.essential.model.bones.BakedAnimations
+import gg.essential.model.bones.BedrockModelState
 import gg.essential.network.cosmetics.Cosmetic
 import kotlin.jvm.JvmField
 
@@ -230,11 +233,15 @@ class CosmeticsState(
     }.toMap()
 
     /**
-     * For each cosmetic, contains the user-configured side on which it should show. Most asymmetrical cosmetics allow
+     * For each cosmetic, contains the side on which it should show. Most asymmetrical cosmetics allow
      * the user to flip them to the other side to match their preference.
+     * If the user has not configured a side, a default side is chosen automatically.
      */
     val sides: Map<CosmeticId, Side> = cosmetics.values.mapNotNull { cosmetic ->
-        cosmetic.settings.side?.let { cosmetic.id to it }
+        val side = cosmetic.settings.side
+            ?: cosmetic.cosmetic.defaultSide
+            ?: bedrockModels[cosmetic.cosmetic]?.let { Side.getDefaultSideOrNull(it.sideOptions) }
+        side?.let { cosmetic.id to it }
     }.toMap()
 
     /**
@@ -286,13 +293,17 @@ class CosmeticsState(
      */
     val partsEquipped: Set<Int> = bedrockModels.flatMap { (cosmetic, model) ->
         val renderGeometry = renderGeometries.getValue(model.cosmetic.id)
-        model.propagateVisibilityToRootBone(
+        val modelState = BedrockModelState(
+            PlayerPose.neutral(),
+            BakedAnimations.EMPTY,
+            Vector3.ZERO,
             sides[model.cosmetic.id],
             hiddenBones[model.cosmetic.id] ?: emptySet(),
             EnumPart.values().toSet(),
         )
+        modelState.apply(model.bones)
         val boneToSlots = cosmetic.property<CosmeticProperty.ArmorHandlingV2>()?.data?.conflicts
-        if (boneToSlots != null) {
+        val slots = if (boneToSlots != null) {
             boneToSlots.asSequence()
                 .filter { model.bones[it.key]?.containsVisibleBoxes(renderGeometry) ?: false }
                 .flatMap { it.value }
@@ -304,6 +315,8 @@ class CosmeticsState(
                     it.key.armorSlotIds
                 }
         }
+        modelState.reset(model.bones)
+        slots
     }.toSet()
 
     fun getPositionAdjustment(cosmetic: Cosmetic) = positionAdjustments[cosmetic.id] ?: Vector3()
@@ -323,9 +336,7 @@ class CosmeticsState(
 
     private fun getSidedRenderExclusions(model: BedrockModel): Collection<Box3> {
         return model.boundingBoxes.let { map ->
-            val cosmetic = model.cosmetic
-            // FIXME this should probably be handled in a single place
-            val side = sides[cosmetic.id] ?: cosmetic.defaultSide ?: Side.getDefaultSideOrNull(model.sideOptions)
+            val side = sides[model.cosmetic.id]
             if (side != null) {
                 map.filter { it.second == null || it.second == side }
             } else {

@@ -28,6 +28,7 @@ import gg.essential.gui.common.modal.configure
 import gg.essential.gui.modal.sps.FirewallBlockingModal
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.util.stateBy
+import gg.essential.sps.SpsAddress
 import gg.essential.universal.UChat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiMainMenu
@@ -215,19 +216,16 @@ object MinecraftUtils : MinecraftUtils {
         previousScreen: GuiScreen? = GuiMultiplayer(GuiMainMenu()),
         showDisconnectWarning: Boolean = true,
     ) {
-        val spsManager = Essential.getInstance().connectionManager.spsManager
-
         if (UMinecraft.getMinecraft().currentScreen is GuiConnecting) {
             Essential.logger.warn("Attempted to connect to a server whilst already connecting!")
             return
         }
 
         if (UMinecraft.getWorld() != null && showDisconnectWarning) {
+            val spsHost = SpsAddress.parse(serverData.serverIP)?.host
             val serverName =
-                if (spsManager.isSpsAddress(serverData.serverIP)) {
-                    spsManager.getHostFromSpsAddress(serverData.serverIP)?.let { uuid ->
-                        UUIDUtil.getNameAsState(uuid, "this friend").map { "$it's world" }
-                    } ?: BasicState("this world")
+                if (spsHost != null) {
+                    UUIDUtil.getNameAsState(spsHost, "this friend").map { "$it's world" }
                 } else {
                     BasicState(serverData.serverIP)
                 }
@@ -237,9 +235,9 @@ object MinecraftUtils : MinecraftUtils {
             return
         }
 
-        if (spsManager.isSpsAddress(serverData.serverIP) && FirewallUtil.isFirewallBlocking()) {
+        if (SpsAddress.parse(serverData.serverIP) != null && FirewallUtil.isFirewallBlocking()) {
             GuiUtil.pushModal { manager ->
-                FirewallBlockingModal(manager, spsManager.getHostFromSpsAddress(serverData.serverIP)) {
+                FirewallBlockingModal(manager, SpsAddress.parse(serverData.serverIP)?.host) {
                     connectToServer(serverData, previousScreen)
                 }
             }

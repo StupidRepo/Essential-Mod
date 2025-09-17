@@ -122,10 +122,10 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
     var disableCosmetics: Boolean by disableCosmeticsState
 
     /** The cosmetics hidden state, as well as a flag on whether this was set by the user or the server/mod. */
-    val ownCosmeticsHiddenStateWithSource = mutableStateOf(Pair(false, false))
-    var ownCosmeticsHiddenState = ownCosmeticsHiddenStateWithSource.bimap({ it.first }, { it to false })
-    var ownCosmeticsHidden by ownCosmeticsHiddenState
-    var ownCosmeticsVisible by !ownCosmeticsHiddenState
+    val ownCosmeticsVisibleStateWithSource = mutableStateOf(Pair(true, CosmeticsVisibilitySource.System))
+    val ownCosmeticsVisibleState = ownCosmeticsVisibleStateWithSource.map { it.first }
+    val ownCosmeticsHidden: Boolean
+        get() = !ownCosmeticsVisibleState.getUntracked()
 
     val hideCosmeticsWhenServerOverridesSkinState = property("Cosmetics.General.Hide cosmetics on server skins", false)
     var hideCosmeticsWhenServerOverridesSkin: Boolean by hideCosmeticsWhenServerOverridesSkinState
@@ -422,7 +422,7 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                 }
                 dynamic {
                     if (!disableCosmeticsState()) {
-                        switch(ownCosmeticsHiddenStateWithSource.bimap({ it.first }, { it to true })) {
+                        switch(ownCosmeticsVisibleStateWithSource.bimap({ !it.first }, { !it to CosmeticsVisibilitySource.UserWithoutNotification })) {
                             name = "Hide your cosmetics"
                             description = "Hide your equipped cosmetics for everyone."
                         }
@@ -673,6 +673,12 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
                 titleText = "Revoking Essential's Terms of Service and Privacy Policy will cause Essential features not to work. Are you sure you want to proceed?"
             }
         }
+    }
+
+    enum class CosmeticsVisibilitySource {
+        System, // Set by Infra, or mod for internal reasons (e.g. undoing failed infra changed)
+        UserWithNotification,
+        UserWithoutNotification
     }
 
 }

@@ -16,6 +16,7 @@ import gg.essential.elementa.components.UIImage
 import gg.essential.elementa.state.BasicState
 import gg.essential.elementa.state.State
 import gg.essential.elementa.utils.withAlpha
+import gg.essential.gui.friends.message.v2.SendState
 import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.image.ImageGeneratorSettings
 import gg.essential.gui.image.ResourceImageFactory
@@ -498,7 +499,7 @@ object EssentialPalette {
     @JvmField
     val CHECKBOX_OUTLINE: Color = Color(0x757575)
 
-    fun getMessageColor(hovered: State<Boolean>, sentByClient: Boolean): State<Color> {
+    fun getMessageColor(hovered: State<Boolean>, sentByClient: Boolean, sendState: SendState): State<Color> {
         return hovered.map {
             if (it) {
                 if (sentByClient) {
@@ -734,6 +735,9 @@ object EssentialPalette {
 
     @JvmField
     val NOTICE_11X: ImageFactory = ResourceImageFactory("/assets/essential/textures/notice_11x11.png")
+
+    @JvmField
+    val ARROW_UP_DOWN_5X7: ImageFactory = ResourceImageFactory("/assets/essential/textures/menu/arrow_up_down.png")
 
     @JvmField
     val ARROW_UP_7X5: ImageFactory = ResourceImageFactory("/assets/essential/textures/menu/arrow_up.png")
@@ -1003,6 +1007,9 @@ object EssentialPalette {
 
     @JvmField
     val RENAME_10X5: ImageFactory = ResourceImageFactory("/assets/essential/textures/optionmenu/rename.png")
+
+    @JvmField
+    val RENAME_8X5: ImageFactory = ResourceImageFactory("/assets/essential/textures/optionmenu/rename_8x5.png")
 
     @JvmField
     val REPORT_10X7: ImageFactory = ResourceImageFactory("/assets/essential/textures/optionmenu/report.png")

@@ -14,7 +14,6 @@ package gg.essential.util
 import com.mojang.authlib.GameProfile
 import com.sparkuniverse.toolbox.chat.enums.ChannelType
 import com.sparkuniverse.toolbox.chat.model.Channel
-import com.sparkuniverse.toolbox.chat.model.Message
 import dev.folomeev.kotgl.matrix.matrices.mat3
 import dev.folomeev.kotgl.matrix.matrices.mat4
 import gg.essential.Essential
@@ -24,7 +23,6 @@ import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.UIContainer
 import gg.essential.elementa.state.State
 import gg.essential.elementa.utils.elementaDebug
-import gg.essential.gui.friends.message.MessageUtils
 import gg.essential.lib.gson.JsonElement
 import gg.essential.lib.gson.JsonPrimitive
 import gg.essential.mixins.ext.client.executor
@@ -99,7 +97,6 @@ private val BOT_UUID = UUID.fromString("cd899a14-de78-4de8-8d31-9d42fff31d7a") /
 fun Channel.isAnnouncement(): Boolean =
     this.type == ChannelType.ANNOUNCEMENT || BOT_UUID in members
 
-fun Message.getSentTimestamp(): Long = MessageUtils.getSentTimeStamp(id)
 fun ServerDiscovery.toServerData(knownServers: Map<String, ServerData> = emptyMap()) =
     knownServers[addresses[0]]
         ?: ServerData(

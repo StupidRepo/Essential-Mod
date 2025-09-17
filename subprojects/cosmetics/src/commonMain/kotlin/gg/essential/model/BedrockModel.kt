@@ -11,23 +11,19 @@
  */
 package gg.essential.model
 
-import dev.folomeev.kotgl.matrix.matrices.mutables.inverse
-import dev.folomeev.kotgl.matrix.matrices.mutables.times
-import dev.folomeev.kotgl.matrix.vectors.vec4
 import gg.essential.cosmetics.events.AnimationEvent
 import gg.essential.cosmetics.skinmask.SkinMask
 import gg.essential.model.backend.PlayerPose
 import gg.essential.model.backend.RenderBackend
+import gg.essential.model.bones.BakedAnimations
+import gg.essential.model.bones.BedrockModelState
+import gg.essential.model.bones.retrievePose
 import gg.essential.model.file.AnimationFile
 import gg.essential.model.file.ModelFile
 import gg.essential.model.file.ParticlesFile
 import gg.essential.model.file.SoundDefinitionsFile
-import gg.essential.model.molang.MolangQueryEntity
-import gg.essential.model.util.Quaternion
 import gg.essential.model.util.UMatrixStack
 import gg.essential.model.util.UVertexConsumer
-import gg.essential.model.util.getRotationEulerZYX
-import gg.essential.model.util.times
 import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.network.cosmetics.Cosmetic.Diagnostic
 import kotlin.jvm.JvmField
@@ -49,8 +45,6 @@ class BedrockModel(
     @JvmField
     var boundingBoxes: List<Pair<Box3, Side?>>
     val bones: Bones
-    val rootBone: Bone
-        get() = bones.root
     val defaultRenderGeometry: RenderGeometry
     var textureFrameCount = 1
     var translucent = false
@@ -123,11 +117,12 @@ class BedrockModel(
                         config.components,
                         config.curves,
                         config.events,
-                        texture,
-                        particleEffects,
-                        soundEffects,
                     )
             }
+        }
+
+        val particleEffectRefs = particleEffects.mapValues {
+            ParticleEffectWithReferencedEffects(it.key, particleEffects, soundEffects)
         }
 
         if (soundData != null) {
@@ -167,7 +162,7 @@ class BedrockModel(
                 generateSequence(trigger) { it.onComplete }.map { it.name }
             }
 
-            animations = animationData.animations.map { Animation(it.key, it.value, bones, particleEffects, soundEffects) }
+            animations = animationData.animations.map { Animation(it.key, it.value, bones, particleEffectRefs, soundEffects) }
                 .filter { animation ->
                     when {
                         animation.name !in referencedAnimations -> false
@@ -197,145 +192,22 @@ class BedrockModel(
         return null
     }
 
-    fun computePose(basePose: PlayerPose, animationState: ModelAnimationState, entity: MolangQueryEntity): PlayerPose {
+    fun computePose(basePose: PlayerPose, animationState: ModelAnimationState): PlayerPose {
         if (animationState.active.none { it.animation.affectsPose }) {
             return basePose
         }
-        animationState.apply(rootBone)
-        applyPose(basePose, entity)
-        return retrievePose(basePose)
-    }
-
-    fun applyPose(pose: PlayerPose, entity: MolangQueryEntity) {
-        var anyGimbal = false
-        var anyWorldGimbal = false
-        for (bone in bones) {
-            if (bone.gimbal) {
-                anyGimbal = true
-                if (bone.worldGimbal) {
-                    anyWorldGimbal = true
-                }
-            }
-            val part = bone.part ?: continue
-            if (part == EnumPart.ROOT) continue
-
-            copy(pose[part], bone, OFFSETS.getValue(part))
-            if (pose.child) {
-                if (part == EnumPart.HEAD) {
-                    bone.childScale = 0.75f
-                    bone.animOffsetY -= 8f
-                } else {
-                    bone.childScale = 0.5f
-                }
-            }
-        }
-        // TODO maybe optimize traversal, don't need to compute subtrees that do not even have any gimbal parts
-        if (anyGimbal) {
-            val entityRotation =
-                if (anyWorldGimbal) with(entity.locator.rotation) { copy(x = -x, y = -y) /* see RenderLivingBase.prepareScale */ }
-                else Quaternion.Identity
-            rootBone.propagateGimbal(Quaternion.Identity, entityRotation)
-        }
-    }
-
-    fun retrievePose(basePose: PlayerPose): PlayerPose {
-        val parts = basePose.toMap(mutableMapOf())
-
-        fun Bone.visit(matrixStack: UMatrixStack, parentHasScaling: Boolean) {
-            if (!affectsPose) {
-                return
-            }
-
-            val hasScaling = parentHasScaling || animScaleX != 1f || animScaleY != 1f || animScaleZ != 1f
-
-            matrixStack.push()
-            applyTransform(matrixStack)
-
-            val part = part
-            if (part != null && part != EnumPart.ROOT) { // ROOT is not needed for pose
-                val offset = OFFSETS.getValue(part)
-                val matrix = matrixStack.peek().model
-
-                // We can easily get the local pivot point by simply undoing the last `matrixStack.translate` call
-                // (ignoring user offset for now because that is unused for emotes)
-                val localPivot = vec4(pivotX, pivotY, pivotZ, 1f)
-                // We can transform that into global space by simply passing it through the matrix
-                val globalPivot = localPivot.times(matrix)
-
-                // Local rotation is even simpler because there is no residual local rotation "pivot", so our global
-                // rotation is simply the rotation of the matrix stack.
-                val globalRotation = matrix.getRotationEulerZYX()
-
-                // We only need to compute the scale/shear matrix if there was some scaling, otherwise we'll just end
-                // up with an identity (within rounding errors) matrix and do a bunch of extra work (here and when
-                // applying it to other cosmetics) which we don't really need to do.
-                val extra = if (!hasScaling) {
-                    null
-                } else {
-                    // To compute the scale/shear matrix, we need to convert the global pivot and rotation back into a
-                    // matrix so we can then compute the difference between that and what we actually want to have
-                    val resultStack = UMatrixStack()
-                    resultStack.translate(globalPivot.x, globalPivot.y, globalPivot.z)
-                    resultStack.rotate(globalRotation.z, 0.0f, 0.0f, 1.0f, false)
-                    resultStack.rotate(globalRotation.y, 0.0f, 1.0f, 0.0f, false)
-                    resultStack.rotate(globalRotation.x, 1.0f, 0.0f, 0.0f, false)
-                    // To compute the difference, we also need to undo the final translate on the current stack because
-                    // the extra matrix is applied before that, right after rotation (because the MC renderer doesn't do
-                    // that final translate).
-                    val expectedStack = matrixStack.fork()
-                    expectedStack.translate(pivotX, pivotY, pivotZ)
-                    // The final transform for a given bone in other cosmetics will end up being
-                    //   M = R * X
-                    // where
-                    //   M is the final transform, this should end up matching the `expectedStack` computed above
-                    //   R is the combination of translation and rotation, this will match `resultStack` computed above
-                    //   X is a remainder of scale/shear transformations, this is what we need to compute and store
-                    // To do so, we simply multiply by the inverse of R (denoted by R') from the left on both sides.
-                    // The Rs on the right side will cancel out and we're left with:
-                    //   R' * M = X
-                    // or
-                    //   X = R' * M
-                    // which we can easily compute as follows:
-                    resultStack.peek().model.inverse().times(expectedStack.peek().model)
-                }
-
-                parts[part] = PlayerPose.Part(
-                    // As per the matrix stack transformations above, if we assume that this point doesn't have any
-                    // parent (as would be the case for regular cosmetics), the global pivot point can be computed as:
-                    //   (a) globalPivot = bone.pivot + bone.animOffset
-                    // As per above [copy] method, the right side variables are set as:
-                    //   (b) bone.pivot = offset.pivot
-                    //   (c) bone.animOffset = pose.pivot + offset.offset
-                    // We're trying to compute the `pose.pivot` value we need to store to replicate in other cosmetics
-                    // the `globalPivot` value observed above.
-                    // We can first rearrange the above equations as:
-                    //   (a) bone.animOffset = globalPivot - offset.pivot
-                    //   (b) bone.offset = bone.pivot
-                    //   (c) pose.pivot = bone.animOffset - bone.offset
-                    // Substituting (a) and (b) into (c) gives us the result we're looking for:
-                    //   pose.pivot = globalPivot - offset.pivot - offset.offset
-                    // A few of the signs get flipped for Y, the details of that are left as an exercise to the reader.
-                    pivotX = (globalPivot.x - offset.pivotX - offset.offsetX),
-                    pivotY = (globalPivot.y - offset.pivotY + offset.offsetY),
-                    pivotZ = (globalPivot.z - offset.pivotZ - offset.offsetZ),
-                    // Global rotation, again, is easier because we don't have to deal with any offsets
-                    rotateAngleX = globalRotation.x,
-                    rotateAngleY = globalRotation.y,
-                    rotateAngleZ = globalRotation.z,
-                    extra = extra,
-                )
-            }
-
-            for (childModel in childModels) {
-                childModel.visit(matrixStack, hasScaling)
-            }
-
-            matrixStack.pop()
-        }
-
-        rootBone.visit(UMatrixStack(), false)
-
-        return PlayerPose.fromMap(parts, basePose.child)
+        val modelState = BedrockModelState(
+            basePose,
+            animationState.bake(bones),
+            Vector3.ZERO,
+            null,
+            emptySet(),
+            EnumPart.values().toSet(),
+        )
+        modelState.apply(bones)
+        val pose = retrievePose(bones, basePose)
+        modelState.reset(bones)
+        return pose
     }
 
     /**
@@ -349,7 +221,7 @@ class BedrockModel(
         matrixStack: UMatrixStack,
         vertexConsumerProvider: RenderBackend.VertexConsumerProvider,
         geometry: RenderGeometry,
-        entity: MolangQueryEntity,
+        bakedAnimations: BakedAnimations,
         metadata: RenderMetadata,
         lifetime: Float,
     ) {
@@ -359,15 +231,15 @@ class BedrockModel(
         val frame = (lifetime * TEXTURE_ANIMATION_FPS).toInt()
         val offset = frame % totalFrames / totalFrames
 
-        val pose = metadata.pose
-        if (pose != null) {
-            applyPose(pose, entity)
-        }
-
-        propagateVisibilityToRootBone(metadata.side,
+        val modelState = BedrockModelState(
+            metadata.pose,
+            bakedAnimations,
+            metadata.positionAdjustment,
+            metadata.side,
             metadata.hiddenBones,
             metadata.parts,
         )
+        modelState.apply(bones)
 
         matrixStack.push()
         matrixStack.scale(1f / 16f)
@@ -391,40 +263,8 @@ class BedrockModel(
         }
 
         matrixStack.pop()
-    }
 
-    /**
-     * Propagates visibility to the root bone with the given [side] or default side if null and required
-     */
-    fun propagateVisibilityToRootBone(
-        side: Side?,
-        hiddenBones: Set<String>,
-        parts: Set<EnumPart>?,
-    ) {
-        // If this cosmetic has bones with the side option, we want to force our default side
-        // otherwise both sides will show
-        val updatedSide = side ?: cosmetic.defaultSide ?: Side.getDefaultSideOrNull(sideOptions)
-
-        for (bone in bones) {
-            val part = bone.part
-            if (part == null) {
-                bone.visible = if (bone.boxName in hiddenBones) false else null
-                continue
-            }
-            bone.visible = (parts == null || part in parts) && bone.boxName !in hiddenBones
-        }
-        rootBone.propagateVisibility(true, updatedSide)
-    }
-
-    private fun copy(pose: PlayerPose.Part, bone: Bone, offset: Offset) {
-        bone.poseRotX = pose.rotateAngleX
-        bone.poseRotY = pose.rotateAngleY
-        bone.poseRotZ = pose.rotateAngleZ
-        bone.poseOffsetX = pose.pivotX + offset.offsetX
-        bone.poseOffsetY = -pose.pivotY + offset.offsetY
-        bone.poseOffsetZ = pose.pivotZ + offset.offsetZ
-        bone.poseExtra = pose.extra
-        bone.childScale = 1f
+        modelState.reset(bones)
     }
 
     class Offset(

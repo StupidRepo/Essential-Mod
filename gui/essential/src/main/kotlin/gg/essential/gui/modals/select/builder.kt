@@ -25,8 +25,10 @@ import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.StateByScope
+import gg.essential.gui.elementa.state.v2.combinators.and
 import gg.essential.gui.elementa.state.v2.combinators.contains
 import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.combinators.not
 import gg.essential.gui.elementa.state.v2.filter
 import gg.essential.gui.elementa.state.v2.mapEach
 import gg.essential.gui.elementa.state.v2.stateBy
@@ -41,9 +43,9 @@ import gg.essential.gui.modals.select.component.playerAvatar
 import gg.essential.gui.modals.select.component.playerName
 import gg.essential.gui.overlay.ModalFlow
 import gg.essential.gui.overlay.ModalManager
-import gg.essential.universal.USound
 import gg.essential.gui.util.hoveredState
 import gg.essential.gui.util.toStateV2List
+import gg.essential.universal.USound
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.USession
 import gg.essential.util.UuidNameLookup
@@ -251,15 +253,14 @@ class SelectModalBuilder<T>(
         map: (Channel) -> T,
         block: SectionLayoutBlock<Channel> = defaultUserOrGroupRow,
     ) {
-        val channelList = messageStates.getObservableChannelList().toStateV2List()
-            .filter { it.type == ChannelType.DIRECT_MESSAGE || it.type == ChannelType.GROUP_DIRECT_MESSAGE }
+        val channelList = messageStates.getObservableChannelList().toStateV2List().filter { it.type == ChannelType.DIRECT_MESSAGE || it.type == ChannelType.GROUP_DIRECT_MESSAGE }
         val friendsAndGroupsState =
             stateBy {
                 // Adapted from ChatTab
                 channelList().sortedWith(
                     compareBy<Channel>(
                         { messageStates.getUnreadChannelState(it.id)() },
-                        { (messageStates.getLatestMessage(it.id)()?.id ?: it.id) shr 22 },
+                        { (messageStates.getLatestMessage(it.id)()?.createdAt ?: it.joinedAt) },
                     ).reversed()
                 )
             }
@@ -359,7 +360,11 @@ class SelectModalBuilder<T>(
 
         return stateBy {
             mappedFriends().mapNotNull { (uuid, isActivity) ->
-                if (isActivity()) uuid else null
+                if (isActivity()) {
+                    uuid
+                } else {
+                    null
+                }
             }
         }.toListState()
     }
@@ -413,3 +418,6 @@ suspend fun <T> ModalFlow.selectModal(
         .apply(block)
         .build(modalManager)
 }
+
+private fun Channel.getOtherUser(): UUID? =
+    if (type == ChannelType.DIRECT_MESSAGE) members.firstOrNull { it != USession.activeNow().uuid } else null

@@ -15,17 +15,14 @@ import gg.essential.Essential
 import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPacket
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.UIContainer
+import gg.essential.elementa.components.Window
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.dsl.*
-import gg.essential.elementa.effects.OutlineEffect
 import gg.essential.elementa.state.BasicState
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.elementa.state.v2.combinators.and
 import gg.essential.gui.elementa.state.v2.combinators.map
-import gg.essential.gui.elementa.state.v2.combinators.not
-import gg.essential.gui.elementa.state.v2.combinators.or
-import gg.essential.gui.elementa.state.v2.combinators.zip
 import gg.essential.gui.elementa.state.v2.flatten
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.stateOf
@@ -34,15 +31,11 @@ import gg.essential.gui.elementa.state.v2.toV1
 import gg.essential.gui.elementa.state.v2.withSystemTime
 import gg.essential.gui.layoutdsl.BasicXModifier
 import gg.essential.gui.layoutdsl.BasicYModifier
-import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.box
 import gg.essential.gui.layoutdsl.layout
-import gg.essential.gui.layoutdsl.then
 import gg.essential.gui.proxies.ScreenWithProxiesHandler.Companion.mountWithProxy
 import gg.essential.gui.wardrobe.Wardrobe
 import gg.essential.gui.wardrobe.WardrobeCategory
-import gg.essential.handlers.PauseMenuDisplay
-import gg.essential.handlers.PauseMenuDisplay.Companion.window
 import gg.essential.util.GuiUtil
 import gg.essential.util.bindEssentialTooltip
 import gg.essential.gui.util.hoveredState
@@ -53,15 +46,12 @@ import gg.essential.vigilance.utils.onLeftClick
 import gg.essential.gui.elementa.state.v2.State as StateV2
 
 class LeftSideBar(
+    window: Window,
     private val topButtonAndMultiplayer: UIContainer,
     private val bottomButton: UIContainer,
     menuVisible: StateV2<Boolean>,
-    collapsed: StateV2<Boolean>,
-    isCompact: StateV2<Boolean>,
-    menuType: PauseMenuDisplay.MenuType,
     rightSideBar: UIContainer,
     leftContainer: UIContainer,
-    accountManager: AccountManager,
 ) : UIContainer() {
 
     private val connectionManager = Essential.getInstance().connectionManager
@@ -70,10 +60,7 @@ class LeftSideBar(
     private val allSales = connectionManager.saleNoticeManager.saleState
 
     private val currentSale = memo {
-        // When the menu is collapsed, the display banner only shows for real sales
-        // and does not display the 'fake' sales used as messages unless they privide
-        // a compact name, so we must exclude them to avoid the banner cycling between 'sale' and nothing.
-        val sales = allSales().filter { (!collapsed() || it.compactName != null) || it.discountPercent > 0 }.toList()
+        val sales = allSales().toList()
         if (sales.isEmpty()) {
             null
         } else {
@@ -85,24 +72,12 @@ class LeftSideBar(
     private val isSale = currentSale.map { it != null }
     private val isFakeSale = currentSale.map { it?.discountPercent == 0 } // 0% off sales are used to show a notice without a sale
 
-
-    private val menuSize = collapsed.zip(isCompact)
-
-    // Account switcher
-    private val accountSwitcher = accountManager.getFullAccountSwitcher(collapsed.toV1(this)).constrain {
-        y = 0.pixels boundTo rightSideBar
-    }.bindParent(this, !isCompact and stateOf(menuType == PauseMenuDisplay.MenuType.MAIN), delayed = true)
-
     private val playerWardrobeContainer by UIContainer().constrain {
         x = CenterConstraint()
         width = ChildBasedMaxSizeConstraint()
         height = ChildBasedSizeConstraint()
-    }.bindConstraints(isCompact) { compact ->
-        y = if (compact) {
-            (CenterConstraint() boundTo rightSideBar).coerceAtLeast(0.pixels(alignOpposite = true) boundTo bottomButton)
-        } else {
-            0.pixels(alignOpposite = true) boundTo rightSideBar
-        }
+    }.constrain {
+        y = (CenterConstraint() boundTo rightSideBar).coerceAtLeast(0.pixels(alignOpposite = true) boundTo bottomButton)
     } childOf this
 
     private val player by platform.newUIPlayer(
@@ -114,8 +89,7 @@ class LeftSideBar(
     ).constrain {
         // x set in init
         width = AspectConstraint()
-    }.bindConstraints(collapsed) { isCollapsed ->
-        height = if (isCollapsed) 110.pixels else 120.pixels
+        height = 120.pixels
     }
 
     private val wardrobeButton by MenuButton(BasicState("Wardrobe"), textAlignment = MenuButton.Alignment.LEFT) {
@@ -128,24 +102,13 @@ class LeftSideBar(
     ).constrain {
         width = 80.pixels
         height = 20.pixels
-    }.setTooltip(menuSize.map { (isCompact, collapsed) -> if (isCompact || collapsed) "Wardrobe" else "" }.toV1(this))
-        .bindCollapsed((collapsed or isCompact).toV1(this), 20f)
+    }.setTooltip("Wardrobe")
+        .bindCollapsed(BasicState(true), 20f)
 
-    private val wardrobeButtonContainerModifier = Modifier.then(StateV2 {
-        if (isCompact()) {
-            BasicXModifier { CenterConstraint() }.then(
-                BasicYModifier { SiblingConstraint(9f) }
-            )
-        } else if (collapsed()) {
-            BasicXModifier { CenterConstraint() }.then(
-                BasicYModifier { SiblingConstraint(10f) }
-            )
-        } else {
-            BasicXModifier { 0.pixels boundTo this@LeftSideBar }.then(
-                BasicYModifier { SiblingConstraint(30f) }
-            )
-        }
-    })
+    private val wardrobeButtonContainerModifier =
+        BasicXModifier { CenterConstraint() }.then(
+            BasicYModifier { SiblingConstraint(9f) }
+        )
 
     init {
         val wardrobeContainer: UIComponent
@@ -158,20 +121,12 @@ class LeftSideBar(
             }
         }
 
-        bindConstraints(isCompact) { compact ->
-            if (compact) {
-                x = basicXConstraint { (topButtonAndMultiplayer.getLeft() / 2) - (it.getWidth() / 2) }
-                        .coerceAtMost(17.pixels(alignOutside = true) boundTo topButtonAndMultiplayer)
-                y = 0.pixels boundTo player
-                width = 100.percent boundTo player
-                height = ChildBasedSizeConstraint()
-            } else {
-                // Maintain the same margin from the window's edge as the right sidebar
-                x = ((SiblingConstraint() boundTo window) - (SiblingConstraint() boundTo rightSideBar))
-                y = 0.pixels
-                width = 100.percent boundTo accountSwitcher
-                height = 100.percent
-            }
+        constrain {
+            x = basicXConstraint { (topButtonAndMultiplayer.getLeft() / 2) - (it.getWidth() / 2) }
+                .coerceAtMost(17.pixels(alignOutside = true) boundTo topButtonAndMultiplayer)
+            y = 0.pixels boundTo playerWardrobeContainer
+            width = 100.percent boundTo playerWardrobeContainer
+            height = ChildBasedSizeConstraint()
         }
 
         // we use a container here so the wardrobe button's vanilla proxy position changes do not affect this
@@ -197,61 +152,20 @@ class LeftSideBar(
         }
         // Big sale flag
         TextFlag(
-            isCompact.zip(isFakeSale).map { (compact, fakeSale) ->
-                val baseStyle = if (fakeSale) MenuButton.NOTICE_GREEN else MenuButton.LIGHT_RED
-                if (compact) {
-                    baseStyle
-                } else {
-                    baseStyle.copy(sides = setOf(
-                        OutlineEffect.Side.Top,
-                        OutlineEffect.Side.Left,
-                        OutlineEffect.Side.Right
-                    ))
-                }
+            isFakeSale.map { fakeSale ->
+                if (fakeSale) MenuButton.NOTICE_GREEN else MenuButton.LIGHT_RED
             },
             text = saleLines,
         ).constrain {
             x = CenterConstraint() boundTo wardrobeButton
             height += 1.pixel
-        }.bindConstraints(isCompact) { compact ->
-            if (compact) {
-                y = SiblingConstraint(3f) boundTo wardrobeButton
-                width = width.coerceIn(72.pixels, 78.pixels)
-            } else {
-                y = SiblingConstraint(alignOpposite = true) boundTo wardrobeButton
-                width = (100.percent boundTo wardrobeButton) - 2.pixels
-            }
+            y = SiblingConstraint(3f) boundTo wardrobeButton
+            width = width.coerceIn(72.pixels, 78.pixels)
         }.onLeftClick {
             openWardrobe(WardrobeCategory.get(currentSale.get()?.category))
-        }.bindParent(this, isSale and !collapsed and menuVisible).apply {
+        }.bindParent(this, isSale and menuVisible).apply {
             bindEssentialTooltip(hoveredState() and currentSale.map { it?.tooltip != null }.toV1(this), currentSale.map { it?.tooltip ?: ""}.toV1(this), EssentialTooltip.Position.ABOVE)
         }
-
-        val collapsedSaleName = currentSale.map {
-            (it?.compactName?.uppercase() ?: "")
-        }
-
-        val smallSaleLines = currentSale.map {
-            listOf(collapsedSaleName)
-        }
-        // Small sale flag
-        TextFlag(
-            isFakeSale.map {
-                if (it) {
-                    MenuButton.NOTICE_GREEN
-                } else {
-                    MenuButton.LIGHT_RED
-                }
-            },
-            text = smallSaleLines,
-        ).constrain {
-            x = CenterConstraint() boundTo wardrobeButton
-            y = 3.pixels(alignOpposite = true, alignOutside = true) boundTo wardrobeButton
-        }.onLeftClick { openWardrobe(WardrobeCategory.get(currentSale.get()?.category)) }
-            .bindParent(leftContainer, isSale and collapsed and menuVisible, delayed = true)
-            .apply {
-                bindEssentialTooltip(hoveredState() and currentSale.map { it?.tooltip != null }.toV1(this), currentSale.map { it?.tooltip ?: ""}.toV1(this), EssentialTooltip.Position.ABOVE)
-            }
 
         val hasAnyNewCosmetics = connectionManager.cosmeticNotices.hasAnyNewCosmetics
 
@@ -260,14 +174,9 @@ class LeftSideBar(
             stateOf(MenuButton.NOTICE_GREEN),
             MenuButton.Alignment.CENTER,
             stateOf("NEW"),
-        ).bindConstraints(isCompact) { compact ->
-            if (compact) {
-                y = CenterConstraint() boundTo wardrobeButton
-                x = 3.pixels(alignOpposite = true, alignOutside = true) boundTo wardrobeButton
-            } else {
-                x = 3.pixels(alignOpposite = true, alignOutside = true) boundTo wardrobeButton
-                y = CenterConstraint() boundTo wardrobeButton
-            }
+        ).constrain {
+            y = CenterConstraint() boundTo wardrobeButton
+            x = 3.pixels(alignOpposite = true, alignOutside = true) boundTo wardrobeButton
         }.onLeftClick { wardrobeButton.runAction() }.bindParent(
             leftContainer,
             hasAnyNewCosmetics and menuVisible,

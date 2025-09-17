@@ -62,8 +62,8 @@ public class CertChain {
     public CertChain loadEmbedded() throws Exception {
         // Microsoft is transitioning their certificates to other root CAs because the current one expires in 2025.
         // https://docs.microsoft.com/en-us/azure/security/fundamentals/tls-certificate-changes
-        // Cloudflare issues certificates through either Let's Encrypt or Google Trust Services.
-        // We must trust the roots of these two CAs.
+        // Cloudflare issues certificates through either Let's Encrypt or Google Trust Services, and as of late 2024
+        // also SSL.com. We must trust the roots of these three CAs.
         // The Amazon Trust Services root is included as Minecraft services used AWS in the past,
         // and other services we use could use AWS now or in the future.
         // These are sorted alphabetically for easier comparison to assets folder
@@ -81,6 +81,19 @@ public class CertChain {
                 .load("isrgrootx1") // Let's Encrypt root CA
                 .load("microsoft-ecc-root-ca-2017") // New Microsoft root CA
                 .load("microsoft-rsa-root-ca-2017") // New Microsoft root CA
+                // Sectigo (aka Comodo) is included because some SSL.com intermediate CAs are cross-signed by them
+                // and some web servers only serve that chain and not one for SSL.com's own root CAs
+                .load("sslcom/Sectigo-AAA-Root")
+                .load("sslcom/SSLcom-RootCA-ECC-384-R2")
+                .load("sslcom/SSLcom-RootCA-EV-ECC-384-R2")
+                .load("sslcom/SSLcom-RootCA-EV-RSA-4096-R2")
+                .load("sslcom/SSLcom-RootCA-EV-RSA-4096-R3")
+                .load("sslcom/SSLcom-RootCA-RSA-4096-R2")
+                .load("sslcom/SSLcom-TLS-Root-2022-ECC")
+                .load("sslcom/SSLcom-TLS-Root-2022-RSA")
+                .load("sslcom/SSLcomEVRootCertificationAuthorityECC")
+                .load("sslcom/SSLcomRootCertificationAuthorityECC")
+                .load("sslcom/SSLcomRootCertificationAuthorityRSA")
                 ;
     }
 

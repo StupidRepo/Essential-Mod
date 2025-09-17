@@ -16,7 +16,6 @@ import gg.essential.gradle.util.StripKotlinMetadataTransform.Companion.registerS
 plugins {
     id("kotlin")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("io.github.goooler.shadow")
     id("gg.essential.defaults")
     id("gg.essential.defaults.repo")
     id("gg.essential.multi-version")
@@ -55,7 +54,7 @@ dependencies {
     })
     implementation(bundle(project(":kdiscordipc"))!!)
 
-    implementation(bundle(project(":cosmetics", configuration = "minecraftRuntimeElements"))!!)
+    implementation(bundle(project(":cosmetics"))!!)
 
     implementation(bundle(project(":lwjgl3"))!!)
     runtimeOnly(bundle(project(":lwjgl3:impl"))!!)
@@ -88,7 +87,7 @@ dependencies {
     if (platform.mcVersion >= 12105 && (platform.isFabric || platform.isNeoForge)) {
         repositories.modrinth()
         if (platform.mcVersion >= 12106) {
-            modCompileOnly("maven.modrinth:iris:1.9.0+1.21.6-${platform.loaderStr}")
+            modCompileOnly("maven.modrinth:iris:1.9.1+1.21.7-${platform.loaderStr}")
         } else {
             modCompileOnly("maven.modrinth:iris:1.8.11+1.21.5-${platform.loaderStr}")
         }

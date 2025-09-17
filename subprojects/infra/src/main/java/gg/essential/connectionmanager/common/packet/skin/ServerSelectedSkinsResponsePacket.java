@@ -9,10 +9,22 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
-package gg.essential.model.util
+package gg.essential.connectionmanager.common.packet.skin;
 
-internal expect fun cbrt(value: Float): Float
+import gg.essential.connectionmanager.common.packet.Packet;
 
-internal expect fun base64Encode(value: ByteArray): String
-internal expect fun base64Decode(value: String): ByteArray
-internal expect fun md5Hex(value: ByteArray): String
+import java.util.Map;
+import java.util.UUID;
+
+public class ServerSelectedSkinsResponsePacket extends Packet {
+
+    private final Map<UUID, String> skins;
+
+    public ServerSelectedSkinsResponsePacket(final Map<UUID, String> skins) {
+        this.skins = skins;
+    }
+
+    public Map<UUID, String> getSkins() {
+        return this.skins;
+    }
+}
