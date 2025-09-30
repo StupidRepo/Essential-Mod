@@ -9,12 +9,12 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
-package gg.essential.mixins.transformers.client.renderer.entity;
+package gg.essential.mixins.transformers.client.gui;
 
 import gg.essential.mixins.DummyTarget;
 import org.spongepowered.asm.mixin.Mixin;
 
-// 1.8.9 only
+// Minecraft now has builtin support for variable height list entries
 @Mixin(DummyTarget.class)
-public class Mixin_RenderNameplateIcon_Sneaking {
+public class Mixin_SelectionListDividers_GuiList {
 }

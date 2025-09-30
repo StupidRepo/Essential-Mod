@@ -102,6 +102,10 @@ import kotlin.math.PI
 import kotlin.random.Random
 import java.util.*
 
+//#if MC>=12109
+//$$ import net.minecraft.client.render.state.CameraRenderState
+//#endif
+
 //#if MC>=12106
 //$$ import com.mojang.blaze3d.buffers.GpuBuffer
 //$$ import com.mojang.blaze3d.buffers.Std140Builder
@@ -146,6 +150,10 @@ import java.util.*
 //#else
 import org.lwjgl.util.vector.Matrix4f
 import org.lwjgl.util.vector.Vector4f
+//#endif
+
+//#if MC==10809
+//$$ import gg.essential.universal.shader.BlendState
 //#endif
 
 open class UI3DPlayer(
@@ -512,7 +520,11 @@ open class UI3DPlayer(
 
         val renderManager = Minecraft.getMinecraft().renderManager
         //#if MC>=11400
+        //#if MC>=12109
+        //$$ val camera = object : Camera() {
+        //#else
         //$$ renderManager.info = object : ActiveRenderInfo() {
+        //#endif
         //$$     init {
         //$$         update(p.world, p, true, true, 0f)
         //$$         setDirection(rotationAngleHorizontal, rotationAngleVerticalFront * 0)
@@ -529,6 +541,12 @@ open class UI3DPlayer(
 
         UGraphics.directColor3f(1f, 1f, 1f)
         UGraphics.enableDepth()
+        //#if MC==10809
+        //$$ // RenderPlayer.doRender() (run via GuiInventory.drawEntityOnScreen() below) applies correct blending in 1.12.2+ but
+        //$$ // not in 1.8.9, where they relied on the blend state already being set earlier in the draw, so we need to set it here
+        //$$ val prevBlend = BlendState.active()
+        //$$ if (prevBlend != BlendState.ALPHA) UGraphics.Globals.blendState(BlendState.ALPHA)
+        //#endif
 
         //#if MC<12106
         val stack = CMatrixStack()
@@ -582,11 +600,27 @@ open class UI3DPlayer(
             //$$ val restoreLighting = setupPlayerLight()
             //$$ val stack = applyCamera(dispatcher)
             //$$
+            //#if MC>=12109
+            //$$ state.light = Light.MAX_VALUE.value.toInt()
+            //$$ state.shadowPieces.clear()
+            //$$ val entityRenderPass = MinecraftClient.getInstance().gameRenderer.entityRenderDispatcher
+            //$$ val cameraState = CameraRenderState().also { cameraState ->
+            //$$     // See GameRenderer.updateCameraState
+            //$$     cameraState.initialized = camera.isReady
+            //$$     cameraState.pos = camera.pos
+            //$$     cameraState.blockPos = camera.blockPos
+            //$$     cameraState.entityPos = camera.focusedEntity.getLerpedPos(camera.lastTickProgress)
+            //$$     cameraState.orientation = Quaternionf(camera.rotation)
+            //$$ }
+            //$$ renderManager.render(state, cameraState, 0.0, 0.0, 0.0, stack.toMC(), entityRenderPass.queue)
+            //$$ entityRenderPass.render()
+            //#else
             //$$ val vertexConsumers = MinecraftClient.getInstance().bufferBuilders.entityVertexConsumers
             //$$ dispatcher.setRenderShadows(false)
             //$$ dispatcher.render(state, 0.0, 0.0, 0.0, stack.toMC(), vertexConsumers, Light.MAX_VALUE.value.toInt())
             //$$ dispatcher.setRenderShadows(true)
             //$$ vertexConsumers.draw()
+            //#endif
             //$$
             //$$ restoreLighting()
             //#else
@@ -614,6 +648,9 @@ open class UI3DPlayer(
         UGraphics.depthFunc(GL11.GL_LEQUAL)
         UGraphics.color4f(1.0f, 1.0f, 1.0f, 1.0f)
         UGraphics.disableDepth()
+        //#if MC==10809
+        //$$ if (prevBlend != BlendState.ALPHA) UGraphics.Globals.blendState(prevBlend) // restore previous blend state
+        //#endif
     }
 
     fun applyCamera(renderManager: RenderManager): UMatrixStack {
@@ -623,7 +660,9 @@ open class UI3DPlayer(
         setupPlayerLight()
         //#endif
 
-        //#if MC>=11400
+        //#if MC>=12109
+        //$$ // Camera state is passed directly to entity renderer in `doDrawPlayer`
+        //#elseif MC>=11400
         //$$ renderManager.cameraOrientation = renderManager.info.rotation
         //#else
         renderManager.playerViewX = -rotationAngleVerticalFront
@@ -734,7 +773,11 @@ open class UI3DPlayer(
         // See RenderPlayer.preRenderCallback
         stack.scale(0.9375f)
 
-        fallbackPlayer.value.render(stack, vertexConsumerProvider)
+        val queue = MinecraftRenderBackend.CommandQueue()
+
+        fallbackPlayer.value.render(stack, queue, vertexConsumerProvider)
+
+        queue.render(vertexConsumerProvider)
 
         //#if MC>=11400
         //$$ immediate.finish()
@@ -777,7 +820,8 @@ open class UI3DPlayer(
             vertexConsumerProvider,
             UUID(0, 0),
             false,
-            false
+            false,
+            player.takeUnless { errored }?.uniqueID, // try to only render this player's particles
         )
 
         //#if MC>=12104
@@ -870,9 +914,15 @@ open class UI3DPlayer(
                 //#if MC>=12104
                 //$$ val skin = skin.get()
                 //#endif
-            //$$     currentSkin = skin.texture
-            //$$     updateSkinType(Model.byTypeOrDefault(skin.model.getName()))
-            //$$     currentCape = skin.capeTexture
+                //#if MC>=12109
+                //$$ currentSkin = skin.body.texturePath()
+                //$$ updateSkinType(Model.byTypeOrDefault(skin.model.asString()))
+                //$$ currentCape = skin.cape?.texturePath()
+                //#else
+                //$$ currentSkin = skin.texture
+                //$$ updateSkinType(Model.byTypeOrDefault(skin.model.getName()))
+                //$$ currentCape = skin.capeTexture
+                //#endif
             //$$ }
             //#else
             // Restore default (because we can't guaranteed that the texture callback will ever be called)
@@ -933,7 +983,7 @@ open class UI3DPlayer(
             }
         }
 
-        fun render(stack: CMatrixStack, vertexConsumerProvider: RenderBackend.VertexConsumerProvider) {
+        fun render(stack: CMatrixStack, queue: RenderBackend.CommandQueue, vertexConsumerProvider: RenderBackend.VertexConsumerProvider) {
             checkForUpdates()
 
             val state = cosmeticsState
@@ -983,12 +1033,12 @@ open class UI3DPlayer(
                     EnumPart.values().toSet(),
                 )
 
-            playerModel.render(stack, vertexConsumerProvider, playerModel.model.defaultRenderGeometry, renderMetadata)
+            playerModel.render(stack, queue, playerModel.model.defaultRenderGeometry, renderMetadata)
             if (cape != null) {
-                renderCape(stack, vertexConsumerProvider, renderMetadata, selectedCape, cape, capeEmissive)
+                renderCape(stack, queue, vertexConsumerProvider, renderMetadata, selectedCape, cape, capeEmissive)
             }
 
-            wearablesManager.render(stack, vertexConsumerProvider, pose, skin)
+            wearablesManager.render(stack, queue, pose, skin)
             wearablesManager.renderForHoverOutline(stack, vertexConsumerProvider, pose, skin)
 
             wearablesManager.updateLocators(pose)
@@ -1008,7 +1058,9 @@ open class UI3DPlayer(
             }
             try {
                 val player = player as? AbstractClientPlayer ?: return null
-                //#if MC>=12002
+                //#if MC>=12109
+                //$$ val textureLocation = player.skin.cape()?.texturePath() ?: return null
+                //#elseif MC>=12002
                 //$$ val textureLocation = player.getSkinTextures().capeTexture ?: return null
                 //#else
                 val textureLocation = player.locationCape ?: return null
@@ -1023,6 +1075,7 @@ open class UI3DPlayer(
 
         private fun renderCape(
             stack: CMatrixStack,
+            queue: RenderBackend.CommandQueue,
             vertexConsumerProvider: RenderBackend.VertexConsumerProvider,
             renderMetadata: RenderMetadata,
             cape: Cosmetic?, // may be null in case of third-party capes
@@ -1032,9 +1085,9 @@ open class UI3DPlayer(
             val model = CapeModel.get(texture.height)
             model.texture = texture
             model.emissiveTexture = emissiveTexture
-            model.render(stack, vertexConsumerProvider, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
-            renderCapeForHoverOutline(vertexConsumerProvider, cape) {
-                model.render(stack, vertexConsumerProvider, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
+            model.render(stack, queue, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
+            renderCapeForHoverOutline(vertexConsumerProvider, cape) { queue ->
+                model.render(stack, queue, model.defaultRenderGeometry, BakedAnimations.EMPTY, renderMetadata, entity.lifeTime)
             }
             model.texture = null
             model.emissiveTexture = null

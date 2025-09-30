@@ -188,6 +188,9 @@ public class
         draggedEntryState = pendingDraggedEntryState;
         pendingDraggedEntryState = null;
         draggedEntryState.setStartTime();
+        //#if MC>=12109
+        //$$ indicatorEntry.setHeight(draggedEntryState.entry.getHeight());
+        //#endif
         draggedEntryState.originalContainer.set(draggedEntryState.originalIndex, indicatorEntry);
         runToUnselectEntries.run();
         runForDrawChange.run();
@@ -324,7 +327,23 @@ public class
         //#if MC>=12106
         //$$ GuiRenderState guiRenderState = new GuiRenderState();
         //$$ DrawContext context = new DrawContext(MinecraftClient.getInstance(), guiRenderState);
+        //#if MC>=12109
+        //$$ int orgX = draggedEntryState.entry.getX();
+        //$$ int orgY = draggedEntryState.entry.getY();
+        //$$ int orgWidth = draggedEntryState.entry.getWidth();
+        //$$ int orgHeight = draggedEntryState.entry.getHeight();
+        //$$ draggedEntryState.entry.setX(x - 2);
+        //$$ draggedEntryState.entry.setY(y - 2);
+        //$$ draggedEntryState.entry.setWidth(width + 4);
+        //$$ draggedEntryState.entry.setHeight(height + 4);
+        //$$ draggedEntryState.entry.render(context, event.getMouseX(), event.getMouseY(), true, event.getPartialTicks());
+        //$$ draggedEntryState.entry.setX(orgX);
+        //$$ draggedEntryState.entry.setY(orgY);
+        //$$ draggedEntryState.entry.setWidth(orgWidth);
+        //$$ draggedEntryState.entry.setHeight(orgHeight);
+        //#else
         //$$ draggedEntryState.entry.render(context, 0, y, x, width, height, event.getMouseX(), event.getMouseY(), true, event.getPartialTicks());
+        //#endif
         //$$ renderGuiRenderStateToRenderTarget(matrixStack, guiRenderState);
         //#elseif MC>=12000
         //$$ DrawContext context = event.getDrawContext().getMc();
@@ -465,6 +484,7 @@ public class
         } else {
             listThatWontReorder.add(0, indicatorEntry);
         }
+        runForDrawChange.run();
     }
 
 
@@ -550,7 +570,9 @@ public class
     //#endif
     //$$        )) {
     //$$
-    //#if MC>=12000
+    //#if MC>=12109
+    //$$        @Override public void render(DrawContext context, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
+    //#elseif MC>=12000
     //$$        @Override public void render(final DrawContext context, final int index, final int y, final int x, final int entryWidth, final int entryHeight, final int mouseX, final int mouseY, final boolean hovered, final float tickDelta) {
     //#else
     //$$        @Override public void render(MatrixStack arg, int m, int n, int o, int p, int q, int r, int t, boolean bl, float f) {
@@ -575,13 +597,22 @@ public class
 
     //#if MC>=11600
     //$$ public static ResourcePackList.ResourcePackEntry initResourcePackIndicator(final PackScreen screen) {
-    //$$    return new ResourcePackList.ResourcePackEntry(Minecraft.getInstance(), ((PackScreenAccessor)screen).essential$getAvailablePackList(),
+    //$$    ResourcePackList list = ((PackScreenAccessor)screen).essential$getAvailablePackList();
+    //#if MC>=12109
+    //$$    return list.new ResourcePackEntry(
+    //#else
+    //$$    return new ResourcePackList.ResourcePackEntry(
+    //#endif
+    //$$            Minecraft.getInstance(),
+    //$$            list,
     //#if MC<11904
     //$$            screen,
     //#endif
     //$$            new FakeIPack()){
     //$$
-    //#if MC>=12000
+    //#if MC>=12109
+    //$$        @Override public void render(DrawContext context, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
+    //#elseif MC>=12000
     //$$        @Override public void render(final DrawContext context, final int index, final int y, final int x, final int entryWidth, final int entryHeight, final int mouseX, final int mouseY, final boolean hovered, final float tickDelta) {
     //#else
     //$$        @Override public void render(MatrixStack arg, int m, int n, int o, int p, int q, int r, int t, boolean bl, float f) {

@@ -21,6 +21,8 @@ public interface EntryListWidgetAccessor {
     @Accessor("itemHeight")
     int essential$getItemHeight();
 
+    //#if MC<12109
     @Accessor("headerHeight")
     int essential$getHeaderHeight();
+    //#endif
 }

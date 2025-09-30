@@ -34,6 +34,12 @@ import gg.essential.util.UDrawContext
 import me.kbrewster.eventbus.Subscribe
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiScreen
+import org.slf4j.LoggerFactory
+
+//#if MC>=12109
+//$$ import net.minecraft.client.gui.Click
+//$$ import net.minecraft.client.input.MouseInput
+//#endif
 
 //#if MC>=12106
 //$$ import gg.essential.util.AdvancedDrawContext
@@ -49,6 +55,7 @@ import java.lang.invoke.MethodHandles
 //#endif
 
 object OverlayManagerImpl : OverlayManager {
+    private val LOGGER = LoggerFactory.getLogger(OverlayManagerImpl::class.java)
     private val mc = Minecraft.getMinecraft()
     private val layers = mutableListOf<LayerImpl>()
     private val layersAndSpecials = mutableListOf<LayerOrSpecial>(
@@ -67,6 +74,7 @@ object OverlayManagerImpl : OverlayManager {
     }
 
     private fun addLayer(layer: LayerImpl) {
+
         layers.add(layers.indexOfLast { it.priority <= layer.priority } + 1, layer)
         layersAndSpecials.add(layersAndSpecials.indexOfLast { it.priority <= layer.priority } + 1, LayerOrSpecial.Layer(layer))
 
@@ -74,6 +82,7 @@ object OverlayManagerImpl : OverlayManager {
     }
 
     override fun removeLayer(layer: Layer) {
+
         layers.remove(layer)
         layersAndSpecials.remove(LayerOrSpecial.Layer(layer))
         clickedLayers.removeIf { (it.first as? LayerOrSpecial.Layer)?.layer == layer }
@@ -240,7 +249,9 @@ object OverlayManagerImpl : OverlayManager {
             } else if (layer == VanillaScreenLayer) {
                 Events.ignoreMouseReleaseEvent = true
                 try {
-                    //#if MC>=11600
+                    //#if MC>=12109
+                    //$$ mc.currentScreen?.mouseReleased(Click(UMouse.Scaled.x, UMouse.Scaled.y, MouseInput(button, 0)))
+                    //#elseif MC>=11600
                     //$$ mc.currentScreen?.mouseReleased(UMouse.Scaled.x, UMouse.Scaled.y, button)
                     //#else
                     (mc.currentScreen as GuiScreenAccessor?)?.invokeMouseReleased(UMouse.Scaled.x.toInt(), UMouse.Scaled.y.toInt(), button)

@@ -51,11 +51,19 @@ public class EssentialKeybinding implements GuiEssentialPlatform.Keybind {
     private boolean pressed = false;
     private boolean requiresEssentialFull = false;
 
+    //#if MC>=12109
+    //$$ public EssentialKeybinding(String keyId, KeyBinding.Category category, int keyCode) {
+    //#else
     public EssentialKeybinding(String keyId, String category, int keyCode) {
+    //#endif
         this(keyId, category, keyCode, false);
     }
 
+    //#if MC>=12109
+    //$$ public EssentialKeybinding(String keyId, KeyBinding.Category category, int keyCode, boolean alwaysTick) {
+    //#else
     public EssentialKeybinding(String keyId, String category, int keyCode, boolean alwaysTick) {
+    //#endif
         this.keyId = keyId;
         this.keyBinding = new KeyBinding(LEGACY_IDS.getOrDefault(keyId, "keybind.name." + keyId), keyCode, category);
         this.alwaysTick = alwaysTick;
@@ -164,7 +172,11 @@ public class EssentialKeybinding implements GuiEssentialPlatform.Keybind {
         //#else
         //$$ keyBinding.setBoundKey(
         //#endif
+        //#if MC>=12109
+        //$$     InputUtil.fromKeyCode(new net.minecraft.client.input.KeyInput(keyCode, -1, 0)));
+        //#else
         //$$     InputMappings.getInputByCode(keyCode, -1));
+        //#endif
         //#endif
     }
 

@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import org.slf4j.LoggerFactory
 
 abstract class Modal(val modalManager: ModalManager) : UIContainer() {
 
@@ -88,6 +89,7 @@ abstract class Modal(val modalManager: ModalManager) : UIContainer() {
     }
 
     open fun onOpen() {
+
         coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Client)
 
         windowListListener = Window.of(this).keyTypedListeners.removeFirstOrNull()
@@ -95,6 +97,7 @@ abstract class Modal(val modalManager: ModalManager) : UIContainer() {
     }
 
     open fun onClose() {
+
         val windowListListener = windowListListener
         val window = Window.of(this)
         if (windowListListener != null) {
@@ -106,5 +109,9 @@ abstract class Modal(val modalManager: ModalManager) : UIContainer() {
 
     open fun handleEscapeKeyPress() {
         close()
+    }
+
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger(Modal::class.java)
     }
 }

@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -48,8 +47,6 @@ import static gg.essential.gui.skin.SkinUtilsKt.showSkinReceivedToast;
 import static gg.essential.util.ExtensionsKt.getExecutor;
 
 public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerChatChannelMessagePacket> {
-
-    public static final AtomicInteger prefetching = new AtomicInteger();
 
     @Override
     protected void onHandle(@NotNull final ConnectionManager connectionManager, @NotNull final ServerChatChannelMessagePacket packet) {
@@ -62,11 +59,12 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
                 return;
             }
 
+            boolean isFromHistoryRequest = packet.getPacketUniqueId() != null;
             final Channel channel = channelOptional.get();
 
             // Upsert the message and cancel the toast if the message already existed
             // and therefore this is an edit
-            if (chatManager.upsertMessageToChannel(channel.getId(), message)) {
+            if (chatManager.upsertMessageToChannel(channel.getId(), message, isFromHistoryRequest)) {
                 continue;
             }
 
@@ -76,10 +74,21 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
             // - from muted channels
             // - if we are prefetching
             // - if essential is not enabled
-            if (message.isRead() ||
+            final boolean isRead;
+            if (connectionManager.getUsingProtocol() >= 9) {
+                Long lastReadMessageId = channel.getLastReadMessageId();
+                if (lastReadMessageId == null) {
+                    isRead = false;
+                } else {
+                    isRead = channel.getLastReadMessageId() >= message.getId();
+                }
+            } else {
+                isRead = message.isRead();
+            }
+            if (isRead ||
                     message.getSender().equals(UUIDUtil.getClientUUID()) ||
                     channel.isMuted() ||
-                    prefetching.get() != 0 ||
+                    isFromHistoryRequest ||
                     !EssentialConfig.INSTANCE.getEssentialFull()
             ) continue;
 

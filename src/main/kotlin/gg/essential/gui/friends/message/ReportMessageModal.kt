@@ -98,8 +98,10 @@ class ReportMessageModal(modalManager: ModalManager, val message: Message, usern
 
         onPrimaryAction {
             Essential.getInstance().connectionManager.chatManager.fileReport(
+                modalManager,
                 message.channelId,
                 message.id,
+                message.sender,
                 reasonMap.entries.first {
                     it.value == reportReason.get()
                 }.key

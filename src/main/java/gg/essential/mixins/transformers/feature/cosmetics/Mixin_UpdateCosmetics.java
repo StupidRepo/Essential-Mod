@@ -47,7 +47,9 @@ public abstract class Mixin_UpdateCosmetics {
     @Shadow
     private WorldClient world;
 
-    //#if MC>=12102
+    //#if MC>=12109
+    //$$ @Inject(method = "render", at = @At(value = "CONSTANT", args = "stringValue=entities"))
+    //#elseif MC>=12102
     //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "CONSTANT", args = "stringValue=entities"))
     //#elseif MC>=11400
     //$$ @Inject(method = "updateCameraAndRender", at = @At(value = "CONSTANT", args = "stringValue=entities"))
@@ -75,7 +77,9 @@ public abstract class Mixin_UpdateCosmetics {
         }
     }
 
-    //#if MC>=12102
+    //#if MC>=12109
+    //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/command/RenderDispatcher;render()V", shift = At.Shift.AFTER))
+    //#elseif MC>=12102
     //$$ @Inject(method = MAIN_PASS_LAMBDA, at = @At(value = "CONSTANT", args = "stringValue=blockentities"))
     //#elseif MC>=11400
     //$$ @Inject(method = "updateCameraAndRender", at = @At(value = "CONSTANT", args = "stringValue=blockentities"))

@@ -74,6 +74,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+//#if MC>=12109
+//$$ import net.minecraft.server.PlayerConfigEntry;
+//#endif
+
 //#if MC>11202
 //$$ import net.minecraft.world.World;
 //$$ import net.minecraft.world.storage.FolderName;
@@ -313,7 +317,11 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         this.difficulty = worldInfo.getDifficulty();
         this.difficultyLocked = worldInfo.isDifficultyLocked();
 
+        //#if MC>=12109
+        //$$ server.setUseAllowlist(true);
+        //#else
         server.getPlayerList().setWhiteListEnabled(true);
+        //#endif
 
         updateOppedPlayers(new HashSet<>(), false);
 
@@ -529,18 +537,28 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         getExecutor(server).execute(() -> {
             UserListWhitelist whitelist = server.getPlayerList().getWhitelistedPlayers();
             for (String userName : whitelist.getKeys()) {
-                //#if MC>=11701
+                //#if MC>=12109
+                //$$ GameProfile profile = server.getApiServices().nameToIdCache().findByName(userName).map(it -> new GameProfile(it.id(), it.name())).orElse(null);
+                //#elseif MC>=11701
                 //$$ GameProfile profile = server.getUserCache().findByName(userName).orElse(null);
                 //#else
                 GameProfile profile = server.getPlayerProfileCache().getGameProfileForUsername(userName);
                 //#endif
                 if (profile != null && !invited.contains(profile.getId())) {
+                    //#if MC>=12109
+                    //$$ whitelist.remove(new PlayerConfigEntry(profile));
+                    //#else
                     whitelist.removeEntry(profile);
+                    //#endif
                 }
             }
             for (UUID uuid : invited) {
                 String userName = UUIDUtil.getName(uuid).join();
+                //#if MC>=12109
+                //$$ PlayerConfigEntry profile = new PlayerConfigEntry(uuid, userName);
+                //#else
                 GameProfile profile = new GameProfile(uuid, userName);
+                //#endif
                 //noinspection ConstantConditions forge is stupid
                 if (whitelist.getEntry(profile) == null) {
                     whitelist.addEntry(new UserListWhitelistEntry(profile));
@@ -717,7 +735,12 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             final PlayerList playerList = integratedServer.getPlayerList();
             final UserListOps opList = playerList.getOppedPlayers();
 
-            List<GameProfile> allProfiles = Arrays.stream(opList.getKeys()).map(username -> integratedServer.getPlayerProfileCache().getGameProfileForUsername(username))
+            List<GameProfile> allProfiles = Arrays.stream(opList.getKeys())
+                //#if MC>=12109
+                //$$ .map(username -> integratedServer.getApiServices().nameToIdCache().findByName(username).map(it -> new GameProfile(it.id(), it.name())))
+                //#else
+                .map(username -> integratedServer.getPlayerProfileCache().getGameProfileForUsername(username))
+                //#endif
                     //#if MC>=11700
                     //$$ .filter(Optional::isPresent).map(Optional::get)
                     //#endif
@@ -726,14 +749,22 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             // Remove all players that are no longer op
             for (GameProfile profile : allProfiles) {
                 if (!immutableOppedPlayers.contains(profile.getId())) {
+                    //#if MC>=12109
+                    //$$ playerList.removeFromOperators(new PlayerConfigEntry(profile));
+                    //#else
                     playerList.removeOp(profile);
+                    //#endif
                 }
             }
 
             // Op all new players
             for (UUID oppedPlayer : immutableOppedPlayers) {
 
+                //#if MC>=12109
+                //$$ PlayerConfigEntry gameProfile = new PlayerConfigEntry(oppedPlayer, UUIDUtil.getName(oppedPlayer).join());
+                //#else
                 GameProfile gameProfile = new GameProfile(oppedPlayer, UUIDUtil.getName(oppedPlayer).join());
+                //#endif
 
                 if (opList.getEntry(gameProfile) == null) {
                     playerList.addOp(gameProfile);

@@ -95,11 +95,11 @@ public class MixinGuiScreen implements EssentialPostScreenDrawHook, EssentialGui
         UDrawContext drawContext = new UDrawContext(matrixStack);
     //#endif
         guiScreenHook.drawScreen(drawContext, mouseX, mouseY, partialTicks, true);
-        essential$afterDraw(matrixStack, mouseX, mouseY, partialTicks);
+        essential$afterDraw(drawContext, mouseX, mouseY, partialTicks);
     }
 
     @Override
-    public void essential$afterDraw(UMatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+    public void essential$afterDraw(UDrawContext drawContext, int mouseX, int mouseY, float partialTicks) {
     }
 
     @Inject(method = "onGuiClosed", at = @At("HEAD"))

@@ -21,16 +21,33 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC>=12109
+//$$ import net.minecraft.client.gui.Click;
+//#endif
+
 @Mixin(Mouse.class)
 public class Mixin_GuiMouseReleaseEvent {
+    //#if MC>=12109
+    //#if FORGE
+    //$$ private static final String MOUSE_RELEASED = "Lnet/minecraftforge/client/event/ForgeEventFactoryClient;onScreenMouseReleased(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/input/MouseButtonEvent;)Z";
+    //#else
+    //$$ private static final String MOUSE_RELEASED = "Lnet/minecraft/client/gui/screen/Screen;mouseReleased(Lnet/minecraft/client/gui/Click;)Z";
+    //#endif
+    //#else
     //#if FORGE
     //$$ private static final String MOUSE_RELEASED = "Lnet/minecraftforge/client/event/ForgeEventFactoryClient;onScreenMouseReleased(Lnet/minecraft/client/gui/screens/Screen;DDI)Z";
     //#else
     private static final String MOUSE_RELEASED = "Lnet/minecraft/client/gui/screen/Screen;mouseReleased(DDI)Z";
     //#endif
+    //#endif
 
     @Inject(method = "onMouseButton", at = @At(value = "INVOKE", target = MOUSE_RELEASED))
+    //#if MC>=12109
+    //$$ private void onMouseClicked(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local Click click) {
+    //$$     int button = click.button();
+    //#else
     private void onMouseClicked(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local(ordinal = 1, argsOnly = true) int button) {
+    //#endif
         Essential.EVENT_BUS.post(new GuiMouseReleaseEvent(screen, button));
     }
 }

@@ -436,13 +436,13 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
 
                         selector(cosmeticArmorSettingSelfState.bimap(swapFirstTwo, swapFirstTwo)) {
                             name = "Cosmetics & armor visibility on me"
-                            description = "Cosmetics and armor may conflict with each other on your player. This setting does not effect what other players see."
+                            description = "Cosmetics and armor may conflict with each other on your player. This setting does not affect what other players see."
                             options = listOf("Only cosmetics", "Only armor", "Cosmetics and armor")
                         }
 
                         selector(cosmeticArmorSettingOtherState.bimap(swapFirstTwo, swapFirstTwo)) {
                             name = "Cosmetics & armor visibility on others"
-                            description = "Cosmetics and armor may conflict with each other on other players. This setting does not effect what other players see."
+                            description = "Cosmetics and armor may conflict with each other on other players. This setting does not affect what other players see."
                             options = listOf("Only cosmetics", "Only armor", "Cosmetics and armor")
                         }
 

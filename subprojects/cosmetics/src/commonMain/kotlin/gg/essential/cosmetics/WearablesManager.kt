@@ -126,37 +126,29 @@ class WearablesManager(
 
     fun render(
         matrixStack: UMatrixStack,
-        vertexConsumerProvider: RenderBackend.VertexConsumerProvider,
+        queue: RenderBackend.CommandQueue,
         pose: PlayerPose,
         skin: RenderBackend.Texture,
         parts: Set<EnumPart> = EnumPart.values().toSet(),
     ) {
-        for ((_, model) in models) {
-            if (model.model.translucent && translucentTextureAtlas != null) {
-                continue // will do these later in a single final pass
-            }
-            render(matrixStack, vertexConsumerProvider, model, pose, skin, parts)
-        }
-
         val atlas = translucentTextureAtlas
-        if (atlas != null) {
-            vertexConsumerProvider.provide(atlas.atlasTexture, false) { vertexConsumer ->
-                val atlasVertexConsumerProvider = RenderBackend.VertexConsumerProvider { texture, emissive, block ->
-                    assert(!emissive)
-                    block(atlas.offsetVertexConsumer(texture, vertexConsumer))
-                }
-                for ((_, model) in models) {
-                    if (model.model.translucent) {
-                        render(matrixStack, atlasVertexConsumerProvider, model, pose, skin, parts)
+        for ((_, model) in models) {
+            val modelQueue = if (model.model.translucent && atlas != null) {
+                RenderBackend.CommandQueue { texture, translucent, emissive, render ->
+                    queue.submit(atlas.atlasTexture, translucent, emissive) { vertexConsumer ->
+                        render(atlas.offsetVertexConsumer(texture, vertexConsumer))
                     }
                 }
+            } else {
+                queue
             }
+            render(matrixStack, modelQueue, model, pose, skin, parts)
         }
     }
 
     fun render(
         matrixStack: UMatrixStack,
-        vertexConsumerProvider: RenderBackend.VertexConsumerProvider,
+        queue: RenderBackend.CommandQueue,
         model: ModelInstance,
         pose: PlayerPose,
         skin: RenderBackend.Texture,
@@ -173,7 +165,7 @@ class WearablesManager(
             state.getPositionAdjustment(cosmetic),
             parts - state.hiddenParts.getOrDefault(cosmetic.id, emptySet()),
         )
-        model.render(matrixStack, vertexConsumerProvider, state.renderGeometries.getValue(cosmetic.id), renderMetadata)
+        model.render(matrixStack, queue, state.renderGeometries.getValue(cosmetic.id), renderMetadata)
     }
 
     fun collectEvents(consumer: (ModelAnimationState.Event) -> Unit) {

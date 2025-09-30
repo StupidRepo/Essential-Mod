@@ -219,7 +219,7 @@ class BedrockModel(
      */
     fun render(
         matrixStack: UMatrixStack,
-        vertexConsumerProvider: RenderBackend.VertexConsumerProvider,
+        queue: RenderBackend.CommandQueue,
         geometry: RenderGeometry,
         bakedAnimations: BakedAnimations,
         metadata: RenderMetadata,
@@ -239,32 +239,32 @@ class BedrockModel(
             metadata.hiddenBones,
             metadata.parts,
         )
-        modelState.apply(bones)
 
-        matrixStack.push()
-        matrixStack.scale(1f / 16f)
+        val matrix = matrixStack.peek().deepCopy()
 
         fun render(vertexConsumer: UVertexConsumer) {
+            modelState.apply(bones)
+
+            val matrixStack = UMatrixStack(mutableListOf(matrix.deepCopy()))
+            matrixStack.scale(1f / 16f)
             bones.byPart.values.forEach { bone ->
                 bone.resetAnimationOffsets(false) // animations will have been baked into the pose already
                 bone.render(matrixStack, vertexConsumer, geometry, metadata.light, offset)
             }
+
+            modelState.reset(bones)
         }
 
-        vertexConsumerProvider.provide(textureLocation, false) { vertexConsumer ->
+        queue.submit(textureLocation, translucent, false) { vertexConsumer ->
             render(vertexConsumer)
         }
 
         val emissiveTexture = emissiveTexture
         if (emissiveTexture != null) {
-            vertexConsumerProvider.provide(emissiveTexture, true) { vertexConsumer ->
+            queue.submit(emissiveTexture, translucent, true) { vertexConsumer ->
                 render(vertexConsumer)
             }
         }
-
-        matrixStack.pop()
-
-        modelState.reset(bones)
     }
 
     class Offset(

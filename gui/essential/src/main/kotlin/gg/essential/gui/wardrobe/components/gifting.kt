@@ -28,7 +28,6 @@ import gg.essential.gui.common.modal.EssentialModal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
-import gg.essential.gui.elementa.state.v2.add
 import gg.essential.gui.elementa.state.v2.addAll
 import gg.essential.gui.elementa.state.v2.collections.MutableTrackedList
 import gg.essential.gui.elementa.state.v2.combinators.map
@@ -37,21 +36,19 @@ import gg.essential.gui.elementa.state.v2.isNotEmpty
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableListStateOf
 import gg.essential.gui.elementa.state.v2.mutableStateOf
-import gg.essential.gui.elementa.state.v2.remove
 import gg.essential.gui.layoutdsl.*
-import gg.essential.gui.modals.select.SelectModal
 import gg.essential.gui.modals.select.selectModal
 import gg.essential.gui.modals.select.users
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.content.CosmeticPreviewToastComponent
 import gg.essential.gui.overlay.ModalFlow
-import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.overlay.launchModalFlow
 import gg.essential.gui.wardrobe.Item
 import gg.essential.gui.wardrobe.ItemId
 import gg.essential.gui.wardrobe.WardrobeState
 import gg.essential.gui.wardrobe.giftCosmeticOrEmote
 import gg.essential.gui.wardrobe.modals.CoinsPurchaseModal
+import gg.essential.gui.wardrobe.modals.PurchaseConfirmationModal
 import gg.essential.gui.wardrobe.modals.StoreDisabledModal
 import gg.essential.network.connectionmanager.coins.CoinsManager
 import gg.essential.network.connectionmanager.features.Feature
@@ -59,16 +56,18 @@ import gg.essential.network.cosmetics.Cosmetic
 import gg.essential.universal.ChatColor
 import gg.essential.universal.USound
 import gg.essential.util.CachedAvatarImage
-import gg.essential.util.Client
 import gg.essential.util.EssentialSounds
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.UuidNameLookup
 import gg.essential.vigilance.utils.onLeftClick
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asExecutor
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.future.asDeferred
+import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
 import org.slf4j.LoggerFactory
 import java.util.UUID
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 private val LOGGER = LoggerFactory.getLogger("Essential Logger")
 
@@ -108,12 +107,24 @@ fun openGiftModal(item: Item.CosmeticOrEmote, state: WardrobeState) {
         loadingFriends.set(false)
     }
 
-    platform.pushModal { manager ->
-        createSelectFriendsToGiftModal(manager, item, state, allFriends, validFriends, loadingFriends).apply {
-            onPrimaryAction { selectedUsers ->
-                giftItemToFriends(item, selectedUsers, state, this)
+    launchModalFlow(platform.createModalManager()) {
+        val selectedUsers = selectFriendsToGiftModal(item, state, allFriends, validFriends, loadingFriends)
+            ?: return@launchModalFlow
+        val multiplier = selectedUsers.size
+        val priceInfo = item.getPricingInfo(state)
+        awaitModal { continuation ->
+            PurchaseConfirmationModal(
+                modalManager,
+                List(multiplier) { item to priceInfo.map { it?.baseCost ?: 0 } },
+                priceInfo.map { (it?.realCost ?: 0) * multiplier },
+                {}
+            ).apply {
+                onPrimaryAction {
+                    this.replaceWith(continuation.resumeImmediately(Unit))
+                }
             }
         }
+        giftItemToFriends(item, selectedUsers, state)
     }
 }
 
@@ -125,22 +136,31 @@ private fun showErrorToast(message: String) {
     Notifications.push("Gifting failed", message) { type = NotificationType.ERROR }
 }
 
-private fun giftItemToFriends(item: Item.CosmeticOrEmote, uuids: Set<UUID>, state: WardrobeState, modal: EssentialModal) {
-    val cost = (item.getCost(state).get() ?: 0) * uuids.size
-    if (cost > state.coins.get()) {
-        modal.replaceWith(CoinsPurchaseModal.create(modal.modalManager, state, cost))
+private suspend fun ModalFlow.giftItemToFriends(item: Item.CosmeticOrEmote, uuids: Set<UUID>, state: WardrobeState) {
+    val cost = (item.getCost(state).getUntracked() ?: 0) * uuids.size
+    if (cost > state.coins.getUntracked()) {
+        awaitModal<Unit> {
+            CoinsPurchaseModal.create(modalManager, state, cost)
+        }
         return
     }
 
-    for (uuid in uuids) {
-        UuidNameLookup.getName(uuid).whenCompleteAsync({ username, exception ->
-            if (exception != null) {
-                showErrorToast("Something went wrong, please try again.")
-                LOGGER.error("Failed to lookup username for $uuid", exception)
-                return@whenCompleteAsync
-            }
-
-            state.giftCosmeticOrEmote(item, uuid) { success, errorCode ->
+    coroutineScope {
+        uuids.forEach { uuid ->
+            launch {
+                val deferredUsername = UuidNameLookup.getName(uuid).asDeferred()
+                val username = try {
+                    deferredUsername.await()
+                } catch (e: Throwable) {
+                    showErrorToast("Something went wrong, please try again.")
+                    LOGGER.error("Failed to lookup username for $uuid", e)
+                    return@launch
+                }
+                val (success, errorCode) = suspendCoroutine { continuation ->
+                    state.giftCosmeticOrEmote(item, uuid) { success, errorCode ->
+                        continuation.resume(success to errorCode)
+                    }
+                }
                 if (!success) {
                     val errorMessage = when (errorCode) {
                         "TARGET_MUST_BE_FRIEND" -> "$username is not your friend!"
@@ -149,14 +169,13 @@ private fun giftItemToFriends(item: Item.CosmeticOrEmote, uuids: Set<UUID>, stat
                         else -> "Something went wrong gifting to $username, please try again."
                     }
                     showErrorToast(errorMessage)
-                    return@giftCosmeticOrEmote
+                    return@launch
                 }
-                modal.replaceWith(null)
                 EssentialSounds.playPurchaseConfirmationSound()
                 showGiftSentToast(item.cosmetic, username)
                 sendGiftEmbed(uuid, item.cosmetic.id)
             }
-        }, Dispatchers.Client.asExecutor())
+        }
     }
 }
 
@@ -183,14 +202,13 @@ fun showGiftReceivedToast(cosmetic: Cosmetic, uuid: UUID, username: String) {
     }
 }
 
-fun createSelectFriendsToGiftModal(
-    manager: ModalManager,
+suspend fun ModalFlow.selectFriendsToGiftModal(
     item: Item.CosmeticOrEmote,
     state: WardrobeState,
     allFriends: ObservableList<UUID>,
     validFriends: State<MutableTrackedList<UUID>>,
     loadingFriends: State<Boolean>,
-): SelectModal<UUID> {
+): Set<UUID>? {
     fun LayoutScope.addRemoveCheckbox(selected: MutableState<Boolean>) {
         val hoverColor = selected.map { if (it) EssentialPalette.CHECKBOX_SELECTED_BACKGROUND_HOVER else EssentialPalette.CHECKBOX_BACKGROUND_HOVER }
         val colorModifier = Modifier.color(EssentialPalette.CHECKBOX_BACKGROUND)
@@ -204,9 +222,9 @@ fun createSelectFriendsToGiftModal(
         }
     }
 
-    val selectedFriends = mutableListStateOf<UUID>()
-
-    return selectModal(manager, "Select friends to gift\nthem ${ChatColor.WHITE + item.name + ChatColor.RESET}.") {
+    return selectModal(
+        "Select friends to gift\nthem ${ChatColor.WHITE + item.name + ChatColor.RESET}."
+    ) {
         modalSettings {
             primaryButtonText = "Purchase"
             titleTextColor = EssentialPalette.TEXT
@@ -236,9 +254,17 @@ fun createSelectFriendsToGiftModal(
             }
         }
 
+        val selectedCount = mutableStateOf(0)
+        modalSettings {
+            selectedCount.set(selectedIdentifiers.size)
+            onSelection { _, _ ->
+                selectedCount.set(selectedIdentifiers.size)
+            }
+        }
+
         extraContent = {
-            val quantityText = selectedFriends.map { "${it.size}x ${item.name}" }
-            val costText = memo { CoinsManager.COIN_FORMAT.format((item.getCost(state)() ?: 0) * selectedFriends().size) }
+            val quantityText = selectedCount.map { "${it}x ${item.name}" }
+            val costText = memo { CoinsManager.COIN_FORMAT.format((item.getCost(state)() ?: 0) * selectedCount()) }
             val shadowModifier = Modifier.shadow(EssentialPalette.BLACK)
 
             if_(validFriends.isNotEmpty()) {
@@ -254,12 +280,6 @@ fun createSelectFriendsToGiftModal(
                     spacer(height = 1f)
                 }
             }
-        }
-    }.onSelection {uuid, selected ->
-        if (selected) {
-            selectedFriends.add(uuid)
-        } else {
-            selectedFriends.remove(uuid)
         }
     }
 }

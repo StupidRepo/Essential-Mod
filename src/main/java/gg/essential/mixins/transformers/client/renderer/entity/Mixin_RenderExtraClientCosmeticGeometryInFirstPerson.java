@@ -34,6 +34,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC>=12109
+//$$ import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+//$$ import net.minecraft.client.render.state.WorldRenderState;
+//$$ import org.spongepowered.asm.mixin.Unique;
+//#endif
+
 //#if MC>=12102
 //$$ import net.minecraft.client.render.RenderTickCounter;
 //#endif
@@ -67,7 +73,9 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
     //$$ @Shadow @Final private EntityRendererManager renderManager;
     //#endif
 
-    //#if MC>=12102
+    //#if MC>=12109
+    //$$ private static final String RENDER_METHOD = "pushEntityRenders";
+    //#elseif MC>=12102
     //$$ private static final String RENDER_METHOD = "renderEntities";
     //#elseif MC>=11600
     //$$ private static final String RENDER_METHOD = "updateCameraAndRender";
@@ -85,15 +93,22 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/BlockPos$PooledMutableBlockPos;release()V"))
             //#endif
     private void renderExtraClientCosmeticGeometry(final CallbackInfo ci,
-                        //#if MC>=12102
+                        //#if MC>=12109
+                        //$$ // see capturePartialTicks
+                        //#elseif MC>=12102
                         //$$ @Local(argsOnly = true) RenderTickCounter tickCounter,
                         //#else
                         @Local(ordinal = 0) float partialTicks, // not argsOnly in 1.21
                         //#endif
 
                         //#if MC>=11600
+                        //#if MC>=12109
+                        //$$ @Local(argsOnly = true) WorldRenderState worldRenderState,
+                        //$$ @Local(argsOnly = true) OrderedRenderCommandQueue queue,
+                        //#else
                         //$$ @Local(argsOnly = true) ActiveRenderInfo activeRenderInfo,
                         //$$ @Local IRenderTypeBuffer.Impl irendertypebuffer$impl,
+                        //#endif
                         //$$ @Local MatrixStack matrixstackIn // not argsOnly in 1.20.6+
                         //#else
                         @Local(ordinal = 0) Entity viewEntity,
@@ -106,7 +121,10 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
         if (MinecraftForgeClient.getRenderPass() != 0) return; // only render in the first pass
         //#endif
 
-        //#if MC>=11600
+        //#if MC>=12109
+        //$$ // FIXME there might be a better place to do this now
+        //$$ Entity viewEntity = MinecraftClient.getInstance().gameRenderer.getCamera().getFocusedEntity();
+        //#elseif MC>=11600
         //$$ Entity viewEntity = activeRenderInfo.getRenderViewEntity();
         //#endif
 
@@ -127,7 +145,11 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
 
         // get camera position
         //#if MC>=11600
+        //#if MC>=12109
+        //$$ net.minecraft.util.math.Vec3d cameraPos = worldRenderState.cameraRenderState.pos;
+        //#else
         //$$ net.minecraft.util.math.vector.Vector3d cameraPos = activeRenderInfo.getProjectedView();
+        //#endif
         //$$ double renderOffsetX = cameraPos.x;
         //$$ double renderOffsetY = cameraPos.y;
         //$$ double renderOffsetZ = cameraPos.z;
@@ -164,39 +186,53 @@ public abstract class Mixin_RenderExtraClientCosmeticGeometryInFirstPerson {
         // 1.5 from the 1.501 in RenderLivingBase.prepareScale (the .001 is already taken care of by PlayerMolangQuery)
         matrixStack.translate(0, -1.5f, 0);
 
+        //#if MC>=11600
+        //$$ int light = this.renderManager.getPackedLight(viewEntity,
+            //#if MC>=12102 && MC<12109
+            //$$ tickCounter.getTickDelta(true)
+            //#else
+            //$$ partialTicks
+            //#endif
+        //$$ );
+        //#endif
         //#if MC==10809
         //$$ setBrightness(viewEntity, partialTicks);
         //#endif
 
         EssentialModelRenderer modelRenderer = ((PlayerEntityRendererExt) renderer).essential$getEssentialModelRenderer();
         CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayer) viewEntity);
+        //#if MC>=12109
+        //$$ RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue, light);
+        //#else
         RenderBackend.VertexConsumerProvider vertexConsumerProvider =
                 new MinecraftRenderBackend.VertexConsumerProvider(
                         //#if MC>=11600
                         //$$ irendertypebuffer$impl,
-                        //$$ this.renderManager.getPackedLight(viewEntity,
-                        //#if MC>=12102
-                        //$$ tickCounter.getTickDelta(true)
-                        //#else
-                        //$$ partialTicks
-                        //#endif
-                        //$$ )
+                        //$$ light
                         //#endif
                 );
+        //#endif
 
         // render only parts connected to ROOT and no other EnumParts
         EnumSet<EnumPart> parts = EnumSet.of(EnumPart.ROOT);
 
         //#if MC>=11600
-        //$$ modelRenderer.render(matrixStack, vertexConsumerProvider, cState, parts, false);
+        //$$ modelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, parts, false);
         //#else
         matrixStack.runWithGlobalState(() -> {
-            modelRenderer.render(new UMatrixStack(), vertexConsumerProvider, cState, parts, false);
+            modelRenderer.render(new UMatrixStack(), vertexConsumerProvider, null, cState, parts, false);
         });
         //#endif
 
         matrixStack.pop();
     }
+
+    //#if MC>=12109
+    //$$ @Unique private float partialTicks;
+    //$$ private void capturePartialTicks(CallbackInfo ci, @Local(argsOnly = true) RenderTickCounter tickCounter) {
+    //$$     partialTicks = tickCounter.getTickProgress(true);
+    //$$ }
+    //#endif
 
     //#if MC==10809
     //$$ @Unique

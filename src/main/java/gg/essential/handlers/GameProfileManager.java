@@ -11,6 +11,8 @@
  */
 package gg.essential.handlers;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Multimap;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
@@ -24,8 +26,6 @@ import net.minecraft.client.Minecraft;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.util.*;
-
-import static gg.essential.util.ExtensionsKt.copy;
 
 //#if MC>=12000
 //$$ import com.mojang.authlib.minecraft.InsecurePublicKeyException;
@@ -64,11 +64,6 @@ public class GameProfileManager implements SubscriptionManager.Listener {
         }
 
         return overwrites.apply(profile);
-    }
-
-    public static void updatePropertyMap(PropertyMap profileProperties, Property property) {
-        profileProperties.removeAll("textures");
-        profileProperties.put("textures", property);
     }
 
     public static class Overwrites {
@@ -122,9 +117,18 @@ public class GameProfileManager implements SubscriptionManager.Listener {
         }
 
         public GameProfile apply(GameProfile originalProfile) {
-            GameProfile updatedProfile = copy(originalProfile);
-            updatePropertyMap(updatedProfile.getProperties(), ManagedTexturesProperty.create(originalProfile, this));
+            Multimap<String, Property> properties = LinkedHashMultimap.create(originalProfile.getProperties());
+
+            properties.removeAll("textures");
+            properties.put("textures", ManagedTexturesProperty.create(originalProfile, this));
+
+            //#if MC>=12109
+            //$$ return new GameProfile(originalProfile.id(), originalProfile.name(), new PropertyMap(properties));
+            //#else
+            GameProfile updatedProfile = new GameProfile(originalProfile.getId(), originalProfile.getName());
+            updatedProfile.getProperties().putAll(properties);
             return updatedProfile;
+            //#endif
         }
 
         @Override
@@ -145,7 +149,9 @@ public class GameProfileManager implements SubscriptionManager.Listener {
 
         PropertyMap properties = null;
         try {
-            //#if MC>=12004
+            //#if MC>=12109
+            //$$ if (!mc.getApiServices().sessionService().getTextures(profile).equals(MinecraftProfileTextures.EMPTY)) {
+            //#elseif MC>=12004
             //$$ if (!mc.getSessionService().getTextures(profile).equals(MinecraftProfileTextures.EMPTY)) {
             //#else
             if (!mc.getSessionService().getTextures(profile, true).isEmpty()) {

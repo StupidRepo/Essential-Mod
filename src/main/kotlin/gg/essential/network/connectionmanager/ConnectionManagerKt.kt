@@ -73,6 +73,11 @@ abstract class ConnectionManagerKt : CMConnection {
     @JvmField
     protected var connection: Connection? = null
 
+    protected abstract val previouslyConnectedProtocol: Int
+
+    override val usingProtocol: Int
+        get() = connection?.usingProtocol ?: previouslyConnectedProtocol
+
     private val disconnectRequests = Channel<CloseReason>(1, BufferOverflow.DROP_LATEST)
 
     protected abstract fun completeConnection(connection: Connection)
@@ -112,7 +117,8 @@ abstract class ConnectionManagerKt : CMConnection {
         val connectBackoff = ExponentialBackoff(2.seconds, 1.minutes, 2.0)
         val unexpectedCloseBackoff = ExponentialBackoff(10.seconds, 2.minutes, 2.0)
 
-        while (true) {
+        var exit = false
+        while (!exit) {
             updateStatus(null)
 
             if (!OnboardingData.hasAcceptedTos()) {

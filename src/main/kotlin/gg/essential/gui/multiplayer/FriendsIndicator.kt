@@ -82,7 +82,12 @@ class FriendsIndicator(val server: ServerData) {
 
         // Figure out the space available for head icons
         val serverNameEndPos = x + 32 + 2 + UMinecraft.getFontRenderer().getStringWidth(server.serverName) + 16
-        val playerCountStartPos = x + listWidth - 15 - 2 - populationInfoText - (HEAD_PADDING * 2)
+        //#if MC>=12100
+        //$$ val populationInfoOffset = 5
+        //#else
+        val populationInfoOffset = 2
+        //#endif
+        val playerCountStartPos = x + listWidth - 15 - populationInfoOffset - populationInfoText - (HEAD_PADDING * 2)
         val spaceAvailable = playerCountStartPos - serverNameEndPos
 
         // Figure out how many heads can fit in the space available and how many to display if we need to truncate them

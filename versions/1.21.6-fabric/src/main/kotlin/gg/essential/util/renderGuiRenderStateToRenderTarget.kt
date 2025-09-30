@@ -53,6 +53,7 @@ fun renderGuiRenderStateToRenderTarget(matrixStack: UMatrixStack, guiRenderState
  * doesn't respect [RenderSystem.outputColorTextureOverride].
  */
 fun renderGuiRenderStateToTexture(guiRenderState: GuiRenderState): GpuTexture {
+    val mc = MinecraftClient.getInstance()
     val mcColor = platform.mcFrameBufferColorTexture
     val mcDepth = platform.mcFrameBufferDepthTexture!!
 
@@ -81,7 +82,11 @@ fun renderGuiRenderStateToTexture(guiRenderState: GuiRenderState): GpuTexture {
     val fogRenderer = FogRenderer()
     val guiRenderer = GuiRenderer(
         guiRenderState,
-        MinecraftClient.getInstance().bufferBuilders.entityVertexConsumers,
+        mc.bufferBuilders.entityVertexConsumers,
+        //#if MC>=12109
+        //$$ mc.gameRenderer.entityRenderCommandQueue,
+        //$$ mc.gameRenderer.entityRenderDispatcher,
+        //#endif
         emptyList(),
     )
     guiRenderer.render(fogRenderer.getFogBuffer(FogRenderer.FogType.NONE))

@@ -32,6 +32,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+//#if MC>=12109
+//$$ import net.minecraft.client.gui.Click;
+//#endif
+
 //#if MC>=11600
 //$$ import com.llamalad7.mixinextras.sugar.ref.LocalDoubleRef;
 //$$ import com.llamalad7.mixinextras.sugar.Local;
@@ -53,7 +57,12 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
 
     @Shadow @Final private GuiMultiplayer owner;
 
-    @Inject(method = {MOUSE_CLICKED}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiMultiplayer;connectToSelected()V"
+    @Inject(method = MOUSE_CLICKED, at = @At(value = "INVOKE"
+            //#if MC>=12109
+            //$$ , target = "Lnet/minecraft/client/gui/screen/multiplayer/MultiplayerServerListWidget$ServerEntry;connect()V"
+            //#else
+            , target = "Lnet/minecraft/client/gui/GuiMultiplayer;connectToSelected()V"
+            //#endif
             , shift = At.Shift.AFTER))
     private void playSoundAfterConnect(final CallbackInfoReturnable<Boolean> cir, @Share("serverConnection") final LocalBooleanRef serverConnection) {
         // playing this sound after will add a slight delay to the sound due to connection logic
@@ -90,7 +99,11 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
 
     //#if MC>=11600
     //$$ // these are used to capture the relative mouse coordinates local variables, which are not held up to the TAIL inject below
+    //#if MC>=12109
+    //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 0)
+    //#else
     //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 2)
+    //#endif
     //$$ private double captureRelativeMouseCoordinatesX(final double value, @Share("relativeX") LocalDoubleRef relativeXSet) {
     //$$     if (EssentialConfig.INSTANCE.getEssentialEnabled()) {
     //$$         // do nothing, just to capture the relative mouse coordinates
@@ -99,7 +112,11 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
     //$$     return value;
     //$$ }
     //$$
+    //#if MC>=12109
+    //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 1)
+    //#else
     //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 3)
+    //#endif
     //$$ private double captureRelativeMouseCoordinatesY(final double value, @Share("relativeY") LocalDoubleRef relativeYSet) {
     //$$     if (EssentialConfig.INSTANCE.getEssentialEnabled()) {
     //$$         // do nothing, just to capture the relative mouse coordinates
@@ -111,7 +128,9 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
 
     // mixin targets the mousePressed method after vanilla buttons have been checked and would have returned from the method
     @Inject(method = {MOUSE_CLICKED},
-            //#if MC>=11600
+            //#if MC>=12109
+            //$$ at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/multiplayer/MultiplayerServerListWidget$Entry;mouseClicked(Lnet/minecraft/client/gui/Click;Z)Z"
+            //#elseif MC>=11600
             //$$ at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Util;milliTime()J", ordinal = 1
             //#else
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;getSystemTime()J", ordinal = 1
@@ -119,7 +138,12 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
             ))
     private void grabHoverEntry(
             //#if MC>=11600
-            //$$ double mouseX, double mouseY, int button, final CallbackInfoReturnable<Boolean> cir,
+            //#if MC>=12109
+            //$$ Click click, boolean doubled,
+            //#else
+            //$$ double mouseX, double mouseY, int button,
+            //#endif
+            //$$ final CallbackInfoReturnable<Boolean> cir,
             //$$ @Share("serverConnection") final LocalBooleanRef serverConnection, @Share("relativeX") LocalDoubleRef relativeXGet, @Share("relativeY") LocalDoubleRef relativeYGet
             //#else
             final int slotIndex, final int mouseX, final int mouseY, final int mouseEvent, final int relativeX, final int relativeY, final CallbackInfoReturnable<Boolean> cir,
@@ -149,6 +173,11 @@ public abstract class Mixin_DragDropUI_ServerListEntry {
 
             // bail if the entry is not in the list, possibly due to a mod
             if (!container.contains(selectedEntry)) return;
+
+            //#if MC>=12109
+            //$$ double mouseX = click.x();
+            //$$ double mouseY = click.y();
+            //#endif
 
             //#if MC>=11600
             //$$ int slotIndex = container.indexOf(selectedEntry);

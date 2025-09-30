@@ -202,8 +202,13 @@ class SocialMenu @JvmOverloads constructor(
     ) {
         if (socialStateManager.messengerStates.getUnreadChannelState(channelId).getUntracked()) {
             options.add(ContextOptionMenu.Option("Mark as Read", image = EssentialPalette.MARK_UNREAD_10X7) {
-                socialStateManager.messengerStates.getMessageListState(channelId).getUntracked().forEach {
-                    socialStateManager.messengerStates.setUnreadState(it.getInfraInstance(), false)
+                if (connectionManager.usingProtocol >= 9) {
+                    val latestMessage = socialStateManager.messengerStates.getLatestMessage(channelId).getUntracked() ?: return@Option
+                    socialStateManager.messengerStates.setLastReadMessage(latestMessage)
+                } else {
+                    socialStateManager.messengerStates.getMessageListState(channelId).getUntracked().forEach {
+                        socialStateManager.messengerStates.setUnreadState(it.getInfraInstance(), false)
+                    }
                 }
             })
         }
@@ -309,15 +314,16 @@ class SocialMenu @JvmOverloads constructor(
         }
 
         val blocked = isBlocked(user)
+        val friend = isFriend(user)
 
         if (!blocked) {
             options.add(ContextOptionMenu.Option(
-                if (isFriend(user)) {
+                if (friend) {
                     "Remove Friend"
                 } else {
                     "Add Friend"
                 },
-                image = if (isFriend(user)) EssentialPalette.REMOVE_FRIEND_10X5 else EssentialPalette.INVITE_10X6,
+                image = if (friend) EssentialPalette.REMOVE_FRIEND_10X5 else EssentialPalette.INVITE_10X6,
             ) {
                 handleAddOrRemove(user)
             })

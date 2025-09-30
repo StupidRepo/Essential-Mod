@@ -77,6 +77,7 @@ keybind.feedback.notfriendedmessage=You cannot message a player unless you are E
 keybind.feedback.openconversationmessage=Attempting to open conversation with %s
 
 ## Keybinds
+key.category.essential.general=Essential
 keybind.name.ESSENTIAL_FRIENDS=Open Friends Gui
 keybind.name.COSMETIC_STUDIO=Open Wardrobe
 Open Cosmetic Studio=Open Wardrobe

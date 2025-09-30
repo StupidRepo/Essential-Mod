@@ -135,6 +135,10 @@ public class Connection extends WebSocketClient {
         this.setConnectionLostTimeout(0); // We have our own keep alive.
     }
 
+    public int getUsingProtocol() {
+        return usingProtocol;
+    }
+
     public void close(@NotNull final CloseReason closeReason) {
         this.close(closeReason.getCode(), closeReason.name());
     }

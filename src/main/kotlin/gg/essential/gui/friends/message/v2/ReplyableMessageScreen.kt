@@ -54,6 +54,7 @@ import gg.essential.network.connectionmanager.EarlyResponseHandler
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.USound
 import gg.essential.util.*
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.vigilance.utils.onLeftClick
 import java.time.Instant
 import java.time.ZoneId
@@ -137,6 +138,7 @@ class ReplyableMessageScreen(
     }.toListState()
 
     private var addedUnreadDivider = false
+    private var markedManuallyUnread = false
 
     private val contentSortComparator = compareBy<UIComponent> {
         // Sort by spacer vs content
@@ -275,7 +277,13 @@ class ReplyableMessageScreen(
     }
 
     override fun draw(matrixStack: UMatrixStack) {
-        markAllAsRead()
+        if (platform.cmConnection.usingProtocol >= 9) {
+            if (!markedManuallyUnread) {
+                findAndMarkLatestMessageAsRead()
+            }
+        } else {
+            markAllAsRead()
+        }
         super.draw(matrixStack)
     }
 
@@ -288,8 +296,12 @@ class ReplyableMessageScreen(
             return
         }
 
-        fun insertDividerAtInstant(instant: Instant) {
+        fun clearDateDividerUnreadStates() {
             content.findChildrenOfType<DateDivider>(true).forEach { it.unread.set(false) }
+        }
+
+        fun insertDividerAtInstant(instant: Instant) {
+            clearDateDividerUnreadStates()
             val unreadDivider by UnreadDividerImpl(instant) childOf content
             content.children.sortWith(contentSortComparator)
             addedUnreadDivider = true
@@ -304,6 +316,7 @@ class ReplyableMessageScreen(
             }.let { index ->
                 val previousSibling = content.children.getOrNull(index - 1)
                 if (previousSibling is DateDivider) {
+                    clearDateDividerUnreadStates()
                     previousSibling.unread.set(true)
                     addedUnreadDivider = true
                     return@insertDividerAt
@@ -316,7 +329,41 @@ class ReplyableMessageScreen(
         val messengerStates = gui.socialStateManager.messengerStates
 
         // Insert at the oldest message
-        val sortedMessages = messageListState.get().sortedBy { it.sendTime }
+        val sortedMessages = messageListState.getUntracked().sortedBy { it.sendTime }
+
+        if (platform.cmConnection.usingProtocol >= 9) {
+            val sortedOtherUserMessages = sortedMessages.filter { USession.activeNow().uuid != it.sender }
+
+            if (sortedOtherUserMessages.isEmpty()) {
+                return
+            }
+
+            val lastReadMessageId = messengerStates.getLastReadMessageId(channel.id).getUntracked()
+
+            if (lastReadMessageId != null) {
+                if (sortedOtherUserMessages.last().id <= lastReadMessageId) {
+                    addedUnreadDivider = true
+                    return
+                }
+
+                if (sortedOtherUserMessages.first().id > lastReadMessageId && sortedMessages.any { it.id == lastReadMessageId }) {
+                    insertDividerAt(sortedOtherUserMessages.first())
+                    return
+                }
+
+                sortedOtherUserMessages.firstOrNull { it.id > lastReadMessageId }?.let {
+                    insertDividerAt(it)
+                    return
+                }
+            } else {
+                if (receivedAllMessages) {
+                    // All messages are unread and the new line divider should appear at the top of the list
+                    insertDividerAt(sortedOtherUserMessages.first())
+                    return
+                }
+            }
+            return
+        }
 
         if (sortedMessages.none { messengerStates.getUnreadMessageState(it.getInfraInstance()).getUntracked() }) {
             // There are no unread messages. All messages are already read, so we won't need to place any divider this
@@ -481,7 +528,9 @@ class ReplyableMessageScreen(
     }
 
     override fun onOpen() {
-        markAllAsRead()
+        if (platform.cmConnection.usingProtocol < 9) {
+            markAllAsRead()
+        }
     }
 
     override fun onClose() {
@@ -509,12 +558,49 @@ class ReplyableMessageScreen(
         sendMessage(message.copy(sendState = SendState.Sending))
     }
 
+    @Deprecated("Not used in protocol 9 or later")
     override fun markAllAsRead() {
         content.childrenOfType<MessageWrapperImpl>().forEach {
             it.markRead()
         }
     }
 
+    private fun findAndMarkLatestMessageAsRead() {
+        // Find latest message from other user
+        val messages = baseMessageListState.getUntracked().sortedBy { it.id }
+        var latestMessage = messages.lastOrNull { USession.activeNow().uuid != it.sender }
+        if (latestMessage == null) {
+            // If none can be found then find the latest message in general unless the latest read message is already in the message list
+            val currentLastReadMessageId = gui.socialStateManager.messengerStates.getLastReadMessageId(channel.id).getUntracked()
+            if (currentLastReadMessageId != null && messages.any { it.id == currentLastReadMessageId }) {
+                return
+            }
+            latestMessage = messages.lastOrNull() ?: return
+        }
+        gui.socialStateManager.messengerStates.setLastReadMessage(latestMessage.getInfraInstance())
+    }
+
+    override fun markMessageAsUnread(messageWrapper: MessageWrapper) {
+        val messages = content.childrenOfType<MessageWrapperImpl>()
+        val readMessageIndex = messages.indexOf(messageWrapper) - 1
+        if (readMessageIndex >= 0) {
+            gui.socialStateManager.messengerStates.setLastReadMessage(messages[readMessageIndex].message.getInfraInstance())
+        } else {
+            gui.socialStateManager.messengerStates.setLastReadMessage(channel.id, null)
+        }
+        markedManuallyUnread = true
+        scroller.holdScrollVerticalLocation(messageWrapper) {
+            addedUnreadDivider = false
+
+            // Delete the existing unread divider if it exists
+            content.children.find { it is UnreadDivider }?.hide(instantly = true)
+
+            // Add the unread message divider
+            insertUnreadDivider()
+        }
+    }
+
+    @Deprecated("Not used in protocol 9 or later")
     override fun markedManuallyUnread(messageWrapper: MessageWrapper) {
         scroller.holdScrollVerticalLocation(messageWrapper) {
             addedUnreadDivider = false

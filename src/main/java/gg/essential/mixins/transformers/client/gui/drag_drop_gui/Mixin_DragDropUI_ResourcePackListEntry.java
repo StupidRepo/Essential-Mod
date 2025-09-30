@@ -28,6 +28,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+//#if MC>=12109
+//$$ import gg.essential.mixins.impl.client.gui.ResourcePackListWrapper;
+//$$ import net.minecraft.client.gui.Click;
+//$$ import net.minecraft.client.gui.screen.pack.PackListWidget.Entry;
+//#endif
+
 //#if MC>=11904
 //$$ import gg.essential.mixins.transformers.client.gui.PackListWidgetAccessor;
 //$$ import net.minecraft.client.MinecraftClient;
@@ -87,7 +93,9 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
     //$$     if (EssentialConfig.INSTANCE.getEssentialEnabled()) USound.INSTANCE.playButtonPress();
     //$$ }
     //$$ @Inject(method = {MOUSE_CLICKED}, at = @At(value = "INVOKE", target =
-    //#if MC>=11904
+    //#if MC>=12109
+    //$$    "Lnet/minecraft/client/gui/screen/pack/PackListWidget$ResourcePackEntry;enable()V"
+    //#elseif MC>=11904
     //$$    "Lnet/minecraft/client/gui/screen/pack/PackListWidget$ResourcePackEntry;enable()Z"
     //#else
     //$$    "Lnet/minecraft/client/gui/screen/PackLoadingManager$IPack;func_230471_h_()V"
@@ -111,7 +119,11 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
 
     //#if MC>=11600
     //$$ // these are used to capture the relative mouse coordinates local variables, which are not held up to the TAIL inject below
+    //#if MC>=12109
+    //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 0)
+    //#else
     //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 2)
+    //#endif
     //$$ private double captureRelativeMouseCoordinatesX(final double value, @Share("relativeX") LocalDoubleRef relativeXSet) {
     //$$     if (EssentialConfig.INSTANCE.getEssentialEnabled()) {
     //$$         // do nothing, just to capture the relative mouse coordinates
@@ -120,7 +132,11 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
     //$$     return value;
     //$$ }
     //$$
+    //#if MC>=12109
+    //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 1)
+    //#else
     //$$ @ModifyVariable(method = MOUSE_CLICKED, at = @At(value = "STORE"), ordinal = 3)
+    //#endif
     //$$ private double captureRelativeMouseCoordinatesY(final double value, @Share("relativeY") LocalDoubleRef relativeYSet) {
     //$$     if (EssentialConfig.INSTANCE.getEssentialEnabled()) {
     //$$         // do nothing, just to capture the relative mouse coordinates
@@ -133,12 +149,21 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
     @ModifyReturnValue(method = {MOUSE_CLICKED}, at = @At(value = "TAIL"))
     private boolean grabHoverEntry(final boolean handled,
                                    //#if MC>=11600
+                                   //#if MC>=12109
+                                   //$$ Click click,
+                                   //#else
                                    //$$ double mouseX, double mouseY, int button,
+                                   //#endif
                                    //$$ @Share("relativeX") LocalDoubleRef relativeXGet, @Share("relativeY") LocalDoubleRef relativeYGet
                                    //#else
                                    final int slotIndex, final int mouseX, final int mouseY, final int mouseEvent, final int relativeX, final int relativeY
                                    //#endif
     ) {
+        //#if MC>=12109
+        //$$ double mouseX = click.x();
+        //$$ double mouseY = click.y();
+        //#endif
+
         //#if MC>=12006
         //$$ if (this.widget.getMaxScroll() > 0 && mouseX > this.widget.getRight() - 8) {
         //$$     // 1.20.6+ allows clicking the entries under the scrollbar this will break dragging behaviour
@@ -151,8 +176,12 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
                 !handled && // just in case some other mod did something, this is always true in vanilla past 1.20.6
                 //#endif
                 showHoverOverlay()) { // is movable entry
-            //noinspection unchecked
+            @SuppressWarnings("unchecked")
+            //#if MC>=12109
+            //$$ GuiDragDropEntryHandler<Entry> dragHandler = ((EssentialGuiDraggableEntryScreen<Entry>) getResourcePacksGUI()).essential$getDragHandlerOrNull();
+            //#else
             GuiDragDropEntryHandler<ResourcePackListEntry> dragHandler = ((EssentialGuiDraggableEntryScreen<ResourcePackListEntry>) getResourcePacksGUI()).essential$getDragHandlerOrNull();
+            //#endif
             if (dragHandler != null && !dragHandler.isDraggingEntry()) {
                 ResourcePackListEntry selectedEntry = (ResourcePackListEntry) (Object) this;
 
@@ -161,7 +190,10 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
                 //$$ ResourcePackList selectedWidget =  ((PackScreenAccessor)getResourcePacksGUI()).essential$getSelectedPackList();
                 //#endif
 
-                //#if MC>=12004
+                //#if MC>=12109
+                //$$ @SuppressWarnings("unchecked") List<Entry> availableList = ResourcePackListWrapper.of(((AbstractListAccessor<Entry>) availableWidget).essential$getChildrenList());
+                //$$ @SuppressWarnings("unchecked") List<Entry> selectedList = ResourcePackListWrapper.of(((AbstractListAccessor<Entry>) selectedWidget).essential$getChildrenList());
+                //#elseif MC>=12004
                 //$$ List<ResourcePackEntry> availableList = availableWidget.children();
                 //$$ List<ResourcePackEntry> selectedList = selectedWidget.children();
                 //#elseif MC>=11600
@@ -173,7 +205,11 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
                 //#endif
 
                 boolean availableListIsContainer = availableList.contains(selectedEntry);
+                //#if MC>=12109
+                //$$ List<Entry> container = availableListIsContainer ? availableList : selectedList;
+                //#else
                 List<ResourcePackListEntry> container = availableListIsContainer ? availableList : selectedList;
+                //#endif
 
                 // bail if the entry is not in the list, possibly due to a mod
                 if (!container.contains(selectedEntry)) return handled;
@@ -196,11 +232,20 @@ public abstract class Mixin_DragDropUI_ResourcePackListEntry {
                 //#endif
 
                 // shift click to instantly swap
-                if (GuiScreen.isShiftKeyDown() && !mustStayInOriginalList) {
+                //#if MC>=12109
+                //$$ boolean hasShift = click.hasShift();
+                //#else
+                boolean hasShift = GuiScreen.isShiftKeyDown();
+                //#endif
+                if (hasShift && !mustStayInOriginalList) {
+                    //#if MC>=12109
+                    //$$ List<Entry> otherContainer = (availableListIsContainer ? selectedList : availableList);
+                    //#else
                     List<ResourcePackListEntry> otherContainer = (availableListIsContainer ? selectedList : availableList);
+                    //#endif
                     // check for any top priority / server packs in the selected list
                     int destIndex = availableListIsContainer
-                            ? ((EssentialGuiDraggableEntryScreen<ResourcePackListEntry>) getResourcePacksGUI()).essential$getQuickSwapIndex()
+                            ? ((EssentialGuiDraggableEntryScreen<?>) getResourcePacksGUI()).essential$getQuickSwapIndex()
                             : 0;
 
                     otherContainer.add(destIndex, selectedEntry);

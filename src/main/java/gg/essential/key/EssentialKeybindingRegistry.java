@@ -44,8 +44,16 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
+//#if MC>=12109
+//$$ import net.minecraft.util.Identifier;
+//#endif
+
 public class EssentialKeybindingRegistry {
+    //#if MC>=12109
+    //$$ private static final KeyBinding.Category CATEGORY = KeyBinding.Category.create(Identifier.of("essential", "general"));
+    //#else
     public static final String CATEGORY = "Essential";
+    //#endif
     private static final EssentialKeybindingRegistry INSTANCE = new EssentialKeybindingRegistry();
     private EssentialKeybinding cosmetics_visibility_toggle;
     private EssentialKeybinding emote_wheel_open;

@@ -18,10 +18,18 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 import java.util.List;
 
+//#if MC>=12109
+//$$ import java.util.function.Consumer;
+//#endif
+
 @Mixin(PackLoadingManager.class)
 public interface PackLoadingManagerAccessor {
     @Accessor("field_238863_d_")
+    //#if MC>=12109
+    //$$ Consumer<ResourcePackOrganizer.AbstractPack> essential$getChangeRunnable();
+    //#else
     Runnable essential$getChangeRunnable();
+    //#endif
     @Accessor("field_238860_a_")
     List<ResourcePackInfo> essential$getEnabledList();
     @Accessor("field_238861_b_")

@@ -44,6 +44,13 @@ import java.util.Objects;
 import static gg.essential.universal.UMinecraft.isCallingFromMinecraftThread;
 import static gg.essential.util.HelpersKt.toUSession;
 
+//#if MC>=12109
+//$$ import com.llamalad7.mixinextras.sugar.Local;
+//$$ import net.minecraft.util.ApiServices;
+//$$ import org.spongepowered.asm.mixin.Unique;
+//$$ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+//#endif
+
 //#if MC>=12002
 //$$ import com.mojang.authlib.yggdrasil.ProfileResult;
 //$$ import net.minecraft.util.Util;
@@ -81,9 +88,15 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow @Mutable @Final private Session session;
 
+    //#if MC>=12109
+    //$$ @Shadow @Final private ApiServices apiServices;
+    //#endif
+
     //#if MC>=12002
     //$$ @Shadow @Mutable @Final private CompletableFuture<ProfileResult> gameProfileFuture;
+    //#if MC<12109
     //$$ @Shadow @Final private MinecraftSessionService sessionService;
+    //#endif
     //#else
     @Shadow public abstract PropertyMap getProfileProperties();
     //#endif
@@ -91,7 +104,16 @@ public abstract class MixinMinecraft implements MinecraftExt {
     //#if MC>=11700
     //$$ @Shadow @Mutable @Final private SocialInteractionsManager socialInteractionsManager;
     //#if MC>=11900
+    //#if MC>=12109
+    //$$ @Unique
+    //$$ private YggdrasilAuthenticationService authenticationService;
+    //$$ @Inject(method = "createUserApiService", at = @At("HEAD"))
+    //$$ private void captureAuthService(CallbackInfoReturnable<?> ci, @Local(argsOnly = true) YggdrasilAuthenticationService authenticationService) {
+    //$$     this.authenticationService = authenticationService;
+    //$$ }
+    //#else
     //$$ @Shadow @Mutable @Final private YggdrasilAuthenticationService authenticationService;
+    //#endif
     //$$
     //$$ @Shadow @Mutable @Final private ProfileKeys profileKeys;
     //$$
@@ -226,8 +248,13 @@ public abstract class MixinMinecraft implements MinecraftExt {
         this.session = session;
 
         //#if MC>=12002
+        //#if MC>=12109
+        //$$ MinecraftSessionService sessionService = this.apiServices.sessionService();
+        //#else
+        //$$ MinecraftSessionService sessionService = this.sessionService;
+        //#endif
         //$$ this.gameProfileFuture = CompletableFuture.supplyAsync(() ->
-        //$$     this.sessionService.fetchProfile(session.getUuidOrNull(), true), Util.getIoWorkerExecutor());
+        //$$     sessionService.fetchProfile(session.getUuidOrNull(), true), Util.getIoWorkerExecutor());
         //#else
         if (!Objects.equals(oldSession.getProfile().getId(), session.getProfile().getId())) {
             this.getProfileProperties().clear();

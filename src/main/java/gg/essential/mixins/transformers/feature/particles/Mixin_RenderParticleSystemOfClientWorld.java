@@ -36,6 +36,11 @@ import static dev.folomeev.kotgl.matrix.vectors.Vectors.vecUnitY;
 import static dev.folomeev.kotgl.matrix.vectors.mutables.MutableVectors.times;
 import static gg.essential.util.HelpersKt.getPerspective;
 
+//#if MC>=12109
+//$$ import net.minecraft.client.render.Frustum;
+//$$ import net.minecraft.client.render.SubmittableBatch;
+//#endif
+
 //#if MC>=12104
 //$$ import com.mojang.blaze3d.systems.RenderSystem;
 //#endif
@@ -53,6 +58,9 @@ import net.minecraft.world.World;
 
 @Mixin(ParticleManager.class)
 public abstract class Mixin_RenderParticleSystemOfClientWorld {
+    //#if MC>=12109
+    //$$ private static final String RENDER_PARTICLES = "addToBatch";
+    //#else
     // Forge overloads this method with an additional argument in 1.16+
     // NeoForge adds another one in 1.21+
     //#if NEOFORGE && MC>=12100
@@ -77,6 +85,7 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
     //$$ private static final String RENDER_PARTICLES = "renderParticles(Lnet/minecraft/client/render/Camera;FLnet/minecraft/client/render/VertexConsumerProvider$Immediate;)V";
     //#else
     private static final String RENDER_PARTICLES = "renderParticles";
+    //#endif
     //#endif
     //#endif
 
@@ -109,6 +118,10 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
         //#endif
     )
     private void essential$renderParticles(
+        //#if MC>=12109
+        //$$ SubmittableBatch batch,
+        //$$ Frustum frustum,
+        //#endif
         //#if MC>=11600
         //#if MC<12005
         //$$ MatrixStack matrixStackIn,
@@ -119,7 +132,7 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
         //#endif
         //$$ ActiveRenderInfo activeRenderInfoIn,
         //$$ float partialTicks,
-        //#if MC>=12104
+        //#if MC>=12104 && MC<12109
         //$$ VertexConsumerProvider.Immediate bufferIn,
         //#endif
         //#if FORGELIKE
@@ -211,13 +224,36 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
         UUID cameraUuid = cameraEntity.getUniqueID();
         //#endif
 
+        boolean isFirstPerson = getPerspective() == 0;
+        boolean hideCosmeticParticlesInFirstPerson = EssentialConfig.INSTANCE.getHideCosmeticParticlesInFirstPerson().getUntracked();
+
+        //#if MC>=12109
+        //$$ batch.add((queue, camera) -> {
+        //$$     ParticleSystem.VertexConsumerProvider particleVertexConsumer = (renderPass, block) -> {
+        //$$         queue.getBatchingQueue(renderPass.getMaterial().getNeedsSorting() ? 0 : 1)
+        //$$             .submitCustom(new MatrixStack(), MinecraftRenderBackend.INSTANCE.getParticleLayer(renderPass), (_matrixEntry, vertexConsumer) ->
+        //$$                 new MinecraftRenderBackend.ParticleVertexConsumerProvider(_layer -> vertexConsumer)
+        //$$                     .provide(renderPass, block));
+        //$$     };
+        //$$
+        //$$     particleSystem.render(
+        //$$         stack,
+        //$$         cameraPos,
+        //$$         cameraRot,
+        //$$         particleVertexConsumer,
+        //$$         cameraUuid,
+        //$$         isFirstPerson,
+        //$$         hideCosmeticParticlesInFirstPerson,
+        //$$         null
+        //$$     );
+        //$$ });
+        //#else
         ParticleSystem.VertexConsumerProvider particleVertexConsumer = new MinecraftRenderBackend.ParticleVertexConsumerProvider(
             //#if MC>=12104
             //$$ bufferIn
             //#endif
         );
 
-        boolean isFirstPerson = getPerspective() == 0;
         particleSystem.render(
                 stack,
                 cameraPos,
@@ -225,12 +261,15 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
                 particleVertexConsumer,
                 cameraUuid,
                 isFirstPerson,
-                EssentialConfig.INSTANCE.getHideCosmeticParticlesInFirstPerson().getUntracked()
+                hideCosmeticParticlesInFirstPerson,
+                null
         );
+        //#endif
 
         profiler.endSection();
     }
 
+    //#if MC<12109
     // Forge's overload has been mirrored in OptiFine (which can be used on Fabric through OptiFabric)
     //#if MC>=11600 && FABRIC
     //$$ @Group(name = "render_particles", min = 1, max = 1)
@@ -289,5 +328,6 @@ public abstract class Mixin_RenderParticleSystemOfClientWorld {
     //$$ private void essential$renderParticles(LightTexture lightTexture, Camera camera, float partialTicks, net.minecraft.client.renderer.culling.Frustum frustum, java.util.function.Predicate renderTypePredicate, CallbackInfo ci) {
     //$$     essential$renderParticles(lightTexture, camera, partialTicks, frustum, ci);
     //$$ }
+    //#endif
     //#endif
 }

@@ -55,6 +55,8 @@ public class BuildInfo {
         //$$ 12106;
         //#elseif MC==12107
         //$$ 12107;
+        //#elseif MC==12109
+        //$$ 12109;
         //#else
         //$$ ADD_CASE_FOR_NEW_VERSION_TO_ABOVE_LIST;
         //#endif

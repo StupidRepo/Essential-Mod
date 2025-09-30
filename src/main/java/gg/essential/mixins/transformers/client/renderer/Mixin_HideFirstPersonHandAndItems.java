@@ -24,7 +24,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ItemRenderer.class)
 public class Mixin_HideFirstPersonHandAndItems {
-    //#if MC>=11600
+    //#if MC>=12109
+    //$$ private static final String RENDER_ITEM_IN_FIRST_PERSON = "renderItem(FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/network/ClientPlayerEntity;I)V";
+    //#elseif MC>=11600
     //$$ private static final String RENDER_ITEM_IN_FIRST_PERSON = "renderItemInFirstPerson(FLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer$Impl;Lnet/minecraft/client/entity/player/ClientPlayerEntity;I)V";
     //#elseif MC==10809
     //$$ private static final String RENDER_ITEM_IN_FIRST_PERSON = "renderItemInFirstPerson(F)V";

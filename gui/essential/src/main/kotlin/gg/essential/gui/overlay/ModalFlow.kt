@@ -69,8 +69,11 @@ suspend fun createModalFlow(modalManager: ModalManager, block: suspend ModalFlow
     val firstModal = CompletableDeferred<Modal?>(coroutineContext.job)
     modalFlow.replacePreviousModalWith = firstModal
     modalManager.coroutineScope.launch {
-        block(modalFlow)
-        modalFlow.replacePreviousModalWith.complete(null)
+        try {
+            block(modalFlow)
+        } finally {
+            modalFlow.replacePreviousModalWith.complete(null)
+        }
     }
     return firstModal.await()
 }

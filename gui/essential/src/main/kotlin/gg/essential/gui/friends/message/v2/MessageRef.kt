@@ -76,6 +76,8 @@ data class MessageRef(
             CreatedInfo(DateTime(0), null),
             null,
             false,
+            0,
+            null,
             0
         )
 

@@ -252,9 +252,20 @@ class ParticleSystem(
         cameraUuid: UUID,
         cameraFirstPerson: Boolean,
         hideParticlesInFirstPerson: Boolean,
+        onlyRenderFromSource: UUID? = null,
     ) {
         val cameraFacing = vec3(0f, 0f, -1f).rotateBy(cameraRot)
-        for ((renderPass, particles) in billboardRenderPasses.entries.sortedBy { it.key.material.needsSorting }) {
+        for ((renderPass, allParticles) in billboardRenderPasses.entries.sortedBy { it.key.material.needsSorting }) {
+
+            // filter out unwanted particles prior to depth sorting calculations
+            val particles = if (onlyRenderFromSource != null) {
+                val particlesFromSource = allParticles.filter { it.emitter.sourceEntity.uuid == onlyRenderFromSource }
+                if (particlesFromSource.isEmpty()) continue
+                particlesFromSource
+            } else {
+                allParticles // never empty
+            }
+
             particleVertexConsumerProvider.provide(renderPass) { vertexConsumer ->
                 if (renderPass.material.needsSorting) {
                     for (particle in particles) {

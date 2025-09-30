@@ -75,11 +75,11 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
 
         //#if FABRIC
         // Note: Cannot pass `program` directly because Iris might not be installed
-        private fun RenderPipeline.assignIrisProgram(program: () -> IrisProgram): RenderPipeline = apply {
+        private fun RenderPipeline.assignIrisProgram(program: () -> () -> IrisProgram): RenderPipeline = apply {
             if (ModLoaderUtil.isModLoaded("iris")) {
                 // Separate method for class loading reasons
                 fun doIt() {
-                    IrisApi.getInstance().assignPipeline(this, program())
+                    IrisApi.getInstance().assignPipeline(this, program()())
                 }
                 doIt()
             }
@@ -101,7 +101,7 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
 
         private val entityTranslucentCullPipeline = RenderPipelines.ENTITY_TRANSLUCENT.toBuilder().withCull(true).build()
             //#if FABRIC
-            .assignIrisProgram { IrisProgram.ENTITIES_TRANSLUCENT }
+            .assignIrisProgram {{ IrisProgram.ENTITIES_TRANSLUCENT }}
             //#endif
 
         fun createEntityTranslucentCullLayer(texture: Identifier): RenderLayer =
@@ -122,8 +122,15 @@ abstract class RenderLayerFactory : RenderLayer("dummy", 0, false, false, {}, {}
             .withBlend(BlendFunction.LIGHTNING)
             .build()
             //#if FABRIC
-            .assignIrisProgram { IrisProgram.PARTICLES_TRANSLUCENT }
+            .assignIrisProgram {{ IrisProgram.PARTICLES_TRANSLUCENT }}
             //#endif
+
+        //#if MC>=12109
+        //$$ private val PARTICLES_TARGET = Target("particles") {
+        //$$     val mc = net.minecraft.client.MinecraftClient.getInstance()
+        //$$     mc.worldRenderer.particlesFramebuffer ?: mc.framebuffer
+        //$$ }
+        //#endif
 
         fun createParticleLayer(renderPass: ParticleEffect.RenderPass): RenderLayer {
             val texture = (renderPass.texture as MinecraftTexture).identifier

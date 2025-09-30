@@ -24,14 +24,29 @@ import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC>=12109
+//$$ import net.minecraft.client.input.CharInput;
+//$$ import net.minecraft.client.input.KeyInput;
+//#endif
+
 @Mixin(value = Keyboard.class, priority = 500)
 public class Mixin_GuiKeyTypedEvent {
+    //#if MC>=12109
+    //#if FORGE
+    //$$ private static final String KEY_PRESSED = "Lnet/minecraftforge/client/ForgeHooksClient;onScreenKeyPressed(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/input/KeyEvent;)Z";
+    //$$ private static final String CHAR_TYPED = "Lnet/minecraftforge/client/ForgeHooksClient;onScreenCharTyped(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/input/CharacterEvent;)Z";
+    //#else
+    //$$ private static final String KEY_PRESSED = "Lnet/minecraft/client/gui/screen/Screen;keyPressed(Lnet/minecraft/client/input/KeyInput;)Z";
+    //$$ private static final String CHAR_TYPED = "Lnet/minecraft/client/gui/screen/Screen;charTyped(Lnet/minecraft/client/input/CharInput;)Z";
+    //#endif
+    //#else
     //#if FORGE
     //$$ private static final String KEY_PRESSED = "Lnet/minecraftforge/client/ForgeHooksClient;onScreenKeyPressed(Lnet/minecraft/client/gui/screens/Screen;III)Z";
     //$$ private static final String CHAR_TYPED = "Lnet/minecraftforge/client/ForgeHooksClient;onScreenCharTyped(Lnet/minecraft/client/gui/screens/Screen;CI)Z";
     //#else
     private static final String KEY_PRESSED = "Lnet/minecraft/client/gui/screen/Screen;keyPressed(III)Z";
     private static final String CHAR_TYPED = "Lnet/minecraft/client/gui/screen/Screen;charTyped(CI)Z";
+    //#endif
     //#endif
 
     @Unique
@@ -45,7 +60,18 @@ public class Mixin_GuiKeyTypedEvent {
 
     @Group(name = "onKeyTyped")
     @Inject(method = "onKey", at = @At(value = "INVOKE", target = KEY_PRESSED), cancellable = true)
-    private void onKeyTyped(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local(ordinal = 0, argsOnly = true) int key) {
+    private void onKeyTyped(
+        CallbackInfo ci,
+        @Local(ordinal = 0) Screen screen,
+        //#if MC>=12109
+        //$$ @Local(ordinal = 0, argsOnly = true) KeyInput keyInput
+        //#else
+        @Local(ordinal = 0, argsOnly = true) int key
+        //#endif
+    ) {
+        //#if MC>=12109
+        //$$ int key = keyInput.key();
+        //#endif
         keyTyped(screen, '\0', key, ci);
     }
 
@@ -54,8 +80,15 @@ public class Mixin_GuiKeyTypedEvent {
     private void onCharTyped(
         CallbackInfo ci,
         @Local(ordinal = 0) Screen screen,
+        //#if MC>=12109
+        //$$ @Local(ordinal = 0, argsOnly = true) CharInput charInput
+        //#else
         @Local(ordinal = 0, argsOnly = true) int codePoint
+        //#endif
     ) {
+        //#if MC>=12109
+        //$$ int codePoint = charInput.codepoint();
+        //#endif
         if (Character.isBmpCodePoint(codePoint)) {
             keyTyped(screen, (char) codePoint, 0, ci);
         } else if (Character.isValidCodePoint(codePoint)) {
@@ -73,14 +106,24 @@ public class Mixin_GuiKeyTypedEvent {
     //$$ @Group(name = "onKeyTyped")
     //$$ @Dynamic("OptiFine calls ForgeHooksClient.onScreenKeyPressed via reflection. This is the second call in the method")
     //$$ @Inject(method = "keyPress", at = @At(value = "FIELD", target = OPTIFINE_ONSCREENKEYPRESSED, ordinal = 1, remap = false), cancellable = true)
+    //#if MC>=12109
+    //$$ private void optifineKeyPressed(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local(ordinal = 0, argsOnly = true) KeyInput keyInput) {
+    //$$     int key = keyInput.key();
+    //#else
     //$$ private void optifineKeyPressed(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local(ordinal = 0, argsOnly = true) int key) {
+    //#endif
     //$$     keyTyped(screen, '\0', key, ci);
     //$$ }
     //$$
     //$$ @Group(name = "onCharTyped")
     //$$ @Dynamic("OptiFine calls ForgeHooksClient.onScreenCharTyped via reflection. It is called multiple times")
     //$$ @Inject(method = "charTyped", at = @At(value = "INVOKE", target = OPTIFINE_CALL, remap = false), cancellable = true)
+    //#if MC>=12109
+    //$$ private void optifineCharTyped(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local(ordinal = 0, argsOnly = true) CharacterInput charInput) {
+    //$$     int codePoint = charInput.codepoint();
+    //#else
     //$$ private void optifineCharTyped(CallbackInfo ci, @Local(ordinal = 0) Screen screen, @Local(ordinal = 0, argsOnly = true) int codePoint) {
+    //#endif
     //$$     if (Character.isBmpCodePoint(codePoint)) {
     //$$         keyTyped(screen, (char) codePoint, 0, ci);
     //$$     } else if (Character.isValidCodePoint(codePoint)) {

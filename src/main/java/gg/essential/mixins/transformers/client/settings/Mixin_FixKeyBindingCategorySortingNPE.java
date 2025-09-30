@@ -25,7 +25,7 @@ import java.util.Objects;
 // Note: This mixin is disabled via our mixin plugin for Forge because Forge already includes a similar patch.
 //       We do not disable it via preprocessor, so it gets remapped across versions.
 @Mixin(KeyBinding.class)
-public abstract class MixinKeyBinding {
+public abstract class Mixin_FixKeyBindingCategorySortingNPE {
 
     @Final
     @Shadow
@@ -36,9 +36,10 @@ public abstract class MixinKeyBinding {
     // To fix that, we add any missing categories on demand.
     @ModifyArg(method = "compareTo", at = @At(value = "INVOKE", target = "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;"))
     private Object ensureCategoryRegistered(Object category) {
-        if (category instanceof String && !MixinKeyBinding.CATEGORY_ORDER.containsKey(category)) {
-            int largest = Objects.requireNonNull(CollectionsKt.maxOrNull(MixinKeyBinding.CATEGORY_ORDER.values()));
-            MixinKeyBinding.CATEGORY_ORDER.put((String) category, largest + 1);
+        Map<String, Integer> map = Mixin_FixKeyBindingCategorySortingNPE.CATEGORY_ORDER;
+        if (category instanceof String && !map.containsKey(category)) {
+            int largest = Objects.requireNonNull(CollectionsKt.maxOrNull(map.values()));
+            map.put((String) category, largest + 1);
         }
         return category;
     }

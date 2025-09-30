@@ -189,8 +189,11 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
             // freeze. This means that the modal will be shown until this process is finished.
             // To remedy this, we can just close the modal before showing the create world screen.
             this@WorldSelectionModal.close()
-            //#if MC>=11900
-            //$$ // Creating a `CreateWorldScreen` manually on 1.19+ is a bit more difficult.
+            //#if MC>=12109
+            //$$ val mc = MinecraftClient.getInstance()
+            //$$ val prevScreen = mc.currentScreen
+            //$$ CreateWorldScreen.show(mc) { mc.setScreen(prevScreen) }
+            //#elseif MC>=11900
             //$$ CreateWorldScreen.create(MinecraftClient.getInstance(), GuiUtil.openedScreen())
             //#else
             GuiUtil.openScreen {

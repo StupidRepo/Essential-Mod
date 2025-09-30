@@ -27,6 +27,13 @@ public class MixinTransformerWrapper implements IMixinTransformer {
         this.extraTransformers = extraTransformers;
     }
 
+    //#if FABRIC
+    //$$ @Override
+    //$$ public boolean couldTransformClass(MixinEnvironment environment, String name) {
+    //$$     return true;
+    //$$ }
+    //#endif
+
     // KnotClassDelegate exclusively uses this method, we don't need to bother intercepting any other ones
     @Override
     public byte[] transformClassBytes(String name, String transformedName, byte[] bytes) {

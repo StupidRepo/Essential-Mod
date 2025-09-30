@@ -59,7 +59,9 @@ public class Mixin_PlayerJoinSessionEvent {
         //#endif
         CallbackInfo info) {
 
-        //#if MC>=12106
+        //#if MC>=12109
+        //$$ MinecraftServer server = player.getEntityWorld().getServer();
+        //#elseif MC>=12106
         //$$ MinecraftServer server = player.getServer();
         //#else
         MinecraftServer server = player.mcServer;

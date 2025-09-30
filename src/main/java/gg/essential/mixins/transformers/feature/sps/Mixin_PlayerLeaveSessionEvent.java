@@ -35,7 +35,9 @@ public class Mixin_PlayerLeaveSessionEvent {
 
     @Inject(method = "playerLoggedOut", at = @At("RETURN"))
     private void essential$playerLeaveSession(EntityPlayerMP player, CallbackInfo info) {
-        //#if MC>=12106
+        //#if MC>=12109
+        //$$ MinecraftServer server = player.getEntityWorld().getServer();
+        //#elseif MC>=12106
         //$$ MinecraftServer server = player.getServer();
         //#else
         MinecraftServer server = player.mcServer;

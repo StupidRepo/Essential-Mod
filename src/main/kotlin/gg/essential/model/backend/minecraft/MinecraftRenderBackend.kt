@@ -38,6 +38,10 @@ import java.io.ByteArrayInputStream
 import gg.essential.model.util.UMatrixStack as CMatrixStack
 import gg.essential.model.util.UVertexConsumer as CVertexConsumer
 
+//#if MC>=12109
+//$$ import net.minecraft.client.render.command.OrderedRenderCommandQueue
+//#endif
+
 //#if MC>=12105
 //$$ import com.mojang.blaze3d.pipeline.BlendFunction
 //$$ import com.mojang.blaze3d.pipeline.RenderPipeline
@@ -110,7 +114,11 @@ object MinecraftRenderBackend : RenderBackend {
             //$$ val dynamicTransforms = RenderSystem.getDynamicUniforms().write(
             //$$     RenderSystem.getModelViewMatrix(),
             //$$     org.joml.Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
+            //#if MC>=12109
+            //$$     org.joml.Vector3f(),
+            //#else
             //$$     RenderSystem.getModelOffset(),
+            //#endif
             //$$     RenderSystem.getTextureMatrix(),
             //$$     RenderSystem.getShaderLineWidth(),
             //$$ )
@@ -167,7 +175,7 @@ object MinecraftRenderBackend : RenderBackend {
     //$$ // As of 1.21.4, MC itself now finally uses the RenderLayer system for its particles, so we'll do the same.
     //$$ // Our particles have more blending modes though, so we need some custom layers.
     //$$ private val particleLayers = mutableMapOf<ParticleEffect.RenderPass, RenderLayer>()
-    //$$ private fun getParticleLayer(renderPass: ParticleEffect.RenderPass) = particleLayers.getOrPut(renderPass) {
+    //$$ fun getParticleLayer(renderPass: ParticleEffect.RenderPass) = particleLayers.getOrPut(renderPass) {
     //#if MC>=12105
     //$$     RenderLayerFactory.createParticleLayer(renderPass)
     //#else
@@ -421,6 +429,83 @@ object MinecraftRenderBackend : RenderBackend {
         val name: String,
         texture: ReleasedDynamicTexture,
     ) : DynamicTexture(identifier("essential", "textures/cosmetics/${name.lowercase()}"), texture)
+
+    class CommandQueue : RenderBackend.CommandQueue {
+        private class Key(
+            val texture: MinecraftTexture,
+            val translucent: Boolean,
+            val emissive: Boolean,
+        ) : Comparable<Key> {
+            override fun compareTo(other: Key): Int = KEY_COMPARATOR.compare(this, other)
+            companion object {
+                val KEY_COMPARATOR =
+                    // Translucent geometry must be last
+                    compareBy<Key> { it.translucent }
+                        // emissive pass must be after the corresponding opaque geometry
+                        .thenBy { it.emissive }
+                        // finally sort by identifier so passes with identical texture can be rendered in one pass
+                        //#if MC>=11200
+                        .thenBy { it.texture.identifier }
+                        //#else
+                        //$$ .thenBy { it.texture.identifier.resourceDomain }
+                        //$$ .thenBy { it.texture.identifier.resourcePath }
+                        //#endif
+            }
+        }
+
+        private val queue = mutableMapOf<Key, MutableList<(CVertexConsumer) -> Unit>>()
+
+        override fun submit(
+            texture: RenderBackend.Texture,
+            translucent: Boolean,
+            emissive: Boolean,
+            render: (CVertexConsumer) -> Unit,
+        ) {
+            require(texture is MinecraftTexture)
+            queue.getOrPut(Key(texture, translucent, emissive), ::mutableListOf)
+                .add(render)
+        }
+
+        fun render(vertexConsumerProvider: RenderBackend.VertexConsumerProvider) {
+            if (queue.isEmpty()) return
+
+            for ((key, commands) in queue.entries.sortedBy { it.key }) {
+                vertexConsumerProvider.provide(key.texture, key.emissive) { vertexConsumer ->
+                    for (command in commands) {
+                        command(vertexConsumer)
+                    }
+                }
+            }
+        }
+    }
+
+    //#if MC>=12109
+    //$$ class MinecraftCommandQueue(
+    //$$     private val mcQueue: OrderedRenderCommandQueue,
+    //$$     private val light: Int,
+    //$$ ) : RenderBackend.CommandQueue {
+    //$$     override fun submit(
+    //$$         texture: RenderBackend.Texture,
+    //$$         translucent: Boolean,
+    //$$         emissive: Boolean,
+    //$$         render: (CVertexConsumer) -> Unit,
+    //$$     ) {
+    //$$         require(texture is MinecraftTexture)
+    //$$         val layer =
+    //$$             if (emissive) getEmissiveLayer(texture.identifier)
+    //$$             else getEntityTranslucentCullLayer(texture.identifier)
+    //$$         val order = when {
+    //$$             translucent -> 2
+    //$$             emissive -> 1
+    //$$             else -> 0
+    //$$         }
+    //$$         mcQueue.getBatchingQueue(order).submitCustom(net.minecraft.client.util.math.MatrixStack(), layer) { _, vertexConsumer ->
+    //$$             VertexConsumerProvider({ vertexConsumer }, light)
+    //$$                 .provide(texture, emissive, render)
+    //$$         }
+    //$$     }
+    //$$ }
+    //#endif
 
     //#if MC>=11600
     //$$ class VertexConsumerProvider(val provider: net.minecraft.client.renderer.IRenderTypeBuffer, val light: Int) : RenderBackend.VertexConsumerProvider {

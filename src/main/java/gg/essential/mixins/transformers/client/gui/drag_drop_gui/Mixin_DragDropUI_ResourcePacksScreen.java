@@ -30,6 +30,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC>=12109
+//$$ import gg.essential.mixins.impl.client.gui.ResourcePackListWrapper;
+//$$ import net.minecraft.client.gui.screen.pack.PackListWidget.Entry;
+//#endif
+
 //#if MC >= 12004
 //$$ import gg.essential.mixins.transformers.client.gui.EntryListWidgetAccessor;
 //#endif
@@ -60,12 +65,28 @@ import java.util.List;
 import static gg.essential.mixins.impl.client.gui.GuiDragDropEntryHandler.initResourcePackIndicator;
 
 @Mixin(GuiScreenResourcePacks.class)
-public abstract class Mixin_DragDropUI_ResourcePacksScreen extends GuiScreen implements EssentialPostScreenDrawHook, EssentialGuiDraggableEntryScreen<ResourcePackListEntry>, EssentialGuiScreenBeforeClose {
+public abstract class Mixin_DragDropUI_ResourcePacksScreen
+    extends GuiScreen
+    implements EssentialPostScreenDrawHook
+    //#if MC>=12109
+    //$$ , EssentialGuiDraggableEntryScreen<Entry>
+    //#else
+    , EssentialGuiDraggableEntryScreen<ResourcePackListEntry>
+    //#endif
+    , EssentialGuiScreenBeforeClose
+{
     @Unique
+    //#if MC>=12109
+    //$$ private @Nullable GuiDragDropEntryHandler<Entry> guiDragHandler = null;
+    //#else
     private @Nullable GuiDragDropEntryHandler<ResourcePackListEntry> guiDragHandler = null;
+    //#endif
 
 
-    //#if MC>=12004
+    //#if MC>=12109
+    //$$ @SuppressWarnings("unchecked") @Unique private List<Entry> getAvailablePacksList() {return ResourcePackListWrapper.of(((AbstractListAccessor<Entry>) this.availablePackList).essential$getChildrenList());}
+    //$$ @SuppressWarnings("unchecked") @Unique private List<Entry> getSelectedPacksList() {return ResourcePackListWrapper.of(((AbstractListAccessor<Entry>) this.selectedPackList).essential$getChildrenList());}
+    //#elseif MC>=12004
     //$$ @Unique private List<ResourcePackEntry> getAvailablePacksList() {return this.availablePackList.children();}
     //$$ @Unique private List<ResourcePackEntry> getSelectedPacksList() {return this.selectedPackList.children();}
     //#elseif MC>=11600
@@ -88,7 +109,13 @@ public abstract class Mixin_DragDropUI_ResourcePacksScreen extends GuiScreen imp
     //$$ @Final @Shadow private PackLoadingManager field_238887_q_;
     //$$
     //$$ @Unique private void markChanged() {
-    //$$     ((PackLoadingManagerAccessor)this.field_238887_q_).essential$getChangeRunnable().run();
+        //#if MC>=12109
+        //$$ // The argument specifies which entry to select after refreshing, but we handle selection ourselves
+        //$$ // already, so we can just pass `null` here.
+        //$$ ((PackLoadingManagerAccessor)this.organizer).essential$getChangeRunnable().accept(null);
+        //#else
+        //$$ ((PackLoadingManagerAccessor)this.field_238887_q_).essential$getChangeRunnable().run();
+        //#endif
     //$$ }
     //#else
     @Shadow private GuiResourcePackAvailable availableResourcePacksList;
@@ -101,7 +128,12 @@ public abstract class Mixin_DragDropUI_ResourcePacksScreen extends GuiScreen imp
     @Shadow public abstract void markChanged();
     //#endif
 
+    @Override
+    //#if MC>=12109
+    //$$ public @Nullable GuiDragDropEntryHandler<Entry> essential$getDragHandlerOrNull() {
+    //#else
     public @Nullable GuiDragDropEntryHandler<ResourcePackListEntry> essential$getDragHandlerOrNull() {
+    //#endif
         return guiDragHandler;
     }
 
@@ -173,10 +205,16 @@ public abstract class Mixin_DragDropUI_ResourcePacksScreen extends GuiScreen imp
     @Inject(method = "initGui", at = @At(value = "TAIL"))
     private void initDragHandler(CallbackInfo ci) {
         if (EssentialConfig.INSTANCE.getEssentialEnabled()) {
-            guiDragHandler = new GuiDragDropEntryHandler<ResourcePackListEntry>(
+            guiDragHandler = new GuiDragDropEntryHandler<>(
                     (GuiScreenResourcePacks) (Object) this,
                     this::markChanged,
                     () -> {
+                        //#if MC>=12109
+                        //$$ //noinspection unchecked
+                        //$$ ((AbstractListAccessor<Entry>) getAvailableResourcePacksWidget()).essential$recalculateAllChildrenPositions();
+                        //$$ //noinspection unchecked
+                        //$$ ((AbstractListAccessor<Entry>) getSelectedResourcePacksWidget()).essential$recalculateAllChildrenPositions();
+                        //#endif
                     },
                     this::dropDraggedEntry,
                     this::updateIndicatorsForChangedDragPos,
@@ -238,7 +276,11 @@ public abstract class Mixin_DragDropUI_ResourcePacksScreen extends GuiScreen imp
     @Unique
     private boolean isPosWithinBoundsOf(GuiResourcePackList list, GuiDragDropEntryHandler.ScreenPosition pos) {
         //#if MC>=12004
+        //#if MC>=12109
+        //$$ int header = 0;
+        //#else
         //$$ int header = ((EntryListWidgetAccessor)list).essential$getHeaderHeight();
+        //#endif
         //$$ double top = list.getY();
         //$$ int bottom = list.getBottom();
         //$$ int left = list.getX();
@@ -280,7 +322,9 @@ public abstract class Mixin_DragDropUI_ResourcePacksScreen extends GuiScreen imp
             guiDragHandler.handleIndicatorForNonReorderingList(getAvailablePacksList(),getSelectedPacksList());
         } else if (isPosWithinBoundsOf(getSelectedResourcePacksWidget(), dragPos)) {
             guiDragHandler.placeIndicatorInListAtIndex(getSelectedPacksList(),
-                    //#if MC>=11904
+                    //#if MC>=12109
+                    //$$ getSelectedPacksList().indexOf(((EssentialEntryAtScreenPosAccess<Entry>)getSelectedResourcePacksWidget()).essential$getEntryAtScreenPosition(dragPos.x(), dragPos.y())),
+                    //#elseif MC>=11904
                     //$$ getSelectedPacksList().indexOf(((EssentialEntryAtScreenPosAccess<ResourcePackEntry>)getSelectedResourcePacksWidget()).essential$getEntryAtScreenPosition(dragPos.x(), dragPos.y())),
                     //#elseif MC>=11600
                     //$$ getSelectedPacksList().indexOf(((AbstractListAccessor)getSelectedResourcePacksWidget()).essential$getEntryAtScreenPosition(dragPos.x(), dragPos.y())),

@@ -319,6 +319,9 @@ class CosmeticsState(
         slots
     }.toSet()
 
+    val usesCapePose: Boolean = bedrockModels.values.any { EnumPart.CAPE in it.bones.byPart }
+    val usesElytraPose: Boolean = bedrockModels.values.any { EnumPart.LEFT_WING in it.bones.byPart || EnumPart.RIGHT_WING in it.bones.byPart }
+
     fun getPositionAdjustment(cosmetic: Cosmetic) = positionAdjustments[cosmetic.id] ?: Vector3()
 
     /**

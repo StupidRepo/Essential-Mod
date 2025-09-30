@@ -44,7 +44,10 @@ class ModalManagerImpl(
     private var layer: Layer? = null
 
     override var isCurrentlyFadingIn: Boolean = false
-        private set
+        private set(value) {
+            if (field == value) return
+            field = value
+        }
 
     override fun modalClosed() {
         val nextModal = modalQueue.removeFirstOrNull()

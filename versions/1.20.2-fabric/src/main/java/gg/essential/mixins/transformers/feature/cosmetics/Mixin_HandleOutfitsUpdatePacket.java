@@ -33,7 +33,11 @@ public abstract class Mixin_HandleOutfitsUpdatePacket {
         var payload = packet.payload();
         if (!(payload instanceof OutfitUpdatesPayload)) return;
 
+        //#if MC>=12109
+        //$$ NetworkThreadUtils.forceMainThread(packet, (ClientCommonNetworkHandler) (Object) this, this.client.getPacketApplyBatcher());
+        //#else
         NetworkThreadUtils.forceMainThread(packet, (ClientCommonNetworkHandler) (Object) this, this.client);
+        //#endif
 
         ((NetHandlerPlayClientExt) this).getEssential$ingameEquippedOutfitsManager()
             .applyUpdates(((OutfitUpdatesPayload) payload).getUpdates());

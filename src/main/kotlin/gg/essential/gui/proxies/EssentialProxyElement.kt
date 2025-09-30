@@ -32,6 +32,11 @@ import gg.essential.util.findChildOfTypeOrNull
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiButton
 
+//#if MC>=12109
+//$$ import net.minecraft.client.gui.Click
+//$$ import net.minecraft.client.input.MouseInput
+//#endif
+
 //#if MC>=12000
 //$$ import net.minecraft.client.gui.DrawContext
 //#endif
@@ -250,12 +255,18 @@ abstract class EssentialProxyElement<T : UIComponent>(
     //#endif
 
     //#if MC>=11600
+    //#if MC>=12109
+    //$$ override fun isValidClickButton(button: MouseInput): Boolean {
+    //#else
     //$$ override fun isValidClickButton(button: Int): Boolean {
+    //#endif
     //$$     return !essentialComponentExistsButInactive && super.isValidClickButton(button)
     //$$ }
     //#endif
 
-    //#if MC>=11600
+    //#if MC>=12109
+    //$$ override fun mouseClicked(click: Click, doubleClick: Boolean): Boolean {
+    //#elseif MC>=11600
     //$$ override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
     //#else
     override fun mousePressed(mc: Minecraft, mouseX: Int, mouseY: Int): Boolean {
@@ -313,10 +324,13 @@ abstract class EssentialProxyElement<T : UIComponent>(
      * */
     protected val hasProxyBeenHidden: Boolean
         get() = !visible
-            //#if MC>=11800
-            //$$ || !isValidClickButton(0) // fancy menu v3+ cancels button rendering via a mixin and custom flag
-            //$$                           // this flag also modifies the button to be invalid for clicks when deleted, which
-            //$$                           // means we can read isValidClickButton() to avoid having to depend on fancy menu directly
+            // fancy menu v3+ cancels button rendering via a mixin and custom flag
+            // this flag also modifies the button to be invalid for clicks when deleted, which
+            // means we can read isValidClickButton() to avoid having to depend on fancy menu directly
+            //#if MC>=12109
+            //$$ || !isValidClickButton(MouseInput(0, 0))
+            //#elseif MC>=11800
+            //$$ || !isValidClickButton(0)
             //#endif
 
     /**

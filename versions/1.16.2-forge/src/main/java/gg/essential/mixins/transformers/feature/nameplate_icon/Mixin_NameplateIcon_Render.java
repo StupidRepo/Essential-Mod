@@ -9,9 +9,8 @@
  * commercialize, or otherwise exploit, or create derivative works based
  * upon, this file or any other in this repository, all of which is reserved by Essential.
  */
-package gg.essential.mixins.transformers.client.renderer.entity;
+package gg.essential.mixins.transformers.feature.nameplate_icon;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.IconCosmeticRenderer;
@@ -35,29 +34,7 @@ import static gg.essential.universal.utils.TextUtilsKt.toFormattedString;
 //#endif
 
 @Mixin(EntityRenderer.class)
-public class Mixin_RenderNameplateIcon<T extends Entity> {
-    @Inject(method = "renderName", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/matrix/MatrixStack;scale(FFF)V", shift = At.Shift.AFTER, ordinal = 0))
-    private void essential$translateNameplate(
-        CallbackInfo ci,
-        //#if MC>=12102
-        //$$ @Local(argsOnly = true) EntityRenderState state,
-        //#else
-        @Local(argsOnly = true) T entity,
-        //#endif
-        @Local(argsOnly = true) MatrixStack matrixStack
-    ) {
-        //#if MC>=12102
-        //$$ if (!(state instanceof PlayerEntityRenderStateExt)) return;
-        //$$ CosmeticsRenderState cState = ((PlayerEntityRenderStateExt) state).essential$getCosmetics();
-        //#else
-        if (!(entity instanceof AbstractClientPlayerEntity)) return;
-        CosmeticsRenderState cState = new CosmeticsRenderState.Live((AbstractClientPlayerEntity) entity);
-        //#endif
-        if (OnlineIndicator.currentlyDrawingPlayerEntityName()) {
-            matrixStack.translate(IconCosmeticRenderer.INSTANCE.getNameplateXOffset(cState), 0f, 0f);
-        }
-    }
-
+public class Mixin_NameplateIcon_Render<T extends Entity> {
     @Inject(method = "renderName", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/matrix/MatrixStack;pop()V"))
     private void renderEssentialIndicator(
         //#if MC>=12102

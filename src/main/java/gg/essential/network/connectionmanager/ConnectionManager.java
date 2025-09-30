@@ -140,6 +140,7 @@ public class ConnectionManager extends ConnectionManagerKt {
     private final NoticeBannerManager noticeBannerManager;
 
     private boolean modsSent = false;
+    private int previouslyConnectedProtocol = 1;
 
     public enum Status {
         NO_TOS,
@@ -448,7 +449,10 @@ public class ConnectionManager extends ConnectionManagerKt {
     }
 
     protected void onClose() {
-        this.connection = null;
+        if (this.connection != null) {
+            this.previouslyConnectedProtocol = this.connection.getUsingProtocol();
+            this.connection = null;
+        }
         this.modsSent = false;
 
         JobKt.cancelChildren(getConnectionScope().getCoroutineContext(), CancellationException("Connection closed.", null));
@@ -549,4 +553,8 @@ public class ConnectionManager extends ConnectionManagerKt {
         }
     }
 
+    @Override
+    protected int getPreviouslyConnectedProtocol() {
+        return previouslyConnectedProtocol;
+    }
 }

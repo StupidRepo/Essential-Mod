@@ -415,7 +415,9 @@ fun USession.toMC() =
         //#if MC>=11800
         //$$ Optional.empty(),
         //$$ Optional.empty(),
+        //#if MC<12109
         //$$ Session.AccountType.MSA,
+        //#endif
         //#else
         "Xbox"
         //#endif

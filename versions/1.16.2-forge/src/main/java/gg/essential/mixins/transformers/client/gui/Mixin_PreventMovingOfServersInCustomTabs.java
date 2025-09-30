@@ -43,7 +43,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class Mixin_PreventMovingOfServersInCustomTabs {
     @Shadow
     @Final
+    //#if MC>=12109
+    //$$ private MultiplayerServerListWidget field_19117;
+    //#else
     private MultiplayerScreen owner;
+    //#endif
 
     //#if MC>=12002
     //#if MC>=12106
@@ -79,7 +83,11 @@ public abstract class Mixin_PreventMovingOfServersInCustomTabs {
     private void preventSwappingInCustomTabs(CallbackInfo ci) {
         if (EssentialConfig.INSTANCE.getCurrentMultiplayerTab() != 0) {
             ci.cancel();
+            //#if MC>=12109
+            //$$ this.field_19117.setSelected((MultiplayerServerListWidget.Entry) (Object) this);
+            //#else
             this.owner.func_214287_a((ServerSelectionList.NormalEntry) (Object) this);
+            //#endif
         }
     }
 }

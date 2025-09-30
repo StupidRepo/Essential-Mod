@@ -23,6 +23,8 @@ interface CMConnection {
 
     val isOpen: Boolean
 
+    val usingProtocol: Int
+
     fun registerOnConnected(onConnected: () -> Unit)
 
     fun <T : Packet> registerPacketHandler(cls: Class<T>, handler: (T) -> Unit)

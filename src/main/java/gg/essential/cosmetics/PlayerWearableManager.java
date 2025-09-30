@@ -82,7 +82,9 @@ public class PlayerWearableManager {
         State<Map<CosmeticSlot, EquippedCosmetic>> cosmeticsSource = playerExt.getCosmeticsSource();
         CosmeticsState oldState = playerExt.getCosmeticsState();
 
-        //#if MC>=12002
+        //#if MC>=12109
+        //$$ Model newSkinType = Model.byTypeOrDefault(player.getSkin().model().asString());
+        //#elseif MC>=12002
         //$$ Model newSkinType = Model.byTypeOrDefault(player.getSkinTextures().model().getName());
         //#else
         Model newSkinType = Model.byTypeOrDefault(player.getSkinType());
@@ -132,6 +134,9 @@ public class PlayerWearableManager {
                         //#else
                         CompletableFuture.completedFuture(skinProvider.loadSkin(texture, MinecraftProfileTexture.Type.CAPE))
                         //#endif
+                            //#if MC>=12109
+                            //$$ .thenApply(it -> it.texturePath())
+                            //#endif
                             .thenApply(it -> new Pair<>(singletonList(toU(it)), null));
                 } else {
                     // otherwise we need to use the texture data from the cosmetic

@@ -54,6 +54,10 @@ import net.minecraft.world.EnumDifficulty as McDifficulty
 import net.minecraft.world.GameType as McGameMode
 import java.util.*
 
+//#if MC>=12109
+//$$ import net.minecraft.server.PlayerConfigEntry
+//#endif
+
 class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServerManager {
     private val refHolder = ReferenceHolderImpl()
 
@@ -103,6 +107,8 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     //$$ var appliedCheatsEnabled: Boolean? = null
     //#endif
 
+    var appliedOpenToLan: Boolean = false
+
     init {
         effect(refHolder) {
             val openToLan = (openToLanSourceState() ?: return@effect)()
@@ -120,6 +126,8 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
                 // We cannot just cancel the previous job because openToLan can only be called once, and if the previous
                 // job has already called it, we need to allow it to finish.
                 prevJob?.join()
+
+                appliedOpenToLan = openToLan
 
                 if (openToLan && !server.public) {
                     // IntegratedServer.openToLan assumes that the client is fully connected (mc.player is initialized).
@@ -180,7 +188,11 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
             whitelistUpdateJob?.cancel()
             whitelistUpdateJob = server.coroutineScope.launch {
                 applyWhitelist(whitelist)
+                //#if MC>=12109
+                //$$ server.useAllowlist = true
+                //#else
                 server.playerList.isWhiteListEnabled = true
+                //#endif
             }
         }
 
@@ -288,7 +300,11 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
         // Add new players to the whitelist
         for (uuid in desiredWhitelist) {
             val name = UuidNameLookup.getName(uuid).asDeferred().await()
+            //#if MC>=12109
+            //$$ val profile = PlayerConfigEntry(uuid, name)
+            //#else
             val profile = GameProfile(uuid, name)
+            //#endif
             @Suppress("SENSELESS_COMPARISON") // Forge applies an inappropriate NonNullByDefault
             if (whitelist.getEntry(profile) == null) {
                 whitelist.addEntry(UserListWhitelistEntry(profile))
@@ -299,7 +315,11 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
         for (userName in whitelist.keys) {
             val profile = server.findProfileForName(userName)
             if (profile != null && profile.id !in desiredWhitelist) {
+                //#if MC>=12109
+                //$$ whitelist.remove(PlayerConfigEntry(profile))
+                //#else
                 whitelist.removeEntry(profile)
+                //#endif
             }
         }
 
@@ -326,14 +346,22 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
         // Remove all players that are no longer op
         for (profile in allProfiles) {
             if (profile.id !in desiredOps) {
+                //#if MC>=12109
+                //$$ playerList.removeFromOperators(PlayerConfigEntry(profile))
+                //#else
                 playerList.removeOp(profile)
+                //#endif
             }
         }
 
         // Op all new players
         for (uuid in desiredOps) {
             val name = UuidNameLookup.getName(uuid).asDeferred().await()
+            //#if MC>=12109
+            //$$ val profile = PlayerConfigEntry(uuid, name)
+            //#else
             val profile = GameProfile(uuid, name)
+            //#endif
             @Suppress("SENSELESS_COMPARISON") // Forge applies an inappropriate NonNullByDefault
             if (opList.getEntry(profile) == null) {
                 playerList.addOp(profile)
@@ -342,6 +370,9 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
     }
 
     private fun IntegratedServer.findProfileForName(name: String): GameProfile? {
+        //#if MC>=12109
+        //$$ return apiServices.nameToIdCache.findByName(name).map { GameProfile(it.id, it.name) }.orElse(null)
+        //#else
         val userCache = playerProfileCache
             //#if MC>=12000
             //$$ ?: error("userCache should not be null") // it's only nullable for TestServer
@@ -350,6 +381,7 @@ class McIntegratedServerManager(val server: IntegratedServer) : IntegratedServer
         //$$ return userCache.findByName(name).orElse(null)
         //#else
         return userCache.getGameProfileForUsername(name)
+        //#endif
         //#endif
     }
 

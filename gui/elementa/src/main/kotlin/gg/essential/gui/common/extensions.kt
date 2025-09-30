@@ -30,16 +30,13 @@ import kotlin.reflect.KProperty
 
 import gg.essential.gui.elementa.state.v2.State as StateV2
 
-fun <T : UIComponent, S> T.bindConstraints(state: State<S>, config: UIConstraints.(S) -> Unit) = apply {
-    state.onSetValueAndNow {
-        constraints.config(it)
-    }
-}
+@Deprecated("Using StateV2 instead")
+fun <T : UIComponent, S> T.bindConstraints(state: State<S>, config: UIConstraints.(S) -> Unit) =
+    bindConstraints(state.toV2(), config)
 
 fun <T : UIComponent, S> T.bindConstraints(state: gg.essential.gui.elementa.state.v2.State<S>, config: UIConstraints.(S) -> Unit) = apply {
-    constraints.config(state.get())
-    state.onSetValue(this) {
-        constraints.config(it)
+    effect(this) {
+        constraints.config(state())
     }
 }
 

@@ -15,7 +15,6 @@ import dev.folomeev.kotgl.matrix.matrices.Mat4;
 import gg.essential.cosmetics.CosmeticsRenderState;
 import gg.essential.cosmetics.EssentialModelRenderer;
 import gg.essential.gui.emotes.EmoteWheel;
-import gg.essential.handlers.OnlineIndicator;
 import gg.essential.mixins.impl.client.entity.AbstractClientPlayerExt;
 import gg.essential.mixins.impl.client.renderer.entity.PlayerEntityRendererExt;
 import gg.essential.mod.cosmetics.SkinLayer;
@@ -38,6 +37,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.EnumSet;
 import java.util.Set;
+
+//#if MC>=12109
+//$$ import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+//$$ import net.minecraft.entity.PlayerLikeEntity;
+//#endif
 
 //#if MC>=12102
 //$$ import gg.essential.mixins.impl.client.model.PlayerEntityRenderStateExt;
@@ -113,8 +117,14 @@ public abstract class MixinRenderPlayer
     }
 
     //#if MC>=12102
+    //#if MC>=12109
+    //$$ @Inject(method = "updateRenderState(Lnet/minecraft/entity/PlayerLikeEntity;Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;F)V", at = @At("RETURN"))
+    //$$ private void disableOuterLayerWhereCoveredByCosmetic(PlayerLikeEntity player, PlayerEntityRenderState state, float tickDelta, CallbackInfo ci) {
+    //$$     if (!(player instanceof AbstractClientPlayerExt)) return;
+    //#else
     //$$ @Inject(method = "updateRenderState(Lnet/minecraft/client/network/AbstractClientPlayerEntity;Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;F)V", at = @At("RETURN"))
     //$$ private void disableOuterLayerWhereCoveredByCosmetic(AbstractClientPlayerEntity player, PlayerEntityRenderState state, float tickDelta, CallbackInfo ci) {
+    //#endif
     //$$     Set<SkinLayer> coveredLayers = ((AbstractClientPlayerExt) player).getCosmeticsState().getCoveredLayers();
     //$$     state.hatVisible &= !coveredLayers.contains(SkinLayer.HAT);
     //$$     state.jacketVisible &= !coveredLayers.contains(SkinLayer.JACKET);
@@ -161,14 +171,22 @@ public abstract class MixinRenderPlayer
     @Inject(method = "renderLeftArm", at = @At("RETURN"))
     //#if MC>=11400
     //#if MC>=12102
+    //#if MC>=12109
+    //$$ private void renderLeftArm(MatrixStack vMatrixStack, OrderedRenderCommandQueue queue, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //#else
     //$$ private void renderLeftArm(MatrixStack vMatrixStack, VertexConsumerProvider buffers, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //#endif
     //$$     AbstractClientPlayerEntity player = MinecraftClient.getInstance().player;
     //$$     if (player == null) return;
     //#else
     //$$ private void renderLeftArm(MatrixStack vMatrixStack, IRenderTypeBuffer buffers, int combinedLight, AbstractClientPlayerEntity player, CallbackInfo ci) {
     //#endif
     //$$     UMatrixStack matrixStack = new UMatrixStack(vMatrixStack);
+    //#if MC>=12109
+    //$$     RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue, combinedLight);
+    //#else
     //$$     RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider(buffers, combinedLight);
+    //#endif
     //#else
     private void renderLeftArm(AbstractClientPlayer player, CallbackInfo ci) {
         UMatrixStack matrixStack = new UMatrixStack();
@@ -179,7 +197,7 @@ public abstract class MixinRenderPlayer
         //#endif
         CosmeticsRenderState cState = new CosmeticsRenderState.Live(player);
         // render only cosmetics connected to LEFT_ARM and no other EnumParts
-        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, cState, EnumSet.of(EnumPart.LEFT_ARM), false);
+        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, EnumSet.of(EnumPart.LEFT_ARM), false);
         EmoteWheel.isPlayerArmRendering = false;
     }
 
@@ -192,14 +210,22 @@ public abstract class MixinRenderPlayer
     @Inject(method = "renderRightArm", at = @At("RETURN"))
     //#if MC>=11400
     //#if MC>=12102
+    //#if MC>=12109
+    //$$ private void renderRightArm(MatrixStack vMatrixStack, OrderedRenderCommandQueue queue, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //#else
     //$$ private void renderRightArm(MatrixStack vMatrixStack, VertexConsumerProvider buffers, int combinedLight, Identifier skinTexture, boolean sleeveVisible, CallbackInfo ci) {
+    //#endif
     //$$     AbstractClientPlayerEntity player = MinecraftClient.getInstance().player;
     //$$     if (player == null) return;
     //#else
     //$$ private void renderRightArm(MatrixStack vMatrixStack, IRenderTypeBuffer buffers, int combinedLight, AbstractClientPlayerEntity player, CallbackInfo ci) {
     //#endif
     //$$     UMatrixStack matrixStack = new UMatrixStack(vMatrixStack);
+    //#if MC>=12109
+    //$$     RenderBackend.CommandQueue vertexConsumerProvider = new MinecraftRenderBackend.MinecraftCommandQueue(queue, combinedLight);
+    //#else
     //$$     RenderBackend.VertexConsumerProvider vertexConsumerProvider = new MinecraftRenderBackend.VertexConsumerProvider(buffers, combinedLight);
+    //#endif
     //#else
     private void renderRightArm(AbstractClientPlayer player, CallbackInfo ci) {
         UMatrixStack matrixStack = new UMatrixStack();
@@ -210,23 +236,8 @@ public abstract class MixinRenderPlayer
         //#endif
         CosmeticsRenderState cState = new CosmeticsRenderState.Live(player);
         // render only cosmetics connected to RIGHT_ARM and no other EnumParts
-        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, cState, EnumSet.of(EnumPart.RIGHT_ARM), false);
+        essentialModelRenderer.render(matrixStack, vertexConsumerProvider, null, cState, EnumSet.of(EnumPart.RIGHT_ARM), false);
         EmoteWheel.isPlayerArmRendering = false;
-    }
-
-    //#if MC>=12102
-    //$$ @Inject(method = "renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/text/Text;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/LivingEntityRenderer;renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/EntityRenderState;Lnet/minecraft/text/Text;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", ordinal = 1))
-    //#elseif MC>=12005
-    //$$ @Inject(method = "renderLabelIfPresent(Lnet/minecraft/client/network/AbstractClientPlayerEntity;Lnet/minecraft/text/Text;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;IF)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/LivingEntityRenderer;renderLabelIfPresent(Lnet/minecraft/entity/Entity;Lnet/minecraft/text/Text;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;IF)V", ordinal = 1))
-    //#elseif MC>=11600
-    //$$ @Inject(method = "renderName(Lnet/minecraft/client/entity/player/AbstractClientPlayerEntity;Lnet/minecraft/util/text/ITextComponent;Lcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/LivingRenderer;renderName(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/text/ITextComponent;Lcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V", ordinal = 1))
-    //#elseif MC>=11200
-    @Inject(method = "renderEntityName", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RenderLivingBase;renderEntityName(Lnet/minecraft/entity/Entity;DDDLjava/lang/String;D)V"))
-    //#else
-    //$$ @Inject(method = "renderOffsetLivingLabel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RendererLivingEntity;renderOffsetLivingLabel(Lnet/minecraft/entity/Entity;DDDLjava/lang/String;FD)V"))
-    //#endif
-    private void setNametagEntity(CallbackInfo ci) {
-        OnlineIndicator.currentlyDrawingPlayerEntityName.set(true);
     }
 
     @Override

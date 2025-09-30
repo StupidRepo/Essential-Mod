@@ -83,7 +83,11 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 //#endif
 
 @Mixin(ServerListEntryNormal.class)
-public abstract class MixinServerListEntryNormal implements ServerListEntryNormalExt {
+public abstract class MixinServerListEntryNormal
+    //#if MC>=12109
+    //$$ extends MultiplayerServerListWidget.Entry
+    //#endif
+    implements ServerListEntryNormalExt {
 
     //#if MC>=12106
     //$$ private static final String DRAW_TEXTURE = "Lnet/minecraft/client/gui/DrawContext;drawGuiTexture(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/util/Identifier;IIII)V";
@@ -152,6 +156,7 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         //#elseif MC>=11602
         //$$ MatrixStack vMatrixStack,
         //#endif
+        //#if MC<12109
         int slotIndex,
         //#if MC>=11602
         //$$ int y,
@@ -162,6 +167,7 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         //#endif
         int listWidth,
         int slotHeight,
+        //#endif
         int mouseX,
         int mouseY,
         boolean isSelected,
@@ -170,6 +176,11 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         //#endif
         CallbackInfo ci
     ) {
+        //#if MC>=12109
+        //$$ int x = this.getContentX();
+        //$$ int y = this.getContentY();
+        //$$ int listWidth = this.getContentWidth();
+        //#endif
         //#if MC>=12000
         //$$ UMatrixStack matrixStack = new UMatrixStack(context.getMatrices());
         //#elseif MC>=11602
@@ -339,6 +350,9 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         //$$ int tooltipX,
         //$$ int tooltipY,
         //#endif
+        //#if MC>=12109
+        //$$ @Local(argsOnly = true) DrawContext drawContext_ // don't actually need this, just need something for the trailing comma
+        //#else
         //#if MC>=11600
         //$$ @Local(ordinal = 1, argsOnly = true) int y,
         //$$ @Local(ordinal = 2, argsOnly = true) int x,
@@ -347,7 +361,13 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
         @Local(ordinal = 2, argsOnly = true) int y,
         //#endif
         @Local(ordinal = 3, argsOnly = true) int listWidth
+        //#endif
     ) {
+        //#if MC>=12109
+        //$$ int x = this.getContentX();
+        //$$ int y = this.getContentY();
+        //$$ int listWidth = this.getContentWidth();
+        //#endif
         if (getExt(this.server).getEssential$showDownloadIcon()) {
             EssentialMultiplayerGui gui = ((GuiMultiplayerExt) this.owner).essential$getEssentialGui();
             gui.showTooltipString(x + listWidth - 15 + 1, y, 7, 8, "Download compatible version");
@@ -358,7 +378,11 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
 
     //#if MC>=11600
     //$$ @Inject(method = "mouseClicked", at = @At(value = "CONSTANT", args = "doubleValue=32.0"), cancellable = true)
+    //#if MC>=12109
+    //$$ private void onMousePressed(CallbackInfoReturnable<Boolean> cir, @Local(ordinal = 0) double relativeX, @Local(ordinal = 1) double relativeY) {
+    //#else
     //$$ private void onMousePressed(CallbackInfoReturnable<Boolean> cir, @Local(ordinal = 2) double relativeX, @Local(ordinal = 3) double relativeY) {
+    //#endif
     //#else
     @Inject(method = "mousePressed", at = @At("HEAD"), cancellable = true)
     private void handleMousePressed(int slotIndex, int mouseX, int mouseY, int mouseEvent, int relativeX, int relativeY, CallbackInfoReturnable<Boolean> cir) {
@@ -399,13 +423,18 @@ public abstract class MixinServerListEntryNormal implements ServerListEntryNorma
 
     @Inject(method = "drawEntry", at = @At("HEAD"))
     private void trackImpression(
-        CallbackInfo ci,
+        CallbackInfo ci
+        //#if MC<12109
         //#if MC>=11600
-        //$$ @Local(ordinal = 1, argsOnly = true) int y
+        //$$ , @Local(ordinal = 1, argsOnly = true) int y
         //#else
-        @Local(ordinal = 2, argsOnly = true) int y
+        , @Local(ordinal = 2, argsOnly = true) int y
+        //#endif
         //#endif
     ) {
+        //#if MC>=12109
+        //$$ int y = this.getContentY();
+        //#endif
         if (!this.trackedImpression && this.impressionConsumer != null) {
             ServerSelectionList list = ((GuiMultiplayerAccessor) this.owner).getServerListSelector();
             //#if MC>=12004

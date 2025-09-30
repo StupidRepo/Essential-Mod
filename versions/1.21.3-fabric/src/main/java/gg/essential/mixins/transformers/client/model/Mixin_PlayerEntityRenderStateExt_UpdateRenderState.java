@@ -20,10 +20,21 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC>=12109
+//$$ import net.minecraft.entity.PlayerLikeEntity;
+//#endif
+
 @Mixin(PlayerEntityRenderer.class)
 public abstract class Mixin_PlayerEntityRenderStateExt_UpdateRenderState {
+    //#if MC>=12109
+    //$$ @Inject(method = "updateRenderState(Lnet/minecraft/entity/PlayerLikeEntity;Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;F)V", at = @At("HEAD"))
+    //$$ private void updateEssentialRenderState(PlayerLikeEntity playerLike, PlayerEntityRenderState state, float tickDelta, CallbackInfo ci) {
+    //$$     if (!(playerLike instanceof AbstractClientPlayerEntity)) return;
+    //$$     AbstractClientPlayerEntity entity = (AbstractClientPlayerEntity) playerLike;
+    //#else
     @Inject(method = "updateRenderState(Lnet/minecraft/client/network/AbstractClientPlayerEntity;Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;F)V", at = @At("HEAD"))
     private void updateEssentialRenderState(AbstractClientPlayerEntity entity, PlayerEntityRenderState state, float tickDelta, CallbackInfo ci) {
+    //#endif
         PlayerEntityRenderStateExt stateExt = (PlayerEntityRenderStateExt) state;
         stateExt.essential$getCosmetics().update(entity);
     }

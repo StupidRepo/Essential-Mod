@@ -11,7 +11,6 @@
  */
 package gg.essential.util
 
-import com.mojang.authlib.GameProfile
 import com.sparkuniverse.toolbox.chat.enums.ChannelType
 import com.sparkuniverse.toolbox.chat.model.Channel
 import dev.folomeev.kotgl.matrix.matrices.mat3
@@ -141,8 +140,6 @@ val MinecraftServer.executor
         //#else
         Executor { addScheduledTask(it) }
 //#endif
-
-fun GameProfile.copy() = GameProfile(id, name).also { it.properties.putAll(properties) }
 
 fun toggleElementaDebug() {
     elementaDebug = !elementaDebug

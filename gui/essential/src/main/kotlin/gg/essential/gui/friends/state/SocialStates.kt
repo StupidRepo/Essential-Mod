@@ -103,7 +103,23 @@ interface IMessengerStates {
      * State that records whether this message is unread or not.
      * Calling [State.set] will propagate update to CM
      */
+    @Deprecated("Not used in protocol 9 or later")
     fun getUnreadMessageState(message: Message): StateV2<Boolean>
+
+    /**
+     * State of the last read message in a channel
+     */
+    fun getLastReadMessageId(channelId: Long): StateV2<Long?>
+
+    /**
+     * Sets the message as the last read message in the channel
+     */
+    fun setLastReadMessage(message: Message)
+
+    /**
+     * Sets the message id as the last read message in the channel
+     */
+    fun setLastReadMessage(channelId: Long, messageId: Long?)
 
     /**
      * Title of this channel.
@@ -139,6 +155,7 @@ interface IMessengerStates {
      */
     fun getObservableChannelList(): ObservableList<Channel>
 
+    @Deprecated("Not used in protocol 9 or later")
     fun setUnreadState(message: Message, unread: Boolean)
 
     /**
@@ -197,6 +214,7 @@ interface IMessengerManager {
     /**
      * Called when a message is unread or read
      */
+    @Deprecated("Not used in protocol 9 or later")
     fun messageReadStateUpdated(message: Message, read: Boolean)
 
     /**

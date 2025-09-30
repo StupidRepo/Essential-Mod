@@ -52,6 +52,7 @@ net.minecraft.nbt.CompoundNBT net.minecraft.nbt.NBTTagCompound
 net.minecraft.nbt.CompoundNBT put() setTag()
 net.minecraft.nbt.ListNBT net.minecraft.nbt.NBTTagList
 net.minecraft.nbt.ListNBT size() tagCount()
+net.minecraft.network.login.ServerLoginNetHandler$1 net.minecraft.server.network.NetHandlerLoginServer$2
 net.minecraft.network.PacketDirection net.minecraft.network.EnumPacketDirection
 net.minecraft.profiler.IProfiler net.minecraft.profiler.Profiler
 net.minecraft.resources.FilePack net.minecraft.client.resources.FileResourcePack

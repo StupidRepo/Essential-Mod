@@ -53,6 +53,7 @@ import gg.essential.universal.UKeyboard
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.USound
 import gg.essential.util.*
+import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.vigilance.utils.onLeftClick
 import java.time.Instant
 
@@ -80,9 +81,11 @@ class MessageWrapperImpl(
             it.hoveredState()
         }.toV2().map { it }
     }
+    @Deprecated("Not used in protocol 9 or later")
     private val markedUnreadManually = BasicState(false)
 
     private val messengerStates = messageScreen.preview.gui.socialStateManager.messengerStates
+    @Deprecated("Not used in protocol 9 or later")
     private val unreadState = messengerStates.getUnreadMessageState(message.getInfraInstance())
 
     private val topSpacer by Spacer(height = 5f) childOf this
@@ -340,8 +343,12 @@ class MessageWrapperImpl(
         }
 
         val markUnreadOption = ContextOptionMenu.Option("Mark Unread", image = EssentialPalette.MARK_UNREAD_10X7) {
-            markSelfUnread()
-            messageScreen.markedManuallyUnread(this)
+            if (platform.cmConnection.usingProtocol >= 9) {
+                messageScreen.markMessageAsUnread(this)
+            } else {
+                markSelfUnread()
+                messageScreen.markedManuallyUnread(this)
+            }
         }
 
         val reportOption = ContextOptionMenu.Option(
@@ -445,6 +452,7 @@ class MessageWrapperImpl(
     /**
      * Marks the internal states of this component as unread
      */
+    @Deprecated("Not used in protocol 9 or later")
     fun markSelfUnread() {
         messengerStates.setUnreadState(message.getInfraInstance(), true)
         markedUnreadManually.set(true)
@@ -472,6 +480,7 @@ class MessageWrapperImpl(
         }
     }
 
+    @Deprecated("Not used in protocol 9 or later")
     fun markRead() {
         // Check the message should be marked as read
         if (message.sent && !markedUnreadManually.get() && unreadState.get()) {

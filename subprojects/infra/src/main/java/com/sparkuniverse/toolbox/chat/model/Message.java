@@ -33,6 +33,7 @@ public class Message {
     @NotNull
     private final String contents;
 
+    @Deprecated
     @SerializedName("e")
     private final boolean read;
 
@@ -85,6 +86,7 @@ public class Message {
         return this.contents;
     }
 
+    @Deprecated
     public boolean isRead() {
         return this.read;
     }

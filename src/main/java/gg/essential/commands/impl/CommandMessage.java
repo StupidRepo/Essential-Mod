@@ -63,7 +63,6 @@ public class CommandMessage extends Command {
         public void accept(Optional<Packet> packet) {
             if (packet.isPresent() && packet.get() instanceof ServerChatChannelMessagePacket) {
                 Message messageObj = CollectionsKt.first(Arrays.asList(((ServerChatChannelMessagePacket) packet.get()).getMessages()));
-                cm.updateReadState(messageObj, true);
                 onConfirm("§dTo " + friend.getIgn() + "§r: " + messageObj.getContents());
             } else {
                 onConfirm("Error!");

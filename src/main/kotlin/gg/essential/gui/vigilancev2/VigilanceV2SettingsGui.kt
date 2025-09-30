@@ -23,6 +23,7 @@ import gg.essential.elementa.dsl.pixels
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.InternalEssentialGUI
 import gg.essential.gui.elementa.state.v2.*
+import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.modals.UpdateAvailableModal
 import gg.essential.gui.vigilancev2.components.vigilanceCategoryTextColor
@@ -102,6 +103,7 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
                             "Privacy Policy" to URI("https://essential.gg/privacy-policy"),
                             "Terms of Service" to URI("https://essential.gg/terms-of-use")
                         ).forEach { (text, uri) -> sidebarLink(text, uri) }
+
                     },
                     {
                         listOf(

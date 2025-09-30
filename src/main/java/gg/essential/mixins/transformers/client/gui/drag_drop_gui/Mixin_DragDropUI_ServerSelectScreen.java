@@ -254,7 +254,11 @@ public abstract class Mixin_DragDropUI_ServerSelectScreen extends GuiScreen impl
         }
     }
 
+    //#if MC>=12109
+    //$$ @Inject(method = "connect", at = @At(value = "HEAD"))
+    //#else
     @Inject(method = "connectToSelected", at = @At(value = "HEAD"))
+    //#endif
     private void onConnect(CallbackInfo ci) {
         // should be covered by the close method, but just in case
         if (guiDragHandler != null && guiDragHandler.isDraggingEntry()) {

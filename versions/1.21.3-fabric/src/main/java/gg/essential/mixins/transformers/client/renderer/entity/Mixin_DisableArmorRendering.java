@@ -25,24 +25,52 @@ import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
+//#if MC>=12109
+//$$ import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+//#endif
+
 @Mixin(value = ArmorFeatureRenderer.class)
 public abstract class Mixin_DisableArmorRendering<S extends BipedEntityRenderState, M extends BipedEntityModel<S>, A extends BipedEntityModel<S>> {
+    //#if MC>=12109
+    //$$ private static final String RENDER = "render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;ILnet/minecraft/client/render/entity/state/BipedEntityRenderState;FF)V";
+    //#else
+    private static final String RENDER = "render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/client/render/entity/state/BipedEntityRenderState;FF)V";
+    //#endif
+
+    //#if MC>=12109
+    //$$ private static final String RENDER_ARMOR = "Lnet/minecraft/client/render/entity/feature/ArmorFeatureRenderer;renderArmor(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/item/ItemStack;Lnet/minecraft/entity/EquipmentSlot;ILnet/minecraft/client/render/entity/state/BipedEntityRenderState;)V";
+    //#else
     //#if FORGE
     //$$ private static final String RENDER_ARMOR = "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderArmorPiece(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/EquipmentSlot;ILnet/minecraft/client/model/HumanoidModel;Lnet/minecraft/client/renderer/entity/state/HumanoidRenderState;)V";
     //#else
     private static final String RENDER_ARMOR = "Lnet/minecraft/client/render/entity/feature/ArmorFeatureRenderer;renderArmor(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;Lnet/minecraft/item/ItemStack;Lnet/minecraft/entity/EquipmentSlot;ILnet/minecraft/client/render/entity/model/BipedEntityModel;)V";
     //#endif
+    //#endif
 
     @WrapWithCondition(
-        method = "render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/client/render/entity/state/BipedEntityRenderState;FF)V",
+        method = RENDER,
         at = @At(value = "INVOKE", target = RENDER_ARMOR)
     )
     private boolean essential$disableArmorRendering(
-        ArmorFeatureRenderer<S, M, A> self, MatrixStack matrixStack, VertexConsumerProvider vertexConsumers, ItemStack stack, EquipmentSlot slot, int light, A armorModel,
+        ArmorFeatureRenderer<S, M, A> self,
+        MatrixStack matrixStack,
+        //#if MC>=12109
+        //$$ OrderedRenderCommandQueue commandQueue,
+        //#else
+        VertexConsumerProvider vertexConsumers,
+        //#endif
+        ItemStack stack,
+        EquipmentSlot slot,
+        int light,
+        //#if MC>=12109
+        //$$ S state
+        //#else
+        A armorModel,
         //#if FORGE
         //$$ S state
         //#else
         @Local(argsOnly = true) S state
+        //#endif
         //#endif
     ) {
         if (!(state instanceof PlayerEntityRenderStateExt)) return true;

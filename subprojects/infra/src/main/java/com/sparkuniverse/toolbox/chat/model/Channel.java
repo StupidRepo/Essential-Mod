@@ -62,7 +62,7 @@ public final class Channel {
             final long id, @NotNull final ChannelType type, @NotNull final String name, @Nullable final String topic,
             @Nullable final ChannelSettings settings, @NotNull final Set<UUID> members,
             @NotNull final CreatedInfo createdInfo, @Nullable final ClosedInfo closedInfo,
-            final boolean muted, final long joinedAt
+            final boolean muted, final long joinedAt, @Nullable Long lastReadMessageId, int unreadMessages
     ) {
         this.id = id;
         this.type = type;
@@ -118,6 +118,14 @@ public final class Channel {
         return this.joinedAt;
     }
 
+    public @Nullable Long getLastReadMessageId() {
+        return null;
+    }
+
+    public int getUnreadMessages() {
+        return -1;
+    }
+
     public void setName(@NotNull final String name) {
         this.name = name;
     }
@@ -130,4 +138,9 @@ public final class Channel {
         this.muted = muted;
     }
 
+    public void setLastReadMessageId(@Nullable Long lastReadMessageId) {
+    }
+
+    public void setUnreadMessages(int unreadMessages) {
+    }
 }

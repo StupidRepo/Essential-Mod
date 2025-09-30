@@ -52,6 +52,7 @@ import net.minecraft.launchwrapper.IClassTransformer;
 //#endif
 
 public class Plugin implements IMixinConfigPlugin {
+    static { IntegrationTestsPlugin.registerUncaughtExceptionHandler(); }
     private static final Logger logger = LogManager.getLogger("Essential Logger - Plugin");
 
     private final boolean inOurDevEnv = Boolean.getBoolean("essential.feature.dev_only");
@@ -146,7 +147,7 @@ public class Plugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith("MixinFramebuffer")) {
             return false; // Forge already includes this patch
         }
-        if (mixinClassName.endsWith("MixinKeyBinding")) {
+        if (mixinClassName.endsWith("Mixin_FixKeyBindingCategorySortingNPE")) {
             return false; // Forge already includes this patch
         }
         //#endif

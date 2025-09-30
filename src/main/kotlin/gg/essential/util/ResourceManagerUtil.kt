@@ -50,6 +50,14 @@ object ResourceManagerUtil : IResourceManagerReloadListener {
      * We want to clear our caches when the resource manager is reloaded in-case a resource pack is controlling
      * the texture.
      */
+    //#if MC>=12109
+    //$$ override fun reload(
+    //$$     store: ResourceReloader.Store,
+    //$$     backgroundExecutor: Executor,
+    //$$     stage: Synchronizer,
+    //$$     gameExecutor: Executor,
+    //$$ ): CompletableFuture<Void> {
+    //#else
     //#if MC<=11202
     override fun onResourceManagerReload(ignored: IResourceManager) {
         //#else
@@ -64,6 +72,7 @@ object ResourceManagerUtil : IResourceManagerReloadListener {
         //$$      gameExecutor: Executor?,
         //$$  ): CompletableFuture<Void?> {
         //#endif
+    //#endif
         listeners.forEach(Listener::invoke)
         //#if MC>11202
         //$$ return stage.markCompleteAwaitingOthers(null)

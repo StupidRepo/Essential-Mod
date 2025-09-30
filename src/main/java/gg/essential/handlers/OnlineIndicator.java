@@ -47,6 +47,9 @@ import static gg.essential.util.HelpersKt.identifier;
 public class OnlineIndicator {
 
     public static final ThreadLocal<Boolean> currentlyDrawingPlayerEntityName = ThreadLocal.withInitial(() -> false);
+    //#if MC>=12109
+    //$$ public static CosmeticsRenderState currentCosmeticsRenderState;
+    //#endif
     //#if MC==11202
     public static Entity nametagEntity = null;
     //#endif

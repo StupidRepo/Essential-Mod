@@ -55,10 +55,17 @@ abstract class MessageScreen : UIContainer(){
     /**
      * Called when [messageWrapper] has marked itself as manually unread
      */
+    @Deprecated("Not used in protocol 9 or later")
     abstract fun markedManuallyUnread(messageWrapper: MessageWrapper)
 
     /**
      * Called when all messages of this screen should be marked as read at once
      */
+    @Deprecated("Not used in protocol 9 or later")
     abstract fun markAllAsRead()
+
+    /**
+     * Called when [messageWrapper] has marked itself as unread
+     */
+    abstract fun markMessageAsUnread(messageWrapper: MessageWrapper)
 }

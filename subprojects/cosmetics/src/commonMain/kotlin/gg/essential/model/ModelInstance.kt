@@ -109,7 +109,7 @@ class ModelInstance(
 
     fun render(
         matrixStack: UMatrixStack,
-        vertexConsumerProvider: RenderBackend.VertexConsumerProvider,
+        queue: RenderBackend.CommandQueue,
         geometry: RenderGeometry,
         renderMetadata: RenderMetadata,
     ) {
@@ -117,7 +117,7 @@ class ModelInstance(
 
         model.render(
             matrixStack,
-            vertexConsumerProvider,
+            queue,
             geometry,
             bakedAnimations,
             renderMetadata,
