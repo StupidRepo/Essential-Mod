@@ -14,6 +14,7 @@ package gg.essential.gui.wardrobe
 import gg.essential.Essential
 import gg.essential.api.gui.GuiRequiresTOS
 import gg.essential.config.EssentialConfig
+import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPacket
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.ScrollComponent
@@ -91,6 +92,15 @@ class Wardrobe(
     )
     init {
         state.inEmoteWheel.set(initialEmoteWheel)
+
+        var previousColumnCount = -1
+        effect(window) {
+            val columnCount = state.featuredPageLayout().second?.key ?: return@effect
+            if (previousColumnCount != columnCount) {
+                connectionManager.telemetryManager.enqueue(ClientTelemetryPacket("WARDROBE_LAYOUT", mapOf("columnCount" to columnCount)))
+                previousColumnCount = columnCount
+            }
+        }
     }
 
     private val searchbar = EssentialCollapsibleSearchbar(activateOnType = false).apply {

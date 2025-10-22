@@ -18,10 +18,11 @@ import gg.essential.elementa.constraints.*
 import gg.essential.elementa.constraints.animation.*
 import gg.essential.elementa.dsl.*
 import gg.essential.elementa.effects.ScissorEffect
-import gg.essential.elementa.state.BasicState
 import gg.essential.elementa.utils.getStringSplitToWidth
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.ContextOptionMenu
+import gg.essential.gui.elementa.state.v2.effect
+import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.universal.UDesktop
 import gg.essential.universal.UKeyboard
 import gg.essential.universal.UMatrixStack
@@ -42,9 +43,9 @@ abstract class AbstractTextInput(
     var maxLength: Int = Int.MAX_VALUE, // Note, this is not enforced when updated
 ) : UIComponent() {
 
-    val placeholderColor = BasicState(EssentialPalette.TEXT)
-    val placeholderShadow = BasicState(true)
-    val textState = BasicState("")
+    val placeholderColor = mutableStateOf(EssentialPalette.TEXT)
+    val placeholderShadow = mutableStateOf(true)
+    val textState = mutableStateOf("")
 
     // Allows all characters when empty
     val allowedCharacters: MutableSet<Char> = mutableSetOf()
@@ -247,7 +248,7 @@ abstract class AbstractTextInput(
                         setCursorPosition(it)
                     }
                 }
-            } else if (keyCode == UKeyboard.KEY_ENTER) { // Enter
+            } else if (UKeyboard.isEnterKey(keyCode)) { // Enter
                 onEnterPressed()
             } else if (keyCode == UKeyboard.KEY_MENU) {
                 val (posX, posY) = cursor.toScreenPos()
@@ -413,9 +414,10 @@ abstract class AbstractTextInput(
 
         enableEffect(ScissorEffect())
 
-        textState.onSetValue {
-            if (it != getText()) {
-                setText(it)
+        effect(this) {
+            val text = textState()
+            if (text != getText()) {
+                setText(text)
             }
         }
     }
@@ -500,10 +502,6 @@ abstract class AbstractTextInput(
 
     fun onUpdate(listener: (text: String) -> Unit) = apply {
         updateAction = listener
-    }
-
-    fun onActivate(listener: (text: String) -> Unit) = apply {
-        activateAction = listener
     }
 
     protected open fun commitTextOperation(operation: TextOperation) {
@@ -821,7 +819,7 @@ abstract class AbstractTextInput(
         drawUnselectedText(UMatrixStack.Compat.get(), text, left, row)
 
     protected open fun drawPlaceholder(matrixStack: UMatrixStack) {
-        drawUnselectedText(matrixStack, placeholder, getLeft(), 0, placeholderColor.get(), placeholderShadow.get())
+        drawUnselectedText(matrixStack, placeholder, getLeft(), 0, placeholderColor.getUntracked(), placeholderShadow.getUntracked())
     }
 
     protected open fun drawUnselectedText(

@@ -17,6 +17,7 @@ import com.sparkuniverse.toolbox.chat.model.Channel;
 import gg.essential.config.EssentialConfig;
 import gg.essential.connectionmanager.common.enums.ActivityType;
 import gg.essential.connectionmanager.common.enums.ProfileStatus;
+import gg.essential.connectionmanager.common.model.profile.ProfilePunishmentStatus;
 import gg.essential.connectionmanager.common.packet.profile.ClientProfileActivityPacket;
 import gg.essential.connectionmanager.common.packet.profile.ServerProfileActivityPacket;
 import gg.essential.connectionmanager.common.packet.profile.ServerProfileStatusPacket;
@@ -27,6 +28,9 @@ import gg.essential.data.OnboardingData;
 import gg.essential.elementa.state.BasicState;
 import gg.essential.elementa.state.State;
 import gg.essential.gui.EssentialPalette;
+import gg.essential.gui.elementa.state.v2.MutableState;
+import gg.essential.gui.elementa.state.v2.collections.MutableTrackedList;
+import gg.essential.gui.elementa.state.v2.collections.TrackedList;
 import gg.essential.gui.friends.SocialMenu;
 import gg.essential.gui.friends.previews.ChannelPreview;
 import gg.essential.gui.friends.state.IStatusManager;
@@ -46,6 +50,7 @@ import gg.essential.network.connectionmanager.handler.profile.trustedhosts.Serve
 import gg.essential.network.connectionmanager.handler.profile.trustedhosts.ServerProfileTrustedHostsRemovePacketHandler;
 import gg.essential.network.connectionmanager.queue.PacketQueue;
 import gg.essential.network.connectionmanager.queue.SequentialPacketQueue;
+import gg.essential.network.connectionmanager.social.ProfileSuspension;
 import gg.essential.network.connectionmanager.subscription.SubscriptionManager;
 import gg.essential.profiles.model.TrustedHost;
 import gg.essential.util.CachedAvatarImage;
@@ -68,6 +73,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static gg.essential.gui.elementa.state.v2.ListKt.clear;
+import static gg.essential.gui.elementa.state.v2.ListKt.mutableListStateOf;
 
 public class ProfileManager extends StateCallbackManager<IStatusManager> implements NetworkedManager, SubscriptionManager.Listener {
     @NotNull
@@ -90,6 +96,12 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
 
     @NotNull
     private final State<Set<String>> userTrustedHostsState = new BasicState<>(new HashSet<>());
+
+    @NotNull
+    private final MutableState<MutableTrackedList<ProfileSuspension>> suspensions = mutableListStateOf();
+
+    @NotNull
+    private final gg.essential.gui.elementa.state.v2.State<TrackedList<ProfileSuspension>> activeSuspensions = ProfileManagerKt.filterActiveSuspensions(suspensions);
 
     /**
      * Used to track whether the default trusted hosts have been loaded in the
@@ -150,6 +162,29 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
     }
 
     @NotNull
+    public gg.essential.gui.elementa.state.v2.State<TrackedList<ProfileSuspension>> getSuspensions() {
+        return this.activeSuspensions;
+    }
+
+    @Nullable
+    public ProfileSuspension getSuspension(@NotNull final UUID uuid) {
+        for (final ProfileSuspension suspension : this.activeSuspensions.getUntracked()) {
+            if (suspension.getUser().equals(uuid)) {
+                return suspension;
+            }
+        }
+        return null;
+    }
+
+    public boolean isSuspended(@NotNull final UUID uuid) {
+        ProfileSuspension suspension = this.getSuspension(uuid);
+        if (suspension == null) {
+            return false;
+        }
+        return suspension.isActiveNow();
+    }
+
+    @NotNull
     public Optional<ProfileStatus> getStatusIfLoaded(@NotNull final UUID uuid) {
         return Optional.ofNullable(this.statuses.get(uuid));
     }
@@ -206,6 +241,19 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
         for (IStatusManager statusManager : getCallbacks()) {
             statusManager.refreshActivity(uuid);
         }
+    }
+
+    public void setPlayerSuspension(@NotNull final UUID uuid, @Nullable final ProfilePunishmentStatus suspension) {
+        MutableTrackedList<ProfileSuspension> newSuspensions = this.suspensions.getUntracked();
+        for (ProfileSuspension profileSuspension : newSuspensions) {
+            if (profileSuspension.getUser().equals(uuid)) {
+                newSuspensions = newSuspensions.remove(profileSuspension);
+            }
+        }
+        if (suspension != null) {
+            newSuspensions = newSuspensions.add(ProfileSuspension.Companion.fromInfra(uuid, suspension));
+        }
+        this.suspensions.set(newSuspensions);
     }
 
     public void setPlayerActivity(
@@ -281,6 +329,7 @@ public class ProfileManager extends StateCallbackManager<IStatusManager> impleme
         this.trustedHosts.clear();
         this.activities.clear();
         this.statuses.clear();
+        clear(this.suspensions);
         updateTrustedHostState();
     }
 

@@ -327,9 +327,8 @@ object ConfigurationUtils {
         items: ListState<Pair<String, String>>,
     ) {
         val minChars = items.map { if (it.size > 20) 2 else 0 }
-        val inputTextState = input.textState.toV2()
         val options = memo {
-            val text = inputTextState()
+            val text = input.textState()
             if (text.length < minChars()) return@memo listOf()
             return@memo items().filter { it.first.contains(text, ignoreCase = true) || it.second.contains(text, ignoreCase = true) }
         }.toListState().mapEach { ContextOptionMenu.Option("${it.second} (${it.first})", null) { input.setText(it.first) } }

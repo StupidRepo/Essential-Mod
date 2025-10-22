@@ -501,7 +501,9 @@ object EssentialPalette {
 
     fun getMessageColor(hovered: State<Boolean>, sentByClient: Boolean, sendState: SendState): State<Color> {
         return hovered.map {
-            if (it) {
+            if (sendState is SendState.Blocked) {
+                COMPONENT_BACKGROUND
+            } else if (it) {
                 if (sentByClient) {
                     MESSAGE_SENT_BACKGROUND_HOVER
                 } else {

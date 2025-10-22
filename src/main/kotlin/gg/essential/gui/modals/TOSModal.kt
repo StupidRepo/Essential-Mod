@@ -26,6 +26,8 @@ import gg.essential.gui.common.outline.GuiScaleOffsetOutline
 import gg.essential.gui.common.shadow.EssentialUIText
 import gg.essential.gui.elementa.GuiScaleOffsetConstraint
 import gg.essential.gui.elementa.state.v2.await
+import gg.essential.gui.elementa.state.v2.combinators.letState
+import gg.essential.gui.overlay.ModalFlow
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.network.connectionmanager.ConnectionManager
 import gg.essential.universal.ChatColor
@@ -196,7 +198,16 @@ class TOSModal(
                             val connectionManager = Essential.getInstance().connectionManager
 
                             coroutineScope.launch {
-                                val status = connectionManager.connectionStatus.await { it != null && it != ConnectionManager.Status.NO_TOS }
+                                val status = connectionManager.connectionStatus
+                                    .letState { status ->
+                                        if (status == ConnectionManager.Status.NO_TOS) return@letState null
+                                        if (status != ConnectionManager.Status.SUCCESS) return@letState status
+                                        if (!connectionManager.suspensionManager.isLoaded()) return@letState null
+                                        if (!connectionManager.rulesManager.isLoaded()) return@letState null
+                                        ConnectionManager.Status.SUCCESS
+                                    }
+                                    .await { it != null }
+
                                 val modal = when {
                                     connectionManager.outdated -> AutoUpdate.createUpdateModal(modalManager)
                                     status == ConnectionManager.Status.MOJANG_UNAUTHORIZED -> AccountNotValidModal(modalManager, successCallback = confirmAction)
@@ -231,3 +242,14 @@ class TOSModal(
         return GuiScaleOffsetConstraint(if (forceUnicodeEnabled) 0f else -1f)
     }
 }
+
+suspend fun ModalFlow.tosModal(): Boolean =
+    awaitModal { continuation ->
+        TOSModal(
+            modalManager,
+            unprompted = false,
+            requiresAuth = true,
+            confirmAction = { modalManager.queueModal(continuation.resumeImmediately(true)) },
+            cancelAction = { modalManager.queueModal(continuation.resumeImmediately(false)) }
+        )
+    }

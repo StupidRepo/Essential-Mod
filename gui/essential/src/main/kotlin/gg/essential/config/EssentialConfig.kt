@@ -265,6 +265,8 @@ object EssentialConfig : Vigilant2(), GuiEssentialPlatform.Config {
 
     val showOwnNametag = property("Quality of Life.Nameplate.Show my nameplate in third-person", true)
 
+    val acknowledgedPermanentSuspension = property("Hidden.acknowledged_permanent_suspension", false)
+
     override val migrations = listOf(
         Migration { config ->
             val overrideGuiScale = config.remove("general.general.gui_scale") as Boolean? ?: return@Migration

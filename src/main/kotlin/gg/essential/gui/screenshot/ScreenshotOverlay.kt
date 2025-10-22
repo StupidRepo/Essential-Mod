@@ -13,7 +13,6 @@ package gg.essential.gui.screenshot
 
 import gg.essential.Essential
 import gg.essential.config.EssentialConfig
-import gg.essential.data.OnboardingData
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.components.UIContainer
@@ -55,8 +54,7 @@ import gg.essential.gui.layoutdsl.fillHeight
 import gg.essential.gui.layoutdsl.fillWidth
 import gg.essential.gui.layoutdsl.layoutAsColumn
 import gg.essential.gui.layoutdsl.row
-import gg.essential.gui.modals.NotAuthenticatedModal
-import gg.essential.gui.modals.TOSModal
+import gg.essential.gui.modals.ensurePrerequisites
 import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
 import gg.essential.gui.screenshot.ScreenshotOverlay.animating
@@ -344,19 +342,8 @@ class ScreenshotPreviewToast(val file: File) : ScreenshotToast() {
 
                     val upload: () -> Unit = { connectionManager.screenshotManager.uploadAndCopyLinkToClipboard(file.toPath()) }
 
-                    if (!OnboardingData.hasAcceptedTos()) {
-                        GuiUtil.pushModal { manager ->
-                            TOSModal(
-                                manager,
-                                unprompted = false,
-                                requiresAuth = true,
-                                confirmAction = { upload() },
-                                cancelAction = {},
-                            )
-                        }
-                    } else if (!connectionManager.isAuthenticated) {
-                        GuiUtil.pushModal { NotAuthenticatedModal(it) { upload() } }
-                    } else {
+                    GuiUtil.launchModalFlow {
+                        ensurePrerequisites()
                         upload()
                     }
                 }

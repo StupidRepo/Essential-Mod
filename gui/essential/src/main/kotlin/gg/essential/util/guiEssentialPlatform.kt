@@ -20,6 +20,7 @@ import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.friends.message.v2.MessageRef
 import gg.essential.gui.friends.state.SocialStates
+import gg.essential.gui.modals.ModalPrerequisites
 import gg.essential.gui.notification.NotificationsManager
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.overlay.OverlayManager
@@ -34,7 +35,9 @@ import gg.essential.mod.cosmetics.preview.PerspectiveCamera
 import gg.essential.model.backend.RenderBackend
 import gg.essential.network.CMConnection
 import gg.essential.network.connectionmanager.cosmetics.AssetLoader
+import gg.essential.network.connectionmanager.cosmetics.ICosmeticsManager
 import gg.essential.network.connectionmanager.cosmetics.ModelLoader
+import gg.essential.network.connectionmanager.cosmetics.WardrobeSettings
 import gg.essential.network.connectionmanager.features.DisabledFeaturesManager
 import gg.essential.network.connectionmanager.media.IScreenshotManager
 import gg.essential.network.connectionmanager.notices.INoticesManager
@@ -46,8 +49,10 @@ import gg.essential.util.image.bitmap.MutableBitmap
 import gg.essential.util.lwjgl3.Lwjgl3Loader
 import io.netty.buffer.ByteBuf
 import kotlinx.coroutines.CoroutineDispatcher
+import java.awt.image.BufferedImage
 import java.io.IOException
 import java.io.InputStream
+import java.net.InetAddress
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.jvm.Throws
@@ -92,10 +97,15 @@ interface GuiEssentialPlatform {
     fun getGlId(identifier: UIdentifier): Int
 
     fun playSound(identifier: UIdentifier)
+    fun playNoteHatSound(volume: Float, pitch: Float)
 
     fun registerCosmeticTexture(name: String, texture: ReleasedDynamicTexture): UIdentifier
 
     fun dismissModalOnScreenChange(modal: Modal, dismiss: () -> Unit)
+
+    fun <T> registerEventBusListener(cls: Class<T>, listener: (T) -> Unit, priority: Int = 0)
+
+    fun <T> unregisterEventBusListener(cls: Class<T>, listener: (T) -> Unit)
 
     val essentialBaseDir: Path
     val config: Config
@@ -111,11 +121,18 @@ interface GuiEssentialPlatform {
 
     fun resolveMessageRef(messageRef: MessageRef)
 
+    // TODO inline once everything's accessible
+    fun haveActiveRemoteSpsSession(address: String): Boolean
+
     val essentialUriListener: EssentialMarkdown.(EssentialMarkdown.LinkClickEvent) -> Unit
 
     val noticesManager: INoticesManager
 
     val skinsManager: SkinsManager
+
+    val cosmeticsManager: ICosmeticsManager
+
+    val wardrobeSettings: WardrobeSettings
 
     val mojangSkinManager: MojangSkinManager
 
@@ -123,9 +140,16 @@ interface GuiEssentialPlatform {
 
     val disabledFeaturesManager: DisabledFeaturesManager
 
+    val screenshotFolder: Path
+
     val isOptiFineInstalled: Boolean
 
     val trustedHosts: Set<String>
+
+    val reportReasons: Map<String, String>
+
+    // TODO move to :gui:essential project
+    fun fileReport(modalManager: ModalManager, channelId: Long, messageId: Long, sender: UUID, reason: String)
 
     fun enqueueTelemetry(packet: ClientTelemetryPacket)
 
@@ -160,11 +184,23 @@ interface GuiEssentialPlatform {
 
     fun openSocialMenu(channelId: Long? = null)
 
+    fun openScreenshotBrowser()
+
     fun connectToServer(name: String, address: String)
 
     val openEmoteWheelKeybind: Keybind
 
     fun restoreMcStateAfterNanoVGDrawCall()
+
+    fun splitHostAndPort(address: String, defaultPort: Int = 25565): Pair<String, Int>
+
+    /** Parses the given IP address. Returns `null` if the address is invalid. Never does any DNS lookups. */
+    fun parseIpAddress(address: String): InetAddress?
+
+    fun loadIntegratedServerIcon(): BufferedImage?
+
+    // TODO: Eventually move override to :gui:essential project
+    val modalPrerequisites: ModalPrerequisites
 
     interface Keybind {
         val isBound: Boolean

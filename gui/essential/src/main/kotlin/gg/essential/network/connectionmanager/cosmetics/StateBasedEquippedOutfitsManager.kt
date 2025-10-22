@@ -98,4 +98,19 @@ class StateBasedEquippedOutfitsManager(
         }
     }
     override fun getSkin(playerId: UUID): Skin? = skins[playerId]
+
+    // Similar to getSkin, getCapeHash must also be thread safe as it's called from the same place
+    private var capes = emptyMap<UUID, String>()
+    init {
+        val capeStates = managedPlayers.toList().mapEach { uuid ->
+            uuid to getEquippedCosmeticsState(uuid).map { it.cosmetics[CosmeticSlot.CAPE]?.id }
+        }
+        effect(refHolder) {
+            capes = capeStates().associateNotNull { (uuid, capeState) ->
+                val cape = capeState() ?: return@associateNotNull null
+                uuid to cape
+            }
+        }
+    }
+    override fun getCapeHash(playerId: UUID): String? = capes[playerId]
 }

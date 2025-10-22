@@ -15,6 +15,8 @@ import gg.essential.elementa.components.Window
 import gg.essential.elementa.events.UIClickEvent
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.ContextOptionMenu
+import gg.essential.gui.modals.ensurePrerequisites
+import gg.essential.gui.overlay.launchModalFlow
 import gg.essential.gui.sendCheckmarkNotification
 import gg.essential.gui.skin.createSkinShareModal
 import gg.essential.gui.wardrobe.Item
@@ -41,7 +43,10 @@ fun handleSkinRightClick(skin: Item.SkinItem, wardrobeState: WardrobeState, even
             sendCheckmarkNotification("Link copied to clipboard.")
         },
         ContextOptionMenu.Option("Share", EssentialPalette.UPLOAD_9X) {
-            platform.pushModal { createSkinShareModal(it, skin) }
+            launchModalFlow(platform.createModalManager()) {
+                ensurePrerequisites(social = true)
+                modalManager.queueModal(createSkinShareModal(modalManager, skin))
+            }
         },
         ContextOptionMenu.Option(if (skin.isFavorite) "Remove Favorite" else "Favorite", EssentialPalette.HEART_7X6) {
             wardrobeState.skinsManager.setFavoriteState(skin.id, !skin.isFavorite)

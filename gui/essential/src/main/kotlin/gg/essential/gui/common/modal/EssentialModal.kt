@@ -116,7 +116,7 @@ open class EssentialModal(
 
         when (keyCode) {
             // Activate selected button on enter or primary button if no button is selected
-            UKeyboard.KEY_ENTER -> selectedButton.let {
+            UKeyboard.KEY_ENTER, UKeyboard.KEY_NUMPADENTER -> selectedButton.let {
                 Window.enqueueRenderOperation {
                     if (it != null) {
                         it.simulateLeftClick()

@@ -11,16 +11,10 @@
  */
 package gg.essential.util
 
-import com.sparkuniverse.toolbox.chat.enums.ChannelType
-import com.sparkuniverse.toolbox.chat.model.Channel
 import dev.folomeev.kotgl.matrix.matrices.mat3
 import dev.folomeev.kotgl.matrix.matrices.mat4
 import gg.essential.Essential
-import gg.essential.api.gui.EssentialGUI
 import gg.essential.connectionmanager.common.model.knownserver.KnownServer
-import gg.essential.elementa.UIComponent
-import gg.essential.elementa.components.UIContainer
-import gg.essential.elementa.state.State
 import gg.essential.elementa.utils.elementaDebug
 import gg.essential.lib.gson.JsonElement
 import gg.essential.lib.gson.JsonPrimitive
@@ -88,13 +82,6 @@ operator fun Color.component2() = this.green
 operator fun Color.component3() = this.blue
 operator fun Color.component4() = this.alpha
 
-
-fun Channel.getOtherUser(): UUID? =
-    if (type == ChannelType.DIRECT_MESSAGE) members.firstOrNull { it != UUIDUtil.getClientUUID() } else null
-
-private val BOT_UUID = UUID.fromString("cd899a14-de78-4de8-8d31-9d42fff31d7a") // EssentialBot
-fun Channel.isAnnouncement(): Boolean =
-    this.type == ChannelType.ANNOUNCEMENT || BOT_UUID in members
 
 fun ServerDiscovery.toServerData(knownServers: Map<String, ServerData> = emptyMap()) =
     knownServers[addresses[0]]
@@ -216,17 +203,6 @@ fun UImage.Companion.read(stream: InputStream): UImage {
 }
 
 fun UImage.Companion.read(bytes: ByteArray) = read(bytes.inputStream())
-
-/**
- * Creates and returns a scrollbar bound within the right divider of an EssentialGUI
- */
-fun EssentialGUI.createRightDividerScroller(
-    display: State<Boolean>,
-    xPositionAndWidth: UIComponent = rightDivider,
-    parent: UIComponent = window,
-    yPositionAndHeight: UIComponent = content,
-    initializeToBottom: Boolean = false,
-): Pair<UIContainer, () -> Unit> = createScrollbarRelativeTo(display, xPositionAndWidth, parent, yPositionAndHeight, initializeToBottom)
 
 fun UMatrixStack.toCommon() =
     gg.essential.model.util.UMatrixStack(

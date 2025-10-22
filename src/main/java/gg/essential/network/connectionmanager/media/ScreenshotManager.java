@@ -26,6 +26,7 @@ import gg.essential.connectionmanager.common.packet.media.ClientMediaUpdatePacke
 import gg.essential.connectionmanager.common.packet.media.ServerMediaPopulatePacket;
 import gg.essential.connectionmanager.common.packet.media.ServerMediaUploadUrlPacket;
 import gg.essential.connectionmanager.common.packet.response.ResponseActionPacket;
+import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPacket;
 import gg.essential.event.render.RenderTickEvent;
 import gg.essential.gui.NotificationsKt;
 import gg.essential.gui.elementa.state.v2.MutableState;
@@ -94,10 +95,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -224,6 +223,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         return upload(path, metadata, ScreenshotUploadToast.create());
     }
 
+    @Override
     public CompletableFuture<Media> upload(Path path, ClientScreenshotMetadata metadata, Consumer<ScreenshotUploadToast.ToastProgress> progressConsumer) {
         Media existingMediaIfPresent = getUploadedMedia(path);
         if (existingMediaIfPresent != null) {
@@ -251,6 +251,8 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
                 } else {
                     progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Failed: An unknown error occurred", false));
                 }
+            } else {
+                connectionManager.getTelemetryManager().enqueue(ClientTelemetryPacket.forAction("SCREENSHOT_UPLOADED"));
             }
         }, ExtensionsKt.getExecutor(Minecraft.getMinecraft()));
         return uploadFuture;
@@ -297,6 +299,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         }
         UDesktop.setClipboardString(embed.getUrl());
         progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Link copied to clipboard", true));
+        connectionManager.getTelemetryManager().enqueue(ClientTelemetryPacket.forAction("SCREENSHOT_COPIED_TO_CLIPBOARD"));
     }
 
     @Override
@@ -341,6 +344,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
 
                     if (anySucceeded) {
                         progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Picture shared", true, channels));
+                        connectionManager.getTelemetryManager().enqueue(ClientTelemetryPacket.forAction("SCREENSHOT_SHARED_TO_CHANNEL"));
                     } else {
                         progressConsumer.accept(new ScreenshotUploadToast.ToastProgress.Complete("Error: All the messages failed to send.", false));
                     }
@@ -491,37 +495,6 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
 
     }
 
-    /**
-     * Saves the content of the provided image
-     */
-    public CompletableFuture<Void> saveDownloadedImageAsync(RenderedImage img) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        Multithreading.runAsync(() -> {
-            try {
-                File imgFile = getDownloadedName(new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date()));
-                saveScreenshot(img, imgFile);
-                future.complete(null);
-            } catch (IOException e) {
-                future.completeExceptionally(e);
-                throw new RuntimeException(e);
-            }
-        });
-        return future;
-    }
-
-    private File getDownloadedName(String name) {
-        int i = 0;
-
-        while (true) {
-            File file1 = new File(HelpersKt.getScreenshotFolder(), "saved_" + name + (i == 0 ? "" : "_" + i) + ".png");
-            if (!file1.exists()) {
-                return file1;
-            }
-
-            ++i;
-        }
-    }
-
     private void precompute(File source) {
         backgroundExecutor.submit(new PrecomputeTask(source, minResolutionProvider));
     }
@@ -589,6 +562,7 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
     }
 
     @NotNull
+    @Override
     public List<Path> getUploadedLocalPathsCache(String mediaId) {
         ClientScreenshotMetadata metadata = screenshotMetadataManager.getMetadataCache(mediaId);
         if (metadata == null) {
@@ -805,6 +779,8 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
                 localScreenshots.set(list -> list.add(new Pair<>(output.getName(), checksum)));
 
                 NotificationsKt.sendCheckmarkNotification("Picture saved as copy");
+
+                connectionManager.getTelemetryManager().enqueue(ClientTelemetryPacket.forAction("SCREENSHOT_EDITED"));
             });
             return output;
 
@@ -866,6 +842,8 @@ public class ScreenshotManager implements NetworkedManager, IScreenshotManager {
         //#else
         //$$  ScreenshotRecorder.saveScreenshot(mc.runDirectory, mc.getFramebuffer(), message -> screenshotMessageCallback(message));
         //#endif
+
+        connectionManager.getTelemetryManager().enqueue(ClientTelemetryPacket.forAction("SCREENSHOT_TAKEN"));
     }
 
     private void screenshotMessageCallback(ITextComponent component) {

@@ -17,6 +17,7 @@ import gg.essential.gui.common.Spacer
 import gg.essential.gui.common.modal.EssentialModal
 import gg.essential.gui.common.modal.configure
 import gg.essential.gui.elementa.state.v2.awaitValue
+import gg.essential.gui.overlay.ModalFlow
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.network.connectionmanager.cosmetics.CosmeticsManager
 import kotlinx.coroutines.launch
@@ -27,7 +28,7 @@ import kotlin.time.Duration.Companion.seconds
  * Displays when the user attempts to open the Wardrobe, but cosmetics are not fully loaded yet.
  * This modal constructs a new instance of either [CosmeticStudio] or [Wardrobe] when complete.
  */
-class CosmeticsLoadingModal(modalManager: ModalManager, callback: () -> Unit) : EssentialModal(modalManager) {
+class CosmeticsLoadingModal(modalManager: ModalManager, continuation: ModalFlow.ModalContinuation<Boolean>) : EssentialModal(modalManager) {
 
     init {
         configure {
@@ -43,9 +44,11 @@ class CosmeticsLoadingModal(modalManager: ModalManager, callback: () -> Unit) : 
             val completed = withTimeoutOrNull(CosmeticsManager.LOAD_TIMEOUT_SECONDS.seconds) {
                 cosmeticsLoaded.awaitValue(true)
             }
-            if (completed == true) {
-                callback()
-            }
+            replaceWith(continuation.resumeImmediately(completed == true))
         }
     }
+}
+
+suspend fun ModalFlow.cosmeticsLoadingModal(): Boolean {
+    return awaitModal { CosmeticsLoadingModal(modalManager, it) }
 }

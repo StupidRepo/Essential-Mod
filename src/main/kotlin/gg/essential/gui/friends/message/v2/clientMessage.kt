@@ -32,16 +32,3 @@ fun infraInstanceToClient(message: Message): ClientMessage {
         message.createdAt,
     )
 }
-
-fun ClientMessage.getInfraInstance(): Message {
-    return Essential.getInstance().connectionManager.chatManager.getMessageById(channel.id, id) ?: Message(
-        id,
-        channel.id,
-        sender,
-        contents,
-        true, // So the social menu doesn't try to mark this message as read
-        replyTo?.messageId,
-        lastEditTime,
-        createdAt,
-    )
-}

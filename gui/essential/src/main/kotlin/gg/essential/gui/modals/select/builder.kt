@@ -31,6 +31,7 @@ import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.combinators.not
 import gg.essential.gui.elementa.state.v2.filter
 import gg.essential.gui.elementa.state.v2.mapEach
+import gg.essential.gui.elementa.state.v2.mapList
 import gg.essential.gui.elementa.state.v2.stateBy
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toListState
@@ -71,6 +72,7 @@ data class Section<T, S : Any>(
 @Suppress("UNUSED_PARAMETER", "MemberVisibilityCanBePrivate")
 class SelectModalBuilder<T>(
     val title: String,
+    val modalSimpleName: String,
 ) {
     private val socialStates by lazy { platform.createSocialStates() }
     private val relationshipStates by lazy { socialStates.relationships }
@@ -205,7 +207,7 @@ class SelectModalBuilder<T>(
     }
 
     fun friends(map: (UUID) -> T, block: SectionLayoutBlock<UUID> = defaultUserRow) {
-        val friendsList = relationshipStates.getObservableFriendList().toStateV2List()
+        val friendsList = relationshipStates.getObservableFriendList().toStateV2List().mapList { list -> list.filter { !socialStates.isSuspended(it)() } }
         users("Friends", map, friendsList, block)
         if (whenEmpty == null) {
             emptyTextNoFriends()
@@ -253,7 +255,16 @@ class SelectModalBuilder<T>(
         map: (Channel) -> T,
         block: SectionLayoutBlock<Channel> = defaultUserOrGroupRow,
     ) {
-        val channelList = messageStates.getObservableChannelList().toStateV2List().filter { it.type == ChannelType.DIRECT_MESSAGE || it.type == ChannelType.GROUP_DIRECT_MESSAGE }
+        val channelList = messageStates.getObservableChannelList().toStateV2List().mapList { list ->
+                list.filter {
+                    if (it.type == ChannelType.DIRECT_MESSAGE) {
+                        val other = it.getOtherUser()
+                        other == null || !socialStates.isSuspended(other)()
+                    } else {
+                        it.type == ChannelType.GROUP_DIRECT_MESSAGE
+                    }
+                }
+            }
         val friendsAndGroupsState =
             stateBy {
                 // Adapted from ChatTab
@@ -339,6 +350,7 @@ class SelectModalBuilder<T>(
 
     fun build(modalManager: ModalManager) = SelectModal(
         modalManager,
+        modalSimpleName,
         sections,
         requiresButtonPress,
         requiresSelection,
@@ -361,7 +373,11 @@ class SelectModalBuilder<T>(
         return stateBy {
             mappedFriends().mapNotNull { (uuid, isActivity) ->
                 if (isActivity()) {
-                    uuid
+                    if (!socialStates.isSuspended(uuid)()) {
+                        uuid
+                    } else {
+                        null
+                    }
                 } else {
                     null
                 }
@@ -398,8 +414,9 @@ fun SelectModalBuilder<Channel>.friendsAndGroups(block: SectionLayoutBlock<Chann
 fun <T> selectModal(
     modalManager: ModalManager,
     title: String,
+    modalSimpleName: String,
     block: SelectModalBuilder<T>.() -> Unit = {}
-) = SelectModalBuilder<T>(title)
+) = SelectModalBuilder<T>(title, modalSimpleName)
     .apply(block)
     .build(modalManager)
 
@@ -408,9 +425,10 @@ fun <T> selectModal(
  */
 suspend fun <T> ModalFlow.selectModal(
     title: String,
+    modalSimpleName: String,
     block: SelectModalBuilder<T>.() -> Unit = {}
 ): Set<T>? = awaitModal { continuation ->
-    SelectModalBuilder<T>(title)
+    SelectModalBuilder<T>(title, modalSimpleName)
         .modalSettings {
             onPrimaryAction { result -> replaceWith(continuation.resumeImmediately(result)) }
             onCancel { button -> if (button) replaceWith(continuation.resumeImmediately(null)) }

@@ -117,8 +117,8 @@ abstract class ConnectionManagerKt : CMConnection {
         val connectBackoff = ExponentialBackoff(2.seconds, 1.minutes, 2.0)
         val unexpectedCloseBackoff = ExponentialBackoff(10.seconds, 2.minutes, 2.0)
 
-        var exit = false
-        while (!exit) {
+        var awaitSessionChange = false
+        while (true) {
             updateStatus(null)
 
             if (!OnboardingData.hasAcceptedTos()) {
@@ -211,6 +211,12 @@ abstract class ConnectionManagerKt : CMConnection {
                         delay(delay.inWholeMilliseconds)
                         continue
                     }
+                    is ConnectResult.Suspended -> {
+                        handleSuspension(result.info)
+                        // If the account in use changes, we can try to connect again
+                        USession.active.await { it != session }
+                        continue
+                    }
                     ConnectResult.Connected -> {}
                 }
                 connectBackoff.reset()
@@ -233,9 +239,14 @@ abstract class ConnectionManagerKt : CMConnection {
 
                         select {
                             wrapper.onClose { info ->
-                                val duration = JavaDuration.between(connectedAt, Instant.now()).toKotlinDuration()
-                                fastUnexpectedClose = duration < 2.minutes
-                                LOGGER.warn("Connection closed unexpectedly ({}) after {}", info, duration)
+                                if (info.knownReason == KnownCloseReason.SUSPENDED) {
+                                    handleSuspension(info)
+                                    awaitSessionChange = true
+                                } else {
+                                    val duration = JavaDuration.between(connectedAt, Instant.now()).toKotlinDuration()
+                                    fastUnexpectedClose = duration < 2.minutes
+                                    LOGGER.warn("Connection closed unexpectedly ({}) after {}", info, duration)
+                                }
                             }
                             async { USession.active.await { it.uuid != session.uuid } }.onAwait { newSession ->
                                 val duration = JavaDuration.between(connectedAt, Instant.now()).toKotlinDuration()
@@ -272,6 +283,11 @@ abstract class ConnectionManagerKt : CMConnection {
             } else {
                 unexpectedCloseBackoff.reset()
             }
+
+            if (awaitSessionChange) {
+                USession.active.await { it != session }
+                awaitSessionChange = false
+            }
         }
     }
 
@@ -281,10 +297,19 @@ abstract class ConnectionManagerKt : CMConnection {
         }
     }
 
+    private suspend fun handleSuspension(result: CloseInfo) {
+        LOGGER.error("User is permanently suspended. Will no longer try to connect for this session.")
+        updateStatus(Status.USER_SUSPENDED)
+        withContext(Dispatchers.Client) {
+            java.suspensionManager.setPermanentlySuspended(result.reason)
+        }
+    }
+
     private sealed interface ConnectResult {
         object Connected : ConnectResult
         object Outdated : ConnectResult
         data class Failed(val info: CloseInfo) : ConnectResult
+        data class Suspended(val info: CloseInfo) : ConnectResult
     }
 
     private class ConnectionWrapper : Connection.Callbacks, Closeable {
@@ -319,6 +344,7 @@ abstract class ConnectionManagerKt : CMConnection {
                 closeChannel.onReceive { info ->
                     when (info.knownReason) {
                         KnownCloseReason.OUTDATED -> ConnectResult.Outdated
+                        KnownCloseReason.SUSPENDED -> ConnectResult.Suspended(info)
                         null -> ConnectResult.Failed(info)
                         else -> throw AssertionError() // FIXME: Workaround for compiler bug fixed in Kotlin 2.0
                     }

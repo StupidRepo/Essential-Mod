@@ -17,6 +17,7 @@ import gg.essential.elementa.dsl.*
 import gg.essential.gui.layoutdsl.LayoutScope
 import gg.essential.gui.layoutdsl.layoutAsBox
 import gg.essential.gui.overlay.ModalManager
+import gg.essential.network.connectionmanager.telemetry.FeatureSessionTelemetry
 import gg.essential.universal.UKeyboard
 import gg.essential.util.Client
 import gg.essential.vigilance.utils.onLeftClick
@@ -44,6 +45,8 @@ abstract class Modal(val modalManager: ModalManager) : UIContainer() {
             }
         }
     }
+
+    open val modalName: String? = this.javaClass.name
 
     init {
         constrain {
@@ -94,6 +97,8 @@ abstract class Modal(val modalManager: ModalManager) : UIContainer() {
 
         windowListListener = Window.of(this).keyTypedListeners.removeFirstOrNull()
         Window.of(this).onKeyType(escapeListener)
+
+        modalName?.let { FeatureSessionTelemetry.startEvent(it) }
     }
 
     open fun onClose() {
@@ -105,6 +110,8 @@ abstract class Modal(val modalManager: ModalManager) : UIContainer() {
         }
 
         window.keyTypedListeners.remove(escapeListener) // Clean ourselves up
+
+        modalName?.let { FeatureSessionTelemetry.endEvent(it) }
     }
 
     open fun handleEscapeKeyPress() {

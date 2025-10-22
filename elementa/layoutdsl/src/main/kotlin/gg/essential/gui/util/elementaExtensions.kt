@@ -35,12 +35,20 @@ inline fun <reified T : Effect> UIComponent.get() =
 inline fun <reified T : Effect> UIComponent.getOrPut(init: () -> T) =
     get<T>() ?: init().also { enableEffect(it) }
 
+@Deprecated("Use StateV2 instead", ReplaceWith("pollingStateV2(initialValue, getter)"))
 fun <T> UIComponent.pollingState(initialValue: T? = null, getter: () -> T): State<T> {
     val state = BasicState(initialValue ?: getter())
     addUpdateFunc { _, _ -> state.set(getter()) }
     return state
 }
 
+/**
+ * Turns some impure computation into a pure [StateV2] by evaluating it before every frame.
+ *
+ * This should be avoided in favor of pure State-based computations where possible, but may be necessary when
+ * interfacing with third-party code.
+ * If the impure part of your computation is the current time, [Observer.systemTime] can likely replace this method.
+ */
 fun <T> UIComponent.pollingStateV2(initialValue: T? = null, getter: () -> T): StateV2<T> {
     val state = mutableStateOf(initialValue ?: getter())
     addUpdateFunc { _, _ -> state.set(getter()) }
@@ -224,6 +232,7 @@ fun UIComponent.hoverScopeV2(parentOnly: Boolean = false): StateV2<Boolean> {
     return consumer.state
 }
 
+@Deprecated("Use StateV2 instead", ReplaceWith("hoverScopeV2(parentOnly)"))
 fun UIComponent.hoverScope(parentOnly: Boolean = false): State<Boolean> =
     hoverScopeV2(parentOnly).toV1(this)
 
@@ -360,6 +369,7 @@ fun UIComponent.isComponentInParentChain(target: UIComponent): Boolean {
 fun UIComponent.isInComponentTree(): Boolean =
     this is Window || hasParent && this in parent.children && parent.isInComponentTree()
 
+@Deprecated("ObservableList should be replaced with StateV2's `ListState`")
 fun <E> ObservableList<E>.onItemRemoved(callback: (E) -> Unit) {
     addObserver { _, arg ->
         if (arg is ObservableRemoveEvent<*>) {
@@ -368,6 +378,7 @@ fun <E> ObservableList<E>.onItemRemoved(callback: (E) -> Unit) {
     }
 }
 
+@Deprecated("ObservableList should be replaced with StateV2's `ListState`")
 fun <E> ObservableList<E>.onItemAdded(callback: (E) -> Unit) {
     addObserver { _, arg ->
         if (arg is ObservableAddEvent<*>) {
@@ -376,6 +387,7 @@ fun <E> ObservableList<E>.onItemAdded(callback: (E) -> Unit) {
     }
 }
 
+@Deprecated("ObservableList should be replaced with StateV2's `ListState`")
 @Suppress("UNCHECKED_CAST")
 fun <E> ObservableList<E>.toStateV2List(): ListStateV2<E> {
     val stateList = mutableStateOf(MutableTrackedList(this.toMutableList()))

@@ -22,6 +22,7 @@ import gg.essential.sps.SpsAddress
 import gg.essential.util.CachedAvatarImage
 import gg.essential.util.GuiEssentialPlatform.Companion.platform
 import gg.essential.util.UuidNameLookup
+import gg.essential.util.colored
 import gg.essential.util.thenAcceptOnMainThread
 import java.awt.Color
 import java.util.UUID
@@ -68,5 +69,11 @@ fun sendSpsInviteNotification(uuid: UUID, name: String) {
             platform.connectToServer(name, SpsAddress(uuid).toString())
         }
         withCustomComponent(Slot.ACTION, button)
+    }
+}
+
+fun sendOutgoingSpsInviteNotification(name: String) {
+    Notifications.push("", "") {
+        iconAndMarkdownBody(EssentialPalette.ENVELOPE_9X7.create(), "${name.colored(EssentialPalette.TEXT_HIGHLIGHT)} invited")
     }
 }

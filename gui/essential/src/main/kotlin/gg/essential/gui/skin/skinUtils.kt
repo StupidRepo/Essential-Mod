@@ -43,7 +43,7 @@ fun createSkinShareModal(
     onModalCancelled: (Boolean) -> Unit = {},
     onComplete: () -> Unit = {}
 ): SelectModal<Channel> {
-    return selectModal(modalManager, "Share Skin") {
+    return selectModal(modalManager, "Share Skin", "ShareSkin") {
         friendsAndGroups()
 
         modalSettings {

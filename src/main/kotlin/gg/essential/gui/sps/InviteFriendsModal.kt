@@ -35,8 +35,7 @@ import gg.essential.gui.modals.select.SelectModal
 import gg.essential.gui.modals.select.offlinePlayers
 import gg.essential.gui.modals.select.onlinePlayers
 import gg.essential.gui.modals.select.selectModal
-import gg.essential.gui.notification.Notifications
-import gg.essential.gui.notification.iconAndMarkdownBody
+import gg.essential.gui.notification.sendOutgoingSpsInviteNotification
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.handlers.PauseMenuDisplay
 import gg.essential.network.connectionmanager.sps.SPSSessionSource
@@ -275,7 +274,7 @@ object InviteFriendsModal {
                         callbackAfterOpen = onComplete,
                     ))
                 } else {
-                    PauseMenuDisplay.showInviteOrHostModal(
+                    PauseMenuDisplay.showInviteOrHostModalInternal(
                         source,
                         previousModal = this,
                         worldSummary = worldSummary,
@@ -341,8 +340,11 @@ object InviteFriendsModal {
             return true
         }
 
-        val title = if (getMinecraft().currentServerData != null) "Invite friends to server" else "Invite friends to world"
-        return selectModal(modalManager, title) {
+        val isServer = getMinecraft().currentServerData != null
+        val title = if (isServer) "Invite friends to server" else "Invite friends to world"
+        val modalSimpleName = "InviteFriends" +
+                if (isServer) "ToServer" else "ToWorld"
+        return selectModal(modalManager, title, modalSimpleName) {
             fun LayoutScope.customPlayerEntry(selected: MutableState<Boolean>, uuid: UUID) {
                 val onlineState = connectionManager.spsManager.getOnlineState(uuid)
                 val reInviteEnabled = getReInviteEnabledState(uuid)
@@ -463,13 +465,7 @@ object InviteFriendsModal {
     }
 
     fun sendInviteNotification(uuid: UUID) {
-        UUIDUtil.getName(uuid).thenAcceptOnMainThread { sendInviteNotification(it) }
-    }
-
-    fun sendInviteNotification(name: String) {
-        Notifications.push("", "") {
-            iconAndMarkdownBody(EssentialPalette.ENVELOPE_9X7.create(), "${name.colored(EssentialPalette.TEXT_HIGHLIGHT)} invited")
-        }
+        UUIDUtil.getName(uuid).thenAcceptOnMainThread { sendOutgoingSpsInviteNotification(it) }
     }
 
     private class WorldSetting(text: String, component: UIComponent, tooltip: State<String>? = null) : UIContainer() {

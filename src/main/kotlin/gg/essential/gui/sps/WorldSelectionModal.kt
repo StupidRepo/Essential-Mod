@@ -154,7 +154,7 @@ class WorldSelectionModal(modalManager: ModalManager) : SearchableConfirmDenyMod
 
         onPrimaryAction {
             selectedWorld.get()?.let { world ->
-                PauseMenuDisplay.showInviteOrHostModal(
+                PauseMenuDisplay.showInviteOrHostModalInternal(
                     SPSSessionSource.MAIN_MENU,
                     previousModal = this,
                     worldSummary = world,

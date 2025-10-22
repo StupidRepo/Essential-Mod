@@ -95,38 +95,30 @@ object GuiUtil : GuiUtil, OverlayManager by OverlayManagerImpl, ModalManager by 
         val screenRequiresTOS = GuiRequiresTOS::class.java.isAssignableFrom(type)
         val screenRequiresCosmetics = type == Wardrobe::class.java
         val screenRequiresAuth = screenRequiresCosmetics || type == SocialMenu::class.java
-        val screenRequiresRules = type == SocialMenu::class.java
+        val screenChecksSocialSuspension = type == SocialMenu::class.java
 
         if (screenRequiresTOS && !OnboardingData.hasAcceptedTos()) {
-            fun showTOS() = pushModal {
-                TOSModal(it, unprompted = false, requiresAuth = screenRequiresAuth, { openScreen(type, screen) })
-            }
             if (openedScreen() == null) {
                 // Show a notification when we're not in any menu, so it's less intrusive
-                sendTosNotification { showTOS() }
-            } else {
-                showTOS()
+                sendTosNotification {
+                    pushModal {
+                        TOSModal(it, unprompted = false, requiresAuth = screenRequiresAuth, { openScreen(type, screen) })
+                    }
+                }
+                return
             }
-            return
         }
 
-        if (screenRequiresAuth && AutoUpdate.requiresUpdate()) {
-            // Essential outdated, require update first
-            pushModal { AutoUpdate.createUpdateModal(it) }
-            return
+        launchModalFlow {
+            if (screenRequiresTOS) {
+                ensurePrerequisites(
+                    cosmetics = screenRequiresCosmetics,
+                    social = screenChecksSocialSuspension,
+                    rules = false
+                )
+            }
+            doOpenScreen(screen)
         }
-
-        if (screenRequiresAuth && !connectionManager.isAuthenticated) {
-            pushModal { NotAuthenticatedModal(it) { openScreen(type, screen) } }
-            return
-        }
-
-        if (screenRequiresCosmetics && !connectionManager.cosmeticsManager.cosmeticsLoaded.getUntracked()) {
-            pushModal { CosmeticsLoadingModal(it) { openScreen(type, screen) } }
-            return
-        }
-
-        doOpenScreen(screen)
     }
 
     @Deprecated("For API users only. Does not check for TOS or similar, use the generic overload instead.", level = DeprecationLevel.ERROR)

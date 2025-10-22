@@ -11,6 +11,7 @@
  */
 package gg.essential.gui.vigilancev2
 
+import gg.essential.Essential
 import gg.essential.data.VersionData
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
@@ -26,13 +27,16 @@ import gg.essential.gui.elementa.state.v2.*
 import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.modals.UpdateAvailableModal
+import gg.essential.gui.modals.communityRulesModal
 import gg.essential.gui.vigilancev2.components.vigilanceCategoryTextColor
 import gg.essential.gui.vigilancev2.palette.VigilancePalette
+import gg.essential.network.connectionmanager.telemetry.FeatureSessionTelemetry
 import gg.essential.universal.UDesktop
 import gg.essential.universal.UMinecraft
 import gg.essential.universal.USound
 import gg.essential.util.AutoUpdate
 import gg.essential.util.GuiUtil
+import gg.essential.util.GuiUtil.launchModalFlow
 import gg.essential.util.openInBrowser
 import gg.essential.vigilance.data.PropertyData
 import java.awt.Color
@@ -48,6 +52,8 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
         stateOf(properties).toListState(),
         initialCategory
     )
+
+    private val reference = ReferenceHolderImpl()
 
     val categories = stateBy {
         properties()
@@ -104,6 +110,14 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
                             "Terms of Service" to URI("https://essential.gg/terms-of-use")
                         ).forEach { (text, uri) -> sidebarLink(text, uri) }
 
+                        val rulesManager = Essential.getInstance().connectionManager.rulesManager
+                        if_(rulesManager.hasRules) {
+                            sidebarElement("Community & Chat Rules") {
+                                launchModalFlow {
+                                    communityRulesModal(rulesManager, UMinecraft.getSettings().language, false)
+                                }
+                            }
+                        }
                     },
                     {
                         listOf(
@@ -131,6 +145,14 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
                     box(Modifier.width(outlineThickness).fillHeight().color(EssentialPalette.LIGHT_DIVIDER))
                 }
             }
+        }
+
+        var oldCategory: String? = null
+        effect(reference) {
+            val newCategory = currentCategoryName().takeIf { screenOpen() }
+            oldCategory?.let { FeatureSessionTelemetry.endEvent("${this@VigilanceV2SettingsGui::class.qualifiedName}-$it") }
+            newCategory?.let { FeatureSessionTelemetry.startEvent("${this@VigilanceV2SettingsGui::class.qualifiedName}-$it") }
+            oldCategory = newCategory
         }
     }
 
@@ -214,6 +236,17 @@ class VigilanceV2SettingsGui @JvmOverloads constructor(
         ) {
             text(text, vigilanceCategoryTextColor())
             icon(EssentialPalette.ARROW_UP_RIGHT_5X5, vigilanceCategoryTextColor())
+        }
+    }
+
+    private fun LayoutScope.sidebarElement(text: String, onClick: () -> Unit) {
+        row(
+            Modifier.hoverScope().onLeftClick {
+                USound.playButtonPress()
+                onClick()
+            }
+        ) {
+            text(text, vigilanceCategoryTextColor())
         }
     }
 

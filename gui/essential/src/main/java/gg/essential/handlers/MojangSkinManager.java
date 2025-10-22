@@ -107,7 +107,7 @@ public abstract class MojangSkinManager {
     }
 
     @Nullable
-    private synchronized Skin updateSkinNow(boolean notification, boolean userSet) {
+    protected synchronized Skin updateSkinNow(boolean notification, boolean userSet) {
         SkinUpdate queuedSkinChange = this.queuedSkinChange;
         this.queuedSkinChange = null;
         if (queuedSkinChange == null) return null;

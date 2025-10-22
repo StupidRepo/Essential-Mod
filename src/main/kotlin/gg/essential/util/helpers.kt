@@ -15,9 +15,6 @@ import com.sparkuniverse.toolbox.util.DateTime
 import gg.essential.Essential
 import gg.essential.config.LoadsResources
 import gg.essential.config.McEssentialConfig
-import gg.essential.elementa.components.UIImage
-import gg.essential.elementa.components.Window
-import gg.essential.gui.common.ImageLoadCallback
 import gg.essential.gui.elementa.essentialmarkdown.EssentialMarkdown
 import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.elementa.state.v2.State
@@ -43,7 +40,6 @@ import net.minecraft.client.resources.IResourcePack
 import net.minecraft.util.ResourceLocation
 import net.minecraft.util.Session
 import org.apache.logging.log4j.LogManager
-import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
 import java.net.URI
@@ -53,7 +49,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import kotlin.io.path.exists
@@ -472,32 +467,6 @@ fun combinedOrderedScreenshotsState(
         result.sortWith(compareByDescending<ScreenshotInfo> { it.time }.thenBy { it.id.name })
         result
     }.toListState()
-}
-
-/**
- * Loads [image] as a [UIImage], calling [whenReady] on the UI thread once it is fully loaded.
- * May be called from any thread.
- * If [image] is `null`, no [UIImage] is created and [whenReady] will be called with `null`.
- */
-fun maybeLoadUIImage(image: BufferedImage?, whenReady: (UIImage?) -> Unit) {
-    if (image == null) {
-        Window.enqueueRenderOperation { whenReady(null) }
-    } else {
-        loadUIImage(image, whenReady)
-    }
-}
-
-/**
- * Loads [image] as a [UIImage], calling [whenReady] on the UI thread once it is fully loaded.
- * May be called from any thread.
- */
-fun loadUIImage(image: BufferedImage, whenReady: (UIImage) -> Unit) {
-    val uiImage = UIImage(CompletableFuture.completedFuture(image))
-    Window.enqueueRenderOperation {
-        uiImage.supply(ImageLoadCallback {
-            whenReady(uiImage)
-        })
-    }
 }
 
 /** Listens for, and parses, any links pointing to custom essential protocol scheme and open associated GuiScreen */

@@ -12,6 +12,7 @@
 package gg.essential.gui.screenshot.components
 
 import com.sparkuniverse.toolbox.chat.model.Channel
+import gg.essential.gui.modals.ensurePrerequisites
 import gg.essential.gui.modals.select.friendsAndGroups
 import gg.essential.gui.modals.select.selectModal
 import gg.essential.gui.overlay.ModalFlow
@@ -26,6 +27,8 @@ suspend fun ModalFlow.shareScreenshotModal(
     screenshot: ScreenshotId,
     metadata: ClientScreenshotMetadata? = null,
 ) {
+    ensurePrerequisites(social = true)
+
     val selectedChannels = selectScreenshotShareTargetsModal()?.toList() ?: return
     val screenshotManager = platform.screenshotManager
     when (screenshot) {
@@ -40,7 +43,7 @@ suspend fun ModalFlow.shareScreenshotModal(
 }
 
 suspend fun ModalFlow.selectScreenshotShareTargetsModal(): Set<Channel>? {
-    return selectModal("Share picture") {
+    return selectModal("Share picture", "SelectScreenshotShare") {
         friendsAndGroups()
 
         modalSettings {

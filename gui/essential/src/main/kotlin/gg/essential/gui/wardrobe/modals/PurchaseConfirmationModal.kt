@@ -11,14 +11,10 @@
  */
 package gg.essential.gui.wardrobe.modals
 
-import gg.essential.elementa.constraints.SiblingConstraint
-import gg.essential.elementa.dsl.constrain
-import gg.essential.elementa.dsl.pixels
-import gg.essential.elementa.state.BasicState
 import gg.essential.gui.EssentialPalette
-import gg.essential.gui.common.modal.ConfirmDenyModal
+import gg.essential.gui.common.modal.EssentialModal2
 import gg.essential.gui.elementa.state.v2.State
-import gg.essential.gui.elementa.state.v2.combinators.map
+import gg.essential.gui.elementa.state.v2.combinators.letState
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.layoutdsl.Arrangement
@@ -27,17 +23,18 @@ import gg.essential.gui.layoutdsl.LayoutScope
 import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.box
 import gg.essential.gui.layoutdsl.childBasedHeight
+import gg.essential.gui.layoutdsl.childBasedMaxHeight
 import gg.essential.gui.layoutdsl.color
 import gg.essential.gui.layoutdsl.column
 import gg.essential.gui.layoutdsl.fillRemainingWidth
 import gg.essential.gui.layoutdsl.fillWidth
 import gg.essential.gui.layoutdsl.height
 import gg.essential.gui.layoutdsl.image
-import gg.essential.gui.layoutdsl.layout
 import gg.essential.gui.layoutdsl.row
 import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.spacer
 import gg.essential.gui.layoutdsl.text
+import gg.essential.gui.layoutdsl.width
 import gg.essential.gui.layoutdsl.wrappedText
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.wardrobe.Item
@@ -45,31 +42,32 @@ import gg.essential.gui.wardrobe.WardrobeState
 import gg.essential.network.connectionmanager.coins.CoinsManager
 import java.awt.Color
 
+// TODO: rewrite usages to use modalflow so passing primary action is no longer required
 class PurchaseConfirmationModal(
     modalManager: ModalManager,
     private val items: List<Pair<Item.CosmeticOrEmote, State<Int>>>,
     private val totalAmount: State<Int>,
-    primaryAction: () -> Unit,
-) : ConfirmDenyModal(modalManager, requiresButtonPress = false) {
+    private val primaryAction: PurchaseConfirmationModal.() -> Unit,
+) : EssentialModal2(modalManager, requiresButtonPress = false) {
     private val discountAmount = memo { items.sumOf { it.second() } - totalAmount() }
 
-    init {
-        titleText = "Confirm your purchase!"
-        titleTextColor = EssentialPalette.TEXT
-        primaryButtonText = "Purchase"
-
-        contentTextSpacingState.rebind(BasicState(0f))
-        spacer.setHeight(17.pixels)
-
-        customContent.constrain {
-            y = SiblingConstraint(14f)
+    override fun LayoutScope.layoutContent(modifier: Modifier) {
+        column(Modifier.width(222f), Arrangement.spacedBy(14f)) {
+            box(Modifier.fillWidth(padding = 16f)) {
+                layoutTitle()
+            }
+            box(Modifier.fillWidth(padding = 16f).childBasedMaxHeight()) {
+                purchaseSummary()
+            }
+            box(Modifier.fillWidth(padding = 16f)) {
+                spacer(height = 3f)
+                layoutButtons()
+            }
         }
+    }
 
-        customContent.layout {
-            purchaseSummary()
-        }
-
-        onPrimaryAction(primaryAction)
+    override fun LayoutScope.layoutTitle() {
+        text("Confirm your purchase!", Modifier.color(EssentialPalette.TEXT))
     }
 
     private fun LayoutScope.purchaseSummary() {
@@ -151,6 +149,14 @@ class PurchaseConfirmationModal(
         }
     }
 
+    override fun LayoutScope.layoutButtons() {
+        primaryAndCancelButtons(
+            "Purchase",
+            "Cancel",
+            { this@PurchaseConfirmationModal.primaryAction() }
+        )
+    }
+
     companion object {
         fun forEquippedItemsPurchasable(modalManager: ModalManager, state: WardrobeState, primaryAction: () -> Unit): PurchaseConfirmationModal {
             val itemsAndPriceInfo = state.equippedCosmeticsPurchasable.getUntracked().map { it to it.getPricingInfo(state) }
@@ -158,10 +164,9 @@ class PurchaseConfirmationModal(
 
             return PurchaseConfirmationModal(
                 modalManager,
-                itemsAndPriceInfo.map { (item, price) -> item to price.map { it?.baseCost ?: 0 } },
+                itemsAndPriceInfo.map { (item, price) -> item to price.letState { it?.baseCost ?: 0 } },
                 totalCost,
-                primaryAction,
-            )
+            ) { primaryAction() }
         }
 
         fun forItem(
@@ -174,10 +179,9 @@ class PurchaseConfirmationModal(
 
             return PurchaseConfirmationModal(
                 modalManager,
-                listOf(item to priceInfo.map { it?.baseCost ?: 0 }),
-                priceInfo.map { it?.realCost ?: 0 },
-                primaryAction,
-            )
+                listOf(item to priceInfo.letState { it?.baseCost ?: 0 }),
+                priceInfo.letState { it?.realCost ?: 0 },
+            ) { primaryAction() }
         }
 
         fun forBundle(modalManager: ModalManager, bundle: Item.Bundle, state: WardrobeState, primaryAction: () -> Unit): PurchaseConfirmationModal {
@@ -200,9 +204,8 @@ class PurchaseConfirmationModal(
             return PurchaseConfirmationModal(
                 modalManager,
                 itemsAndPriceInfo,
-                bundleInfo.map { it?.realCost ?: 0 },
-                primaryAction,
-            )
+                bundleInfo.letState { it?.realCost ?: 0 },
+            ) { primaryAction() }
         }
     }
 }

@@ -54,6 +54,7 @@ import gg.essential.lib.gson.Gson;
 import gg.essential.lib.gson.GsonBuilder;
 import gg.essential.network.connectionmanager.ConnectionManager;
 import gg.essential.network.connectionmanager.skins.PlayerSkinLookup;
+import gg.essential.network.connectionmanager.telemetry.FeatureSessionTelemetry;
 import gg.essential.sps.McIntegratedServerManager;
 import gg.essential.sps.WindowTitleManager;
 import gg.essential.universal.UMinecraft;
@@ -389,6 +390,8 @@ public class Essential implements EssentialAPI {
 
         // Fetch update changelog now so it is preloaded for later use
         AutoUpdate.INSTANCE.getChangelog();
+
+        FeatureSessionTelemetry.INSTANCE.start();
     }
 
     private File createEssentialDir() {

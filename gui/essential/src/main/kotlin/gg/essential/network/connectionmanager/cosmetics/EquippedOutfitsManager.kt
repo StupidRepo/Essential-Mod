@@ -22,6 +22,7 @@ interface EquippedOutfitsManager {
     fun getEquippedCosmeticsState(playerId: UUID): State<Outfit>
     fun getVisibleCosmeticsState(playerId: UUID): State<Map<CosmeticSlot, EquippedCosmetic>>
     fun getSkin(playerId: UUID): Skin? // must be thread-safe
+    fun getCapeHash(playerId: UUID): String? // must be thread-safe
 
     data class Outfit(
         val cosmetics: Map<CosmeticSlot, EquippedCosmeticId>,

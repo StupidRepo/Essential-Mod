@@ -44,6 +44,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static gg.essential.gui.skin.SkinUtilsKt.showSkinReceivedToast;
+import static gg.essential.util.ChannelExtensionsKt.getOtherUser;
 import static gg.essential.util.ExtensionsKt.getExecutor;
 
 public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerChatChannelMessagePacket> {
@@ -109,7 +110,7 @@ public class ServerChatChannelMessagePacketHandler extends PacketHandler<ServerC
             boolean notification = !(GuiUtil.INSTANCE.openedScreen() instanceof SocialMenu);
 
             if (notification) {
-                final UUID uuid = channel.getType() == ChannelType.DIRECT_MESSAGE ? ExtensionsKt.getOtherUser(channel) : message.getSender();
+                final UUID uuid = channel.getType() == ChannelType.DIRECT_MESSAGE ? getOtherUser(channel) : message.getSender();
                 UUIDUtil.getName(uuid).thenAcceptAsync(new NotificationHandler(channel, message), getExecutor(Minecraft.getMinecraft()));
             }
         }

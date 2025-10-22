@@ -18,17 +18,17 @@ import com.sparkuniverse.toolbox.chat.enums.ChannelType;
 import com.sparkuniverse.toolbox.chat.model.Channel;
 import com.sparkuniverse.toolbox.chat.model.Message;
 import gg.essential.Essential;
-import gg.essential.api.gui.Slot;
 import gg.essential.connectionmanager.common.packet.Packet;
 import gg.essential.connectionmanager.common.packet.chat.*;
 import gg.essential.connectionmanager.common.packet.response.ResponseActionPacket;
+import gg.essential.connectionmanager.common.packet.social.ServerSocialAllowedDomainsPacket;
 import gg.essential.gui.elementa.state.v2.ListKt;
 import gg.essential.gui.elementa.state.v2.MutableState;
 import gg.essential.gui.elementa.state.v2.State;
 import gg.essential.gui.EssentialPalette;
 import gg.essential.gui.elementa.state.v2.StateByKt;
 import gg.essential.gui.elementa.state.v2.collections.MutableTrackedList;
-import gg.essential.gui.friends.message.v2.ClientMessage;
+import gg.essential.gui.friends.message.ReportMessageConfirmationModal;
 import gg.essential.gui.friends.message.v2.ClientMessageKt;
 import gg.essential.gui.friends.message.v2.MessageRef;
 import gg.essential.gui.friends.state.IMessengerManager;
@@ -55,17 +55,18 @@ import gg.essential.util.CachedAvatarImage;
 import gg.essential.util.StringsKt;
 import gg.essential.util.USession;
 import gg.essential.util.UUIDUtil;
+import gg.essential.util.UuidNameLookup;
 import kotlin.Unit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static gg.essential.util.ExtensionsKt.isAnnouncement;
+import static gg.essential.util.ChannelExtensionsKt.isAnnouncement;
 
 public class ChatManager extends StateCallbackManager<IMessengerManager> implements NetworkedManager {
 
@@ -80,6 +81,8 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
 
     @NotNull
     private final Map<String, Map<String, String>> reportReasons = Maps.newConcurrentMap();
+
+    private @NotNull List<String> allowedDomains = Collections.emptyList();
 
     @NotNull
     private final Set<Long> announcementChannelIds = Sets.newConcurrentHashSet();
@@ -131,6 +134,10 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         connectionManager.registerPacketHandler(ServerChatChannelRemovePacket.class, new ServerChatChannelRemovePacketHandler());
         connectionManager.registerPacketHandler(ServerChatChannelMessageReportReasonsPacket.class, new ServerChatChannelMessageReportReasonsPacketHandler());
 
+        connectionManager.registerPacketHandler(ServerSocialAllowedDomainsPacket.class, packet -> {
+            this.allowedDomains = packet.getDomains();
+            return Unit.INSTANCE;
+        });
     }
 
     @NotNull
@@ -284,6 +291,8 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         this.reportReasons.clear();
         this.channelEagerMessageResolverMap.clear();
 
+        this.allowedDomains = Collections.emptyList();
+
         for (IMessengerManager callback : getCallbacks()) {
             callback.reset();
         }
@@ -368,6 +377,35 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         this.sendMessage(channelId, messageContent, null, callback);
     }
 
+    public void editMessage(
+        final long channelId,
+        final long messageId,
+        @NotNull final String messageContent,
+        @Nullable final Consumer<Boolean> callback
+    ) {
+        sendMessageQueue.enqueue(new ClientChatChannelMessageUpdatePacket(channelId, messageId, messageContent), maybePacket -> {
+            Packet packet = maybePacket.orElse(null);
+            if (packet instanceof ResponseActionPacket && ((ResponseActionPacket) packet).isSuccessful()) {
+                Message message = getMessageById(channelId, messageId);
+                if (message != null) {
+                    upsertMessageToChannel(channelId, new Message(
+                        message.getId(),
+                        message.getChannelId(),
+                        message.getSender(),
+                        messageContent,
+                        message.isRead(),
+                        message.getReplyTargetId(),
+                        message.getLastEditTime(),
+                        message.getCreatedAt()
+                    ), false);
+                }
+                if (callback != null) callback.accept(true);
+            } else {
+                if (callback != null) callback.accept(false);
+            }
+        });
+    }
+
     public void removeMessage(final long channelId, final long messageId) {
         ConcurrentMap<Long, Message> channelMessages = this.channelMessages.get(channelId);
         if (channelMessages != null) {
@@ -384,20 +422,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
                 }
             }
         }
-    }
-
-    public void updateMessage(final ClientMessage message, final String newContents) {
-        Message messageCopy = new Message(
-            message.getId(),
-            message.getChannel().getId(),
-            message.getSender(),
-            newContents,
-            true,
-            message.getReplyTo() == null ? null : message.getReplyTo().getMessageId(),
-            Instant.now().toEpochMilli(),
-            message.getCreatedAt()
-        );
-        upsertMessageToChannel(messageCopy.getChannelId(), messageCopy, false);
     }
 
     public void deleteMessage(final long channelId, final long messageId) {
@@ -614,6 +638,23 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
             boolean success = packet instanceof ResponseActionPacket && ((ResponseActionPacket) packet).isSuccessful();
             if (success) {
                 channel.setMuted(muted);
+                if (muted) {
+                    CompletableFuture<String> nameFuture;
+                    if (channel.getType() == ChannelType.DIRECT_MESSAGE) {
+                        nameFuture = channel.getMembers().stream().filter(uuid -> !uuid.equals(UUIDUtil.getClientUUID())).findFirst().map(UuidNameLookup::getName).orElse(CompletableFuture.completedFuture("Unknown"));
+                    } else {
+                        nameFuture = CompletableFuture.completedFuture(channel.getName());
+                    }
+                    nameFuture.whenCompleteAsync((name, throwable) ->
+                        Notifications.INSTANCE.push("", "", notificationBuilder -> {
+                            ExtensionsKt.iconAndMarkdownBody(notificationBuilder,
+                                    EssentialPalette.MUTE_8X9.create(),
+                                    StringsKt.colored(name, EssentialPalette.TEXT_HIGHLIGHT) + " has been muted"
+                            );
+                            return Unit.INSTANCE;
+                        })
+                    );
+                }
             } else {
                 ExtensionsKt.error(Notifications.INSTANCE, "Error", "Failed to mute channel.\nPlease try again.");
             }
@@ -628,17 +669,7 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
         mutedStateUpdateQueue.enqueue(new ClientChatChannelMessageReportPacket(channelId, messageId, reason), response -> {
             Packet packet = response.orElse(null);
             if (packet instanceof ServerChatChannelMessageReportPacket) {
-                Notifications.INSTANCE.push(
-                        "Player Reported",
-                        "Thank you for reporting\nthis player.",
-                        4f,
-                        () -> Unit.INSTANCE,
-                        () -> Unit.INSTANCE,
-                        (builder) -> {
-                            builder.withCustomComponent(Slot.ICON, EssentialPalette.ROUND_WARNING_7X.create());
-                            return Unit.INSTANCE;
-                        }
-                );
+                modalManager.queueModal(new ReportMessageConfirmationModal(modalManager, sender, false));
             } else {
                 ExtensionsKt.error(Notifications.INSTANCE, "Report Failed", "Failed to report player.\nPlease try again.");
             }
@@ -648,10 +679,6 @@ public class ChatManager extends StateCallbackManager<IMessengerManager> impleme
 
     private void updateChannelListState() {
         ListKt.setAll(channelsWithMessagesListState, new ArrayList<>(channelMessages.keySet()));
-    }
-
-    public void setLastReadMessage(@NotNull final Message lastReadMessage) {
-        setLastReadMessage(lastReadMessage.getChannelId(), lastReadMessage.getId());
     }
 
     public void setLastReadMessage(final long channelId, @Nullable final Long lastReadMessageId) {

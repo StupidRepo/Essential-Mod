@@ -19,16 +19,13 @@ import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.EssentialDropDown
 import gg.essential.gui.common.EssentialTooltip
 import gg.essential.gui.common.HighlightedBlock
-import gg.essential.gui.common.and
 import gg.essential.gui.common.input.UITextInput
 import gg.essential.gui.common.input.essentialInput
 import gg.essential.gui.common.modal.Modal
 import gg.essential.gui.elementa.state.v2.*
 import gg.essential.gui.elementa.state.v2.combinators.*
-import gg.essential.gui.elementa.state.v2.stateBy
 import gg.essential.gui.layoutdsl.*
 import gg.essential.gui.overlay.ModalManager
-import gg.essential.gui.util.hoveredState
 import gg.essential.gui.wardrobe.WardrobeState
 import gg.essential.gui.wardrobe.components.coinPackImage
 import gg.essential.gui.wardrobe.components.coinsText
@@ -61,13 +58,13 @@ class CoinsPurchaseModal private constructor(
 
         val coinsManager = state.coinsManager
 
-        val coinsNeededState = stateBy { 0 }
-        val hasCoinsNeededState = coinsNeededState.map { it > 0 }
+        val coinsNeededState = State { 0 }
+        val hasCoinsNeededState = coinsNeededState.letState { it > 0 }
 
-        val creatorCodeTooltip = coinsManager.creatorCodeName.map { "Your purchase supports $it." }
+        val creatorCodeTooltip = coinsManager.creatorCodeName.letState { "Your purchase supports $it." }
 
         val creatorCodeInput = UITextInput("Creator Code", shadowColor = EssentialPalette.BLACK).apply {
-            setText(coinsManager.creatorCode.get())
+            setText(coinsManager.creatorCode.getUntracked())
             onUpdate { newText ->
                 val upper = newText.uppercase()
                 // If not all uppercase, set it to uppercase. The resulting new update call will then actually save it
@@ -80,23 +77,17 @@ class CoinsPurchaseModal private constructor(
         }
 
         // We disable the dropdown if we have more one or fewer currencies configured
-        val currencyDropdownDisabled = coinsManager.currencies.map { it.size <= 1 }
+        val currencyDropdownDisabled = coinsManager.currencies.letState { it.size <= 1 }
 
         val dropdown = EssentialDropDown(
-            coinsManager.currency.get() ?: USD_CURRENCY,
+            coinsManager.currency.getUntracked() ?: USD_CURRENCY,
             coinsManager.currencies.mapEach { EssentialDropDown.Option(it.currencyCode, it) },
             disabled = currencyDropdownDisabled,
         )
 
-        dropdown.selectedOption.onSetValue(this) {
+        dropdown.selectedOption.onChange(this) {
             coinsManager.currencyRaw.set(it.value.currencyCode)
         }
-
-        dropdown.bindEssentialTooltip(
-            dropdown.hoveredState() and currencyDropdownDisabled.toV1(this@CoinsPurchaseModal),
-            stateOf("Other currencies coming soon!").toV1(this@CoinsPurchaseModal),
-            EssentialTooltip.Position.ABOVE,
-        )
 
         fun LayoutScope.bundleBox(originalBundle: CoinBundle) {
             val bundleState = memo {
@@ -186,9 +177,9 @@ class CoinsPurchaseModal private constructor(
                 spacer(height = 11f)
                 box(Modifier.fillWidth().height(17f)) {
                     row(Modifier.fillHeight().alignHorizontal(Alignment.Start), Arrangement.spacedBy(5f)) {
-                        essentialInput(creatorCodeInput, coinsManager.creatorCodeValid.map { it == false }, "Invalid Creator Code", Modifier.width(90f).fillHeight())
+                        essentialInput(creatorCodeInput, coinsManager.creatorCodeValid.letState { it == false }, "Invalid Creator Code", Modifier.width(90f).fillHeight())
 
-                        if_(coinsManager.creatorCodeValid.map { it == true }) {
+                        if_({ coinsManager.creatorCodeValid() == true }) {
                             box(Modifier.width(13f).height(13f).color(EssentialPalette.GREEN_BUTTON_HOVER).shadow().hoverScope().hoverTooltip(creatorCodeTooltip.toV1(this.stateScope), position = EssentialTooltip.Position.ABOVE)) {
                                 image(EssentialPalette.CHECKMARK_7X5, Modifier.color(EssentialPalette.TEXT_HIGHLIGHT).shadow(EssentialPalette.TEXT_TRANSPARENT_SHADOW))
                             }
@@ -197,13 +188,13 @@ class CoinsPurchaseModal private constructor(
                         }
                     }
                     row(Modifier.fillHeight(), Arrangement.spacedBy(5f)) {
-                        val minimumAmount = state.settings.youNeedMinimumAmount.get()
+                        val minimumAmount = state.settings.youNeedMinimumAmount.getUntracked()
 
                         text("Essential Coins", Modifier.alignVertical(Alignment.Center(true)).shadow(EssentialPalette.BLACK))
                         infoIcon("Unlock cosmetics and emotes with Essential Coins", position = EssentialTooltip.Position.ABOVE)
                     }
                     row(Modifier.fillHeight().alignHorizontal(Alignment.End), Arrangement.spacedBy(5f)) {
-                        dropdown(Modifier.width(47f).shadow())
+                        dropdown(Modifier.width(47f).shadow().hoverScope().whenTrue(currencyDropdownDisabled, Modifier.hoverTooltip(stateOf("Other currencies coming soon!"), position = EssentialTooltip.Position.ABOVE)))
                         box(Modifier.widthAspect(1f).fillHeight().color(EssentialPalette.COMPONENT_BACKGROUND_HIGHLIGHT).hoverColor(EssentialPalette.GRAY_BUTTON_HOVER).shadow().hoverScope()) {
                             icon(EssentialPalette.CANCEL_5X, Modifier.color(EssentialPalette.TEXT))
                         }.onLeftClick {

@@ -41,6 +41,7 @@ import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.spacer
 import gg.essential.gui.layoutdsl.text
 import gg.essential.gui.notification.Notifications
+import gg.essential.gui.overlay.ModalFlow
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.universal.USound
 import gg.essential.util.AutoUpdate
@@ -144,4 +145,8 @@ class UpdateRequiredModal(modalManager: ModalManager) : ConfirmDenyModal(modalMa
         )
         onPrimaryAction { shutdown() }
     }
+}
+
+suspend fun ModalFlow.updateRequiredModal() {
+    awaitModal<Unit> { UpdateRequiredModal(modalManager) }
 }
