@@ -17,13 +17,10 @@ import gg.essential.connectionmanager.common.packet.Packet
 import gg.essential.elementa.state.State
 import gg.essential.elementa.utils.ObservableList
 import gg.essential.gui.elementa.state.v2.ListState
-import gg.essential.gui.elementa.state.v2.combinators.map
-import gg.essential.gui.elementa.state.v2.stateUsingSystemTime
 import gg.essential.gui.friends.message.v2.ClientMessage
 import gg.essential.gui.elementa.state.v2.MutableState as MutableStateV2
 import gg.essential.gui.elementa.state.v2.State as StateV2
 import gg.essential.network.connectionmanager.relationship.RelationshipResponse
-import gg.essential.network.connectionmanager.social.ProfileSuspension
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -32,20 +29,10 @@ interface SocialStates {
     val relationships: IRelationshipStates
     val messages: IMessengerStates
     val activity: IStatusStates
-    val suspensions: ListState<ProfileSuspension>
 
-    fun getSuspension(uuid: UUID): StateV2<ProfileSuspension?> = stateUsingSystemTime { now ->
-        suspensions().find { it.user == uuid }
-    }
-
-    fun isSuspended(uuid: UUID): StateV2<Boolean> = getSuspension(uuid).map { it != null }
 }
 
 interface IRelationshipStates {
-
-    fun isFriend(uuid: UUID): Boolean = uuid in getObservableFriendList()
-
-    fun isBlocked(uuid: UUID): Boolean = uuid in getObservableBlockedList()
 
     fun getObservableFriendList(): ObservableList<UUID>
 
@@ -117,11 +104,7 @@ interface IMessengerStates {
      * Calling [State.set] will propagate update to CM
      */
     @Deprecated("Not used in protocol 9 or later")
-    fun getUnreadMessageState(channelId: Long, messageId: Long): StateV2<Boolean>
-    @Deprecated("Not used in protocol 9 or later")
-    fun getUnreadMessageState(message: ClientMessage): StateV2<Boolean> = getUnreadMessageState(message.channel.id, message.id)
-    @Deprecated("Not used in protocol 9 or later")
-    fun getUnreadMessageState(message: Message): StateV2<Boolean> = getUnreadMessageState(message.channelId, message.id)
+    fun getUnreadMessageState(message: Message): StateV2<Boolean>
 
     /**
      * State of the last read message in a channel
@@ -131,12 +114,7 @@ interface IMessengerStates {
     /**
      * Sets the message as the last read message in the channel
      */
-    fun setLastReadMessage(message: Message) = setLastReadMessage(message.channelId, message.id)
-
-    /**
-     * Sets the message as the last read message in the channel
-     */
-    fun setLastReadMessage(message: ClientMessage) = setLastReadMessage(message.channel.id, message.id)
+    fun setLastReadMessage(message: Message)
 
     /**
      * Sets the message id as the last read message in the channel
@@ -160,7 +138,7 @@ interface IMessengerStates {
     /**
      * State reflecting the most recent message sent in this channel
      */
-    fun getLatestMessage(channelId: Long): StateV2<ClientMessage?>
+    fun getLatestMessage(channelId: Long): StateV2<Message?>
 
     /**
      * A List State that has the initial value of all loaded message in this channel.
@@ -178,11 +156,7 @@ interface IMessengerStates {
     fun getObservableChannelList(): ObservableList<Channel>
 
     @Deprecated("Not used in protocol 9 or later")
-    fun setUnreadState(channelId: Long, messageId: Long, unread: Boolean)
-    @Deprecated("Not used in protocol 9 or later")
-    fun setUnreadState(message: ClientMessage, unread: Boolean) = setUnreadState(message.channel.id, message.id, unread)
-    @Deprecated("Not used in protocol 9 or later")
-    fun setUnreadState(message: Message, unread: Boolean) = setUnreadState(message.channelId, message.id, unread)
+    fun setUnreadState(message: Message, unread: Boolean)
 
     /**
      * Sets the title of a channel. Will throw an exception if this channel
@@ -201,25 +175,9 @@ interface IMessengerStates {
     fun sendMessage(channelId: Long, message: String, replyTo: Long? = null, callback: ((Optional<Packet>) -> Unit)? = null)
 
     /**
-     * Edits the given [messageId]
-     */
-    fun editMessage(channelId: Long, messageId: Long, content: String, callback: (Boolean) -> Unit)
-    fun editMessage(message: ClientMessage, content: String, callback: (Boolean) -> Unit) = editMessage(message.channel.id, message.id, content, callback)
-
-    /**
-     * Deletes [messageId] from the given [channelId] it is in
-     */
-    fun deleteMessage(channelId: Long, messageId: Long)
-
-    /**
      * Deletes [message] from the channel it is in
      */
-    fun deleteMessage(message: ClientMessage) = deleteMessage(message.id, message.channel.id)
-
-    /**
-     * Deletes [message] from the channel it is in
-     */
-    fun deleteMessage(message: Message) = deleteMessage(message.id, message.channelId)
+    fun deleteMessage(message: Message)
 
     fun leaveGroup(channelId: Long)
 
@@ -237,11 +195,6 @@ interface IMessengerStates {
      * can store its state before it is cleared
      */
     fun registerResetListener(callback: () -> Unit)
-
-    // FIXME these could probably be cleaned up, though their behavior wrt announcement channels doesn't match existing
-    //  methods, so not entirely sure
-    fun getMessagesRaw(channelId: Long): Map<Long, Message>?
-    fun retrieveMessageHistoryRaw(channelId: Long, before: Long? = null, after: Long? = null, messageLimit: Int = 50, callback: ((Optional<Packet>) -> Unit)? = null)
 }
 
 // For callbacks from CM. Will update associated states

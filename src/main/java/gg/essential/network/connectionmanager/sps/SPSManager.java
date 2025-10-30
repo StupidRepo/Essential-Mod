@@ -21,7 +21,6 @@ import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPac
 import gg.essential.connectionmanager.common.packet.upnp.*;
 import gg.essential.data.SPSData;
 import gg.essential.event.network.server.ServerLeaveEvent;
-import gg.essential.event.network.server.ServerTickEvent;
 import gg.essential.event.render.RenderTickEvent;
 import gg.essential.event.sps.PlayerJoinSessionEvent;
 import gg.essential.event.sps.PlayerLeaveSessionEvent;
@@ -41,7 +40,6 @@ import gg.essential.network.connectionmanager.handler.upnp.ServerUPnPSessionRemo
 import gg.essential.network.connectionmanager.queue.PacketQueue;
 import gg.essential.network.connectionmanager.queue.SequentialPacketQueue;
 import gg.essential.sps.ResourcePackSharingHttpServer;
-import gg.essential.sps.TPSSessionMonitor;
 import gg.essential.sps.WindowTitleManager;
 import gg.essential.sps.SpsAddress;
 import gg.essential.universal.UMinecraft;
@@ -131,8 +129,6 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
     private String resourcePackChecksum = null;
 
     private Instant sessionStartTime = Instant.now();
-
-    private TPSSessionMonitor tpsSessionMonitor = null;
 
     /**
      * A random ID for each session, used for telemetry purposes.
@@ -375,8 +371,6 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         EssentialCommandRegistry.INSTANCE.registerSPSHostCommands();
 
         WindowTitleManager.INSTANCE.updateTitle();
-
-        tpsSessionMonitor = new TPSSessionMonitor();
     }
 
     public synchronized void updateLocalSession(@NotNull String ip, int port) {
@@ -433,7 +427,6 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         resourcePackUrl = null;
         resourcePackChecksum = null;
         shareResourcePack = false;
-        tpsSessionMonitor = null;
 
         ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(EssentialCommandRegistry.INSTANCE::unregisterSPSHostCommands);
 
@@ -471,18 +464,6 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
     private void sendSessionTelemetry(IntegratedServer server, UPnPSession oldSession) {
         File worldDirectory = ExtensionsKt.getWorldDirectory(server).toFile();
 
-        float averageTPS;
-        float minTPS;
-        float maxTPS;
-        if (tpsSessionMonitor != null) {
-            averageTPS = tpsSessionMonitor.getAverageTPS();
-            minTPS = tpsSessionMonitor.getMinTPS();
-            maxTPS = tpsSessionMonitor.getMaxTPS();
-        } else {
-            averageTPS = 0f;
-            minTPS = 0f;
-            maxTPS = 0f;
-        }
         HashMap<String, Object> metadata = new HashMap<String, Object>() {{
             put("userCPU", cpuInfo());
             put("worldNameHash", DigestUtils.sha256Hex(UUIDUtil.getClientUUID() + worldDirectory.getName()));
@@ -493,9 +474,6 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             put("sessionDurationSeconds", TimeUnit.MILLISECONDS.toSeconds(Duration.between(sessionStartTime, Instant.now()).toMillis()));
             put("sessionId", sessionId);
             put("initiatedFrom", localSessionSource);
-            put("averageTPS", averageTPS);
-            put("minTPS", minTPS);
-            put("maxTPS", maxTPS);
         }};
 
         // Fork so calculating the world size doesn't block the main thread
@@ -505,7 +483,7 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
             metadata.put("worldSizeMb", worldSizeBytes / 1_000_000);
 
             // Return to main thread because enqueue is not thread safe
-            ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() -> connectionManager.getTelemetryManager().enqueue(new ClientTelemetryPacket("SPS_SESSION_4", metadata)));
+            ExtensionsKt.getExecutor(Minecraft.getMinecraft()).execute(() -> connectionManager.getTelemetryManager().enqueue(new ClientTelemetryPacket("SPS_SESSION_3", metadata)));
         });
     }
 
@@ -825,13 +803,6 @@ public class SPSManager extends StateCallbackManager<IStatusManager> implements 
         final MutableState<Boolean> onlineState = onlinePlayerStates.remove(event.getProfile().getId());
         if (onlineState != null) {
             onlineState.set(false);
-        }
-    }
-
-    @Subscribe
-    public void onServerTick(ServerTickEvent event) {
-        if (tpsSessionMonitor != null) {
-            tpsSessionMonitor.tick();
         }
     }
 

@@ -23,8 +23,7 @@ import gg.essential.gui.util.pollingState
 class AccountNotValidModal(
     modalManager: ModalManager,
     private val skipAuthCheck: Boolean = false,
-    private val successCallback: Modal.() -> Unit = {},
-    private val failureCallback: Modal.() -> Unit = {},
+    private val successCallback: Modal.() -> Unit = {}
 ) : ConfirmDenyModal(modalManager, false) {
 
     private val authStatus = pollingState { Essential.getInstance().connectionManager.isAuthenticated }
@@ -49,12 +48,6 @@ class AccountNotValidModal(
                 successCallback.invoke(this)
                 replaceWith(null)
             }
-        }
-    }
-
-    override fun onClose() {
-        if (!authStatus.get()) {
-            failureCallback.invoke(this)
         }
     }
 }

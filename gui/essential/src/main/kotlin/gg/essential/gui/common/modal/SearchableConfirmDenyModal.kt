@@ -20,7 +20,6 @@ import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.*
 import gg.essential.gui.common.input.UITextInput
 import gg.essential.gui.common.input.essentialInput
-import gg.essential.gui.elementa.state.v2.effect
 import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.stateOf
@@ -94,9 +93,7 @@ open class SearchableConfirmDenyModal(
             input.setColor(EssentialPalette.TEXT)
             input.placeholderShadow.set(false)
             input.placeholderColor.set(EssentialPalette.TEXT_MID_GRAY)
-            effect(stateScope) {
-                searchBarTextState.set(input.textState())
-            }
+            input.textState.onSetValueAndNow { searchBarTextState.set(it) }
             essentialInput(
                 input,
                 icon = EssentialPalette.SEARCH_7X,

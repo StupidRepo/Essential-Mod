@@ -41,7 +41,6 @@ import gg.essential.gui.layoutdsl.hoverColor
 import gg.essential.gui.layoutdsl.hoverScope
 import gg.essential.gui.layoutdsl.onLeftClick
 import gg.essential.gui.layoutdsl.outline
-import gg.essential.gui.layoutdsl.row
 import gg.essential.gui.layoutdsl.shadow
 import gg.essential.gui.layoutdsl.spacer
 import gg.essential.gui.layoutdsl.tag
@@ -90,7 +89,7 @@ abstract class EssentialModal2(
                 nextComponent?.grabWindowFocus()
             }
 
-            UKeyboard.KEY_ENTER, UKeyboard.KEY_NUMPADENTER -> {
+            UKeyboard.KEY_ENTER -> {
                 val primaryAction = window.findChildrenByTag<PrimaryAction>(recursive = true).singleOrNull()
 
                 // The simulated left-click event may cause the component's hierarchy to change.
@@ -251,20 +250,6 @@ abstract class EssentialModal2(
             textModifier = Modifier.color(EssentialPalette.TEXT_MID_GRAY).shadow(Color.BLACK).then(textModifier),
             block = block,
         )
-    }
-
-    /** See [primaryButton], [cancelButton]. */
-    fun LayoutScope.primaryAndCancelButtons(
-        primaryText: String,
-        cancelText: String,
-        primaryAction: suspend () -> Unit,
-        cancelAction: () -> Unit = ::close,
-        primaryStyle: StyledButton.Style = OutlineButtonStyle.BLUE,
-    ) {
-        row(Arrangement.spacedBy(8f)) {
-            cancelButton(cancelText, action = cancelAction)
-            primaryButton(primaryText, style = primaryStyle, action = primaryAction)
-        }
     }
 
     /**

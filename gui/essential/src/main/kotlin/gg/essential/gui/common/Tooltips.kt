@@ -52,8 +52,9 @@ abstract class AbstractTooltip(private val logicalParent: UIComponent) : UIConta
             }
         }
 
-        effect(logicalParent) {
-            toggle(visible())
+        toggle(visible.get())
+        visible.onSetValue(logicalParent) {
+            toggle(it)
         }
 
         return this
@@ -193,9 +194,9 @@ abstract class Tooltip(logicalParent: UIComponent) : AbstractTooltip(logicalPare
 
     // Old name of bindText, contrary to its name it actually supports multiple lines and you cannot call it multiple times to add more lines
     fun bindLine(state: StateV2<String>, wrapAtWidth: Float? = null, configure: UIText.() -> Unit = {}): Tooltip {
-        effect(this) {
+        state.onSetValueAndNow(this) { text ->
             clearLines()
-            state().lines().forEach { fullLine ->
+            text.lines().forEach { fullLine ->
                 if (wrapAtWidth != null) {
                     val lines = getStringSplitToWidth(fullLine, wrapAtWidth, 1f, processColorCodes = false)
                     for (line in lines) {

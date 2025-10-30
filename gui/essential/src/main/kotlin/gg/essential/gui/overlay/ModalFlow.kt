@@ -55,10 +55,6 @@ fun launchModalFlow(modalManager: ModalManager, block: suspend ModalFlow.() -> U
                 }
             }
         }
-
-        override val modalName: String?
-            get() = null
-
         override fun LayoutScope.layoutModal() {}
         override fun handleEscapeKeyPress() {}
     })
@@ -156,8 +152,6 @@ class ModalFlow(val modalManager: ModalManager) {
 
         fun resumeImmediately(result: T): Modal {
             return object : Modal(modalManager) {
-                override val modalName: String?
-                    get() = null
                 override fun onOpen() {
                     super.onOpen()
 

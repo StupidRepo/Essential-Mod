@@ -50,18 +50,14 @@ import gg.essential.network.connectionmanager.notices.PersistentToastNoticeListe
 import gg.essential.network.connectionmanager.notices.SaleNoticeManager;
 import gg.essential.network.connectionmanager.notices.SocialMenuNewFriendRequestNoticeManager;
 import gg.essential.network.connectionmanager.profile.ProfileManager;
-import gg.essential.network.connectionmanager.profile.SuspensionDisconnectHandler;
 import gg.essential.network.connectionmanager.relationship.RelationshipManager;
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager;
 import gg.essential.network.connectionmanager.serverdiscovery.ServerDiscoveryManager;
 import gg.essential.network.connectionmanager.skins.PlayerSkinLookup;
 import gg.essential.network.connectionmanager.skins.SkinsManager;
-import gg.essential.network.connectionmanager.social.RulesManager;
 import gg.essential.network.connectionmanager.social.SocialManager;
 import gg.essential.network.connectionmanager.sps.SPSManager;
 import gg.essential.network.connectionmanager.subscription.SubscriptionManager;
-import gg.essential.network.connectionmanager.suspension.McSuspensionManager;
-import gg.essential.network.connectionmanager.suspension.SuspensionManager;
 import gg.essential.network.connectionmanager.telemetry.TelemetryManager;
 import gg.essential.sps.McIntegratedServerManager;
 import gg.essential.util.ModLoaderUtil;
@@ -142,8 +138,6 @@ public class ConnectionManager extends ConnectionManagerKt {
     private final SocialMenuNewFriendRequestNoticeManager socialMenuNewFriendRequestNoticeManager;
     @NotNull
     private final NoticeBannerManager noticeBannerManager;
-    private /* final */ SuspensionManager suspensionManager;
-    private /* final */ RulesManager rulesManager;
 
     private boolean modsSent = false;
     private int previouslyConnectedProtocol = 1;
@@ -152,7 +146,6 @@ public class ConnectionManager extends ConnectionManagerKt {
         NO_TOS,
         ESSENTIAL_DISABLED,
         OUTDATED,
-        USER_SUSPENDED,
         CANCELLED,
         ALREADY_CONNECTED,
         NO_RESPONSE,
@@ -291,10 +284,6 @@ public class ConnectionManager extends ConnectionManagerKt {
             this.telemetryManager::enqueue
         ));
 
-        this.managers.add(this.suspensionManager = new McSuspensionManager(this));
-        this.managers.add(this.rulesManager = new RulesManager(this));
-        SuspensionDisconnectHandler.INSTANCE.setupEffects(this);
-
         PlayerSkinLookup.INSTANCE.register(this);
     }
 
@@ -407,14 +396,6 @@ public class ConnectionManager extends ConnectionManagerKt {
 
     public @NotNull NoticeBannerManager getNoticeBannerManager() {
         return noticeBannerManager;
-    }
-
-    public @NotNull SuspensionManager getSuspensionManager() {
-        return this.suspensionManager;
-    }
-
-    public @NotNull RulesManager getRulesManager() {
-        return this.rulesManager;
     }
 
     @Override

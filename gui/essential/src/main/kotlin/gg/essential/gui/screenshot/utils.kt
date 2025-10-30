@@ -12,8 +12,6 @@
 package gg.essential.gui.screenshot
 
 import com.sparkuniverse.toolbox.util.DateTime
-import gg.essential.api.gui.Slot
-import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.modal.PropertiesModal
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.asyncMap
@@ -37,7 +35,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
-import java.awt.image.BufferedImage
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -46,10 +43,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.util.*
-import javax.imageio.ImageIO
 import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
-import kotlin.io.path.outputStream
 
 fun createDateOnlyCalendar(time: Long = System.currentTimeMillis()): Calendar {
     val date: Calendar = GregorianCalendar()
@@ -178,20 +172,5 @@ fun copyScreenshotToClipboard(screenshot: Path) {
         } else {
             Notifications.error("Failed to copy picture", "")
         }
-    }
-}
-
-suspend fun saveImageAsScreenshot(image: BufferedImage) {
-    withContext(Dispatchers.IO) {
-        val folder = platform.screenshotFolder
-        val baseName = "saved_" + SCREENSHOT_DATETIME_FORMAT.format(Date())
-        val file = (0..Int.MAX_VALUE).firstNotNullOf { i ->
-            folder.resolve(baseName + (if (i > 0) "_$i" else "") + ".png")
-                .takeUnless { it.exists() }
-        }
-        file.outputStream().use { ImageIO.write(image, "png", it) }
-    }
-    Notifications.push("Picture saved", "", action = { platform.openScreenshotBrowser() }) {
-        withCustomComponent(Slot.ICON, EssentialPalette.PICTURES_SHORT_9X7.create())
     }
 }

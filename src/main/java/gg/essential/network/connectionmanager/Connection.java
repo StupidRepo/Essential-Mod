@@ -123,7 +123,7 @@ public class Connection extends WebSocketClient {
     private int usingProtocol = 1;
     private ScheduledFuture<?> timeoutTask;
 
-    private static final int MAX_PROTOCOL = 9;
+    private static final int MAX_PROTOCOL = 8;
 
     public Connection(@NotNull Callbacks callbacks) {
         super(CM_HOST_URI);
@@ -174,8 +174,6 @@ public class Connection extends WebSocketClient {
         KnownCloseReason knownReason;
         if (reason.contains("Invalid status code received: 410") || reason.contains("Invalid status code received: 404")) {
             knownReason = KnownCloseReason.OUTDATED;
-        } else if (code == 4008) {
-            knownReason = KnownCloseReason.SUSPENDED;
         } else {
             knownReason = null;
         }
@@ -387,7 +385,6 @@ public class Connection extends WebSocketClient {
 
     public enum KnownCloseReason {
 
-        OUTDATED,
-        SUSPENDED
+        OUTDATED
     }
 }

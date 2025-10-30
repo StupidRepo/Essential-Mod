@@ -34,7 +34,7 @@ import gg.essential.gui.elementa.VanillaButtonConstraint.Companion.constrainTo
 import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.elementa.state.v2.stateOf
-import gg.essential.gui.modals.ensurePrerequisites
+import gg.essential.gui.modals.TOSModal
 import gg.essential.gui.overlay.ModalManager
 import gg.essential.gui.serverdiscovery.VersionDownloadModal
 import gg.essential.mixins.ext.client.gui.acc
@@ -206,8 +206,6 @@ class EssentialMultiplayerGui {
         }
     }
 
-    private val oldButtons = mutableListOf<GuiButton>()
-
     fun setupButtons(
         buttons: List<GuiButton>,
         addButton: (GuiButton) -> GuiButton,
@@ -239,13 +237,6 @@ class EssentialMultiplayerGui {
         }
 
         when (EssentialConfig.currentMultiplayerTab) {
-            0 -> {
-                oldButtons.forEach { removeButton(it) }
-                oldButtons.clear()
-                oldButtons.add(favouritesTabButton)
-                oldButtons.add(friendsTabButton)
-                oldButtons.add(discoverTabButton)
-            }
             1 -> {
                 removeAllButtons()
                 repositionJoinServerButton(false, "Join Friend")
@@ -378,10 +369,7 @@ class EssentialMultiplayerGui {
 
     private fun withTosAccepted(block: () -> Unit) {
         if (!OnboardingData.hasAcceptedTos()) {
-            GuiUtil.launchModalFlow {
-                ensurePrerequisites()
-                block()
-            }
+            GuiUtil.pushModal { TOSModal(it, unprompted = false, requiresAuth = true, { block() }) }
         } else {
             block()
         }

@@ -22,7 +22,6 @@ import kotlinx.coroutines.Dispatchers;
 import me.kbrewster.eventbus.Subscribe;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BooleanSupplier;
@@ -70,15 +69,4 @@ public class McMojangSkinManager extends MojangSkinManager {
                 )
         );
     }
-
-    @Nullable
-    protected synchronized Skin updateSkinNow(boolean notification, boolean userSet) {
-        Skin updatedSkin = super.updateSkinNow(notification, userSet);
-        // If the skin is set in the mojang api successfully, we want to also update the client's values
-        if (updatedSkin != null) {
-            MinecraftGameProfileTexturesRefresher.INSTANCE.updateTextures(updatedSkin.getHash(), "SKIN");
-        }
-        return updatedSkin;
-    }
-
 }

@@ -26,7 +26,6 @@ public class ServerProfileStatusPacketHandler extends PacketHandler<ServerProfil
         ProfileManager profileManager = connectionManager.getProfileManager();
         profileManager.setPlayerStatus(packet.getUUID(), packet.getStatus(), packet.getLastOnlineTimestamp());
 
-        profileManager.setPlayerSuspension(packet.getUUID(), packet.getPunishmentStatus());
     }
 
 }

@@ -30,7 +30,6 @@ import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.addAll
 import gg.essential.gui.elementa.state.v2.collections.MutableTrackedList
-import gg.essential.gui.elementa.state.v2.combinators.letState
 import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.combinators.not
 import gg.essential.gui.elementa.state.v2.isNotEmpty
@@ -38,7 +37,6 @@ import gg.essential.gui.elementa.state.v2.memo
 import gg.essential.gui.elementa.state.v2.mutableListStateOf
 import gg.essential.gui.elementa.state.v2.mutableStateOf
 import gg.essential.gui.layoutdsl.*
-import gg.essential.gui.modals.ensurePrerequisites
 import gg.essential.gui.modals.select.selectModal
 import gg.essential.gui.modals.select.users
 import gg.essential.gui.notification.Notifications
@@ -98,7 +96,7 @@ fun openGiftModal(item: Item.CosmeticOrEmote, state: WardrobeState) {
         ServerCosmeticBulkRequestUnlockStateResponsePacket::class.java // FIXME workaround for feature-flag-processor eating the packet
         when (val packet = maybePacket.orElse(null)) {
             is ServerCosmeticBulkRequestUnlockStateResponsePacket -> {
-                validFriends.addAll(packet.unlockStates.filter { !it.value }.keys.toList().filter { !socialStates.isSuspended(it).getUntracked() })
+                validFriends.addAll(packet.unlockStates.filter { !it.value }.keys.toList())
             }
             else -> {
                 showErrorToast("Something went wrong, please try again.")
@@ -110,8 +108,6 @@ fun openGiftModal(item: Item.CosmeticOrEmote, state: WardrobeState) {
     }
 
     launchModalFlow(platform.createModalManager()) {
-        ensurePrerequisites(social = true)
-
         val selectedUsers = selectFriendsToGiftModal(item, state, allFriends, validFriends, loadingFriends)
             ?: return@launchModalFlow
         val multiplier = selectedUsers.size
@@ -119,9 +115,14 @@ fun openGiftModal(item: Item.CosmeticOrEmote, state: WardrobeState) {
         awaitModal { continuation ->
             PurchaseConfirmationModal(
                 modalManager,
-                List(multiplier) { item to priceInfo.letState { it?.baseCost ?: 0 } },
-                priceInfo.letState { (it?.realCost ?: 0) * multiplier }
-            ) { this.replaceWith(continuation.resumeImmediately(Unit)) }
+                List(multiplier) { item to priceInfo.map { it?.baseCost ?: 0 } },
+                priceInfo.map { (it?.realCost ?: 0) * multiplier },
+                {}
+            ).apply {
+                onPrimaryAction {
+                    this.replaceWith(continuation.resumeImmediately(Unit))
+                }
+            }
         }
         giftItemToFriends(item, selectedUsers, state)
     }
@@ -222,7 +223,7 @@ suspend fun ModalFlow.selectFriendsToGiftModal(
     }
 
     return selectModal(
-        "Select friends to gift\nthem ${ChatColor.WHITE + item.name + ChatColor.RESET}.", "SelectFriendsToGift"
+        "Select friends to gift\nthem ${ChatColor.WHITE + item.name + ChatColor.RESET}."
     ) {
         modalSettings {
             primaryButtonText = "Purchase"

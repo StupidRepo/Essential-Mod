@@ -19,7 +19,6 @@ import com.mojang.authlib.properties.PropertyMap;
 import gg.essential.Essential;
 import gg.essential.api.utils.JsonHolder;
 import gg.essential.mod.Skin;
-import gg.essential.mod.cosmetics.CapeDisabledKt;
 import gg.essential.network.connectionmanager.subscription.SubscriptionManager;
 import gg.essential.util.UUIDUtil;
 import net.minecraft.client.Minecraft;
@@ -53,15 +52,11 @@ import com.mojang.authlib.minecraft.InsecureTextureException;
 public class GameProfileManager implements SubscriptionManager.Listener {
     public static final String SKIN_URL = Skin.SKIN_URL;
 
-    public static GameProfile handleGameProfile(GameProfile gameProfile, Skin skin) {
-        return handleGameProfile(gameProfile, skin, null);
-    }
-
-    public static GameProfile handleGameProfile(GameProfile profile, Skin skin, String capeHash) {
+    public static GameProfile handleGameProfile(GameProfile profile, Skin skin) {
         if (skin == null) {
             return null;
         }
-        Overwrites overwrites = new Overwrites(skin.getHash(), skin.getModel().getType(), capeHash);
+        Overwrites overwrites = new Overwrites(skin.getHash(), skin.getModel().getType(), null);
 
         final Property property = profile.getProperties().get("textures").stream().findFirst().orElse(null);
         if (property == null || ManagedTexturesProperty.hasOverwrites(property, overwrites)) {
@@ -107,9 +102,9 @@ public class GameProfileManager implements SubscriptionManager.Listener {
             }
 
             if (this.capeHash != null) {
-                if (this.capeHash.isEmpty() || this.capeHash.equals(CapeDisabledKt.CAPE_DISABLED_COSMETIC_ID)) {
+                if (this.capeHash.isEmpty()) {
                     textures.remove("CAPE");
-                } else if (this.capeHash.length() == 64) {
+                } else {
                     final JsonHolder cape = textures.optOrCreateJsonHolder("CAPE");
                     String url = cape.optString("url");
                     if (!url.endsWith(this.capeHash)) {

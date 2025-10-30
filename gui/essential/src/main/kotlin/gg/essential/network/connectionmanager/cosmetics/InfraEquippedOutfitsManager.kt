@@ -124,9 +124,6 @@ class InfraEquippedOutfitsManager(
     override fun getSkin(playerId: UUID): Skin? =
         managerImpl.getSkin(playerId)
 
-    override fun getCapeHash(playerId: UUID): String?=
-        managerImpl.getCapeHash(playerId)
-
     fun update(playerId: UUID, outfit: InfraOutfit) {
         if (subscriptionManager.isSubscribedOrSelf(playerId)) {
             infraCosmeticsData.requestCosmeticsIfMissing(outfit.cosmetics.values)

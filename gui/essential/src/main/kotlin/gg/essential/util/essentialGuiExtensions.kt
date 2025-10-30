@@ -29,7 +29,6 @@ import gg.essential.elementa.utils.withAlpha
 import gg.essential.gui.EssentialPalette
 import gg.essential.gui.common.AbstractTooltip
 import gg.essential.gui.common.EssentialTooltip
-import gg.essential.gui.common.ImageLoadCallback
 import gg.essential.gui.common.LayoutDslTooltip
 import gg.essential.gui.common.bindParent
 import gg.essential.gui.common.constraints.DivisionConstraint
@@ -43,7 +42,7 @@ import gg.essential.gui.elementa.state.v2.combinators.map
 import gg.essential.gui.elementa.state.v2.utils.toState
 import gg.essential.gui.image.ImageFactory
 import gg.essential.gui.layoutdsl.*
-import gg.essential.gui.util.hoveredStateV2
+import gg.essential.gui.util.hoveredState
 import gg.essential.gui.util.isComponentInParentChain
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.UMouse
@@ -53,19 +52,14 @@ import kotlinx.coroutines.asExecutor
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.awt.Color
-import java.awt.image.BufferedImage
 import java.util.concurrent.CompletableFuture
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 
-@Deprecated("Use LayoutDSL instead")
 infix fun <T : UIComponent> T.hiddenChildOf(parent: UIComponent) = apply {
     parent.addChild(this)
     hide(instantly = true)
 }
 
-@Deprecated("Use `Modifier.animateColor` instead")
 fun <T : UIComponent> T.animateColor(
     color: ColorConstraint,
     time: Float = .3f,
@@ -76,8 +70,6 @@ fun <T : UIComponent> T.animateColor(
     }
 }
 
-@Deprecated("Use `Modifier.animateColor` instead")
-@Suppress("DEPRECATION")
 fun <T : UIComponent> T.animateColor(
     color: Color,
     time: Float = .3f,
@@ -141,13 +133,6 @@ fun UIComponent.createEssentialTooltip(
 /**
  * @param windowPadding Sets the padding from the window borders. The tooltip will be constrained to stay within the window+padding. Disabled if null
  */
-@Deprecated("Replace with StateV2 version",
-    ReplaceWith(
-        "component.bindEssentialTooltip(display.toV2(), tooltipContent.toV2(), position, padding, wrapAtWidth, configure, windowPadding)",
-        "gg.essential.gui.elementa.state.v2.toV2"
-        )
-)
-@Suppress("DEPRECATION")
 fun <T : UIComponent> T.bindEssentialTooltip(
     display: State<Boolean>,
     tooltipContent: State<String>,
@@ -156,31 +141,16 @@ fun <T : UIComponent> T.bindEssentialTooltip(
     wrapAtWidth: Float? = null,
     configure: UIText.() -> Unit = {},
     windowPadding: Float? = null,
-): T = bindEssentialTooltip(display.toV2(), tooltipContent.toV2(), position, padding, wrapAtWidth, configure, windowPadding)
-
-/**
- * @param windowPadding Sets the padding from the window borders. The tooltip will be constrained to stay within the window+padding. Disabled if null
- */
-@Deprecated("Use `Modifier.whenTrue` + `Modifier.tooltip` instead")
-fun <T : UIComponent> T.bindEssentialTooltip(
-    display: StateV2<Boolean>,
-    tooltipContent: StateV2<String>,
-    position: EssentialTooltip.Position = EssentialTooltip.Position.BELOW,
-    padding: Float = 5f,
-    wrapAtWidth: Float? = null,
-    configure: UIText.() -> Unit = {},
-    windowPadding: Float? = null,
-): T = apply {
+): T {
     val tooltip = createEssentialTooltip(tooltipContent, position, padding, wrapAtWidth, configure, windowPadding)
     tooltip.bindVisibility(display)
+    return this
 }
 
 /**
  * @param windowPadding Sets the padding from the window borders. The tooltip will be constrained to stay within the window+padding. Disabled if null
  */
 @JvmOverloads
-@Deprecated("Use `Modifier.hoverTooltip` instead")
-@Suppress("DEPRECATION")
 fun <T : UIComponent> T.bindHoverEssentialTooltip(
     tooltipContent: State<String>,
     position: EssentialTooltip.Position = EssentialTooltip.Position.BELOW,
@@ -189,7 +159,7 @@ fun <T : UIComponent> T.bindHoverEssentialTooltip(
     configure: UIText.() -> Unit = {},
     windowPadding: Float? = null,
 ): T {
-    return bindEssentialTooltip(hoveredStateV2(), tooltipContent.toV2(), position, padding, wrapAtWidth, configure, windowPadding)
+    return bindEssentialTooltip(hoveredState(), tooltipContent, position, padding, wrapAtWidth, configure, windowPadding)
 }
 
 private fun UIComponent.positionTooltip(
@@ -248,7 +218,6 @@ private fun UIComponent.positionTooltip(
     }
 }
 
-@Deprecated("Use LayoutDSL instead, centering is the default behavior for LayoutDSL containers")
 fun <T : UIComponent> T.centered(): T = apply {
     constrain {
         x = CenterConstraint()
@@ -541,11 +510,4 @@ fun Color.darker(percentage: Float): Color {
         (blue * brightnessFactor).toInt().coerceIn(0, 255),
         alpha
     )
-}
-
-suspend fun loadUIImage(image: BufferedImage): UIImage = suspendCoroutine { continuation ->
-    val uiImage = UIImage(CompletableFuture.completedFuture(image))
-    uiImage.supply(ImageLoadCallback {
-        continuation.resume(uiImage)
-    })
 }

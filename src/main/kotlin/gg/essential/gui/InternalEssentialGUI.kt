@@ -17,11 +17,8 @@ import gg.essential.api.gui.EssentialGUI
 import gg.essential.connectionmanager.common.packet.telemetry.ClientTelemetryPacket
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.components.UIBlock
-import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl
 import gg.essential.gui.elementa.state.v2.State
 import gg.essential.gui.elementa.state.v2.mutableStateOf
-import gg.essential.gui.elementa.state.v2.onChange
-import gg.essential.network.connectionmanager.telemetry.FeatureSessionTelemetry
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UMatrixStack
 import gg.essential.universal.render.URenderPipeline
@@ -36,21 +33,10 @@ abstract class InternalEssentialGUI(
     restorePreviousGuiOnClose: Boolean = true,
     discordActivityDescription: String? = null,
 ): EssentialGUI(version, guiTitle, newGuiScale, restorePreviousGuiOnClose, discordActivityDescription) {
-    private val reference = ReferenceHolderImpl()
     private val screenOpenMutable = mutableStateOf(false)
     protected val screenOpen: State<Boolean> = screenOpenMutable
 
     private var openedAt: Long? = null
-
-    init {
-        screenOpen.onChange(reference) { open ->
-            if (open) {
-                FeatureSessionTelemetry.startEvent(this@InternalEssentialGUI.javaClass.name)
-            } else {
-                FeatureSessionTelemetry.endEvent(this@InternalEssentialGUI.javaClass.name)
-            }
-        }
-    }
 
     override fun initScreen(width: Int, height: Int) {
         super.initScreen(width, height)

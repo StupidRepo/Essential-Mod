@@ -12,9 +12,7 @@
 package gg.essential.gui.friends.state
 
 import gg.essential.elementa.utils.ObservableAddEvent
-import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.network.connectionmanager.ConnectionManager
-import gg.essential.network.connectionmanager.social.ProfileSuspension
 import gg.essential.util.UUIDUtil
 import gg.essential.util.getOtherUser
 import gg.essential.util.thenAcceptOnMainThread
@@ -38,8 +36,6 @@ class SocialStateManager(connectionManager: ConnectionManager) : SocialStates {
         get() = messengerStates
     override val activity: IStatusStates
         get() = statusStates
-
-    override val suspensions: ListState<ProfileSuspension> = connectionManager.profileManager.suspensions
 
     init {
         val observableFriendList = relationshipStates.getObservableFriendList()

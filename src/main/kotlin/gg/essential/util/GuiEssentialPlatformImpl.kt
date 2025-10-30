@@ -11,8 +11,6 @@
  */
 package gg.essential.util
 
-import com.google.common.net.HostAndPort
-import com.google.common.net.InetAddresses
 import com.mojang.authlib.GameProfile
 import gg.essential.Essential
 import gg.essential.api.profile.wrapped
@@ -26,7 +24,6 @@ import gg.essential.gui.common.EmulatedUI3DPlayer
 import gg.essential.gui.common.UIPlayer
 import gg.essential.gui.common.modal.Modal
 import gg.essential.gui.elementa.essentialmarkdown.EssentialMarkdown
-import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.elementa.state.v2.MutableState
 import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl
 import gg.essential.gui.elementa.state.v2.State
@@ -44,7 +41,6 @@ import gg.essential.gui.friends.state.MessengerStateManagerImpl
 import gg.essential.gui.friends.state.RelationshipStateManagerImpl
 import gg.essential.gui.friends.state.SocialStates
 import gg.essential.gui.friends.state.StatusStateManagerImpl
-import gg.essential.gui.modals.McModalPrerequisites
 import gg.essential.gui.notification.NotificationsImpl
 import gg.essential.gui.notification.NotificationsManager
 import gg.essential.gui.overlay.ModalManager
@@ -52,7 +48,6 @@ import gg.essential.gui.overlay.ModalManagerImpl
 import gg.essential.gui.overlay.OverlayManager
 import gg.essential.gui.overlay.OverlayManagerImpl
 import gg.essential.gui.screenshot.bytebuf.LimitedAllocator
-import gg.essential.gui.screenshot.components.ScreenshotBrowser
 import gg.essential.gui.screenshot.providers.MinecraftWindowedTextureProvider
 import gg.essential.gui.screenshot.providers.WindowedImageProvider
 import gg.essential.gui.screenshot.providers.WindowedTextureProvider
@@ -72,20 +67,15 @@ import gg.essential.model.backend.minecraft.MinecraftRenderBackend
 import gg.essential.model.util.Color
 import gg.essential.network.CMConnection
 import gg.essential.network.connectionmanager.cosmetics.AssetLoader
-import gg.essential.network.connectionmanager.cosmetics.ICosmeticsManager
 import gg.essential.network.connectionmanager.cosmetics.ModelLoader
-import gg.essential.network.connectionmanager.cosmetics.WardrobeSettings
 import gg.essential.network.connectionmanager.features.DisabledFeaturesManager
 import gg.essential.network.connectionmanager.media.IScreenshotManager
 import gg.essential.network.connectionmanager.notices.INoticesManager
 import gg.essential.network.connectionmanager.skins.SkinsManager
-import gg.essential.network.connectionmanager.social.ProfileSuspension
 import gg.essential.sps.SpsAddress
 import gg.essential.universal.UGraphics
 import gg.essential.universal.UImage
-import gg.essential.universal.UMinecraft
 import gg.essential.universal.UScreen
-import gg.essential.universal.USound
 import gg.essential.universal.utils.ReleasedDynamicTexture
 import gg.essential.util.image.GpuTexture
 import gg.essential.util.image.bitmap.Bitmap
@@ -99,14 +89,10 @@ import net.minecraft.client.Minecraft
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
-import java.awt.image.BufferedImage
 import java.io.IOException
 import java.io.InputStream
-import java.net.InetAddress
 import java.nio.file.Path
 import java.util.*
-import javax.imageio.ImageIO
-import kotlin.io.path.isRegularFile
 import kotlin.jvm.Throws
 
 //#if MC>=12106
@@ -116,12 +102,6 @@ import kotlin.jvm.Throws
 //#if MC>=12105
 //$$ import net.minecraft.client.texture.GlTexture
 //$$ import com.mojang.blaze3d.opengl.GlStateManager
-//#endif
-
-//#if MC>=11200
-import net.minecraft.init.SoundEvents
-//#else
-//$$ import net.minecraft.util.ResourceLocation
 //#endif
 
 @AccessedViaReflection("GuiEssentialPlatform")
@@ -216,14 +196,6 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         EssentialSoundManager.playSound(identifier.toMC())
     }
 
-    override fun playNoteHatSound(volume: Float, pitch: Float) {
-        //#if MC>=11200
-        USound.playSoundStatic(SoundEvents.BLOCK_NOTE_HAT, .25f, 0.75f)
-        //#else
-        //$$ USound.playSoundStatic(ResourceLocation("note.hat"), .25f, 0.75f)
-        //#endif
-    }
-
     override fun registerCosmeticTexture(name: String, texture: ReleasedDynamicTexture): UIdentifier {
         return MinecraftRenderBackend.CosmeticTexture(name, texture).identifier.toU()
     }
@@ -240,14 +212,6 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
                 dismiss()
             }
         }
-    }
-
-    override fun <T> registerEventBusListener(cls: Class<T>, listener: (T) -> Unit, priority: Int) {
-        Essential.EVENT_BUS.register(cls, listener, priority)
-    }
-
-    override fun <T> unregisterEventBusListener(cls: Class<T>, listener: (T) -> Unit) {
-        Essential.EVENT_BUS.unregister(cls, listener)
     }
 
     override val essentialBaseDir: Path
@@ -319,18 +283,11 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
             override val relationships: IRelationshipStates by lazy { RelationshipStateManagerImpl(cm.relationshipManager) }
             override val messages: IMessengerStates by lazy { MessengerStateManagerImpl(cm.chatManager) }
             override val activity: IStatusStates by lazy { StatusStateManagerImpl(cm.profileManager, cm.spsManager) }
-            override val suspensions: ListState<ProfileSuspension>
-                get() = cm.profileManager.suspensions
         }
     }
 
     override fun resolveMessageRef(messageRef: MessageRef) {
         Essential.getInstance().connectionManager.chatManager.retrieveChannelHistoryUntil(messageRef)
-    }
-
-    override fun haveActiveRemoteSpsSession(address: String): Boolean {
-        val spsAddr = SpsAddress.parse(address) ?: return false
-        return Essential.getInstance().connectionManager.spsManager.getRemoteSession(spsAddr.host) != null
     }
 
     override val essentialUriListener: EssentialMarkdown.(EssentialMarkdown.LinkClickEvent) -> Unit
@@ -342,12 +299,6 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
     override val skinsManager: SkinsManager
         get() = Essential.getInstance().connectionManager.skinsManager
 
-    override val cosmeticsManager: ICosmeticsManager
-        get() = Essential.getInstance().connectionManager.cosmeticsManager
-
-    override val wardrobeSettings: WardrobeSettings
-        get() = Essential.getInstance().connectionManager.cosmeticsManager.wardrobeSettings
-
     override val mojangSkinManager: MojangSkinManager
         get() = Essential.getInstance().skinManager
 
@@ -357,21 +308,11 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
     override val disabledFeaturesManager: DisabledFeaturesManager
         get() = Essential.getInstance().connectionManager.disabledFeaturesManager
 
-    override val screenshotFolder: Path
-        get() = gg.essential.util.screenshotFolder.toPath()
-
     override val isOptiFineInstalled: Boolean
         get() = OptiFineUtil.isLoaded()
 
     override val trustedHosts: Set<String>
         get() = TrustedHostsUtil.getTrustedHosts().flatMapTo(mutableSetOf()) { it.domains }
-
-    override val reportReasons: Map<String, String>
-        get() = Essential.getInstance().connectionManager.chatManager.getReportReasons(UMinecraft.getSettings().language)
-
-    override fun fileReport(modalManager: ModalManager, channelId: Long, messageId: Long, sender: UUID, reason: String) {
-        Essential.getInstance().connectionManager.chatManager.fileReport(modalManager, channelId, messageId, sender, reason)
-    }
 
     override fun enqueueTelemetry(packet: ClientTelemetryPacket) {
         Essential.getInstance().connectionManager.telemetryManager.enqueue(packet)
@@ -484,10 +425,6 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         GuiUtil.openScreen(SocialMenu::class.java) { SocialMenu(channelId) }
     }
 
-    override fun openScreenshotBrowser() {
-        GuiUtil.openScreen { ScreenshotBrowser() }
-    }
-
     override fun connectToServer(name: String, address: String) {
         MinecraftUtils.connectToServer(name, address)
     }
@@ -516,33 +453,4 @@ class GuiEssentialPlatformImpl : GuiEssentialPlatform {
         //$$ net.minecraft.client.render.BufferRenderer.unbindAll()
         //#endif
     }
-
-    override fun splitHostAndPort(address: String, defaultPort: Int): Pair<String, Int> {
-        val hostAndPort = HostAndPort.fromString(address)
-        val host = hostAndPort.host
-        val port = hostAndPort.getPortOrDefault(25565)
-        return Pair(host, port)
-    }
-
-    override fun parseIpAddress(address: String): InetAddress? {
-        return try {
-            InetAddresses.forString(address)
-        } catch (e: IllegalArgumentException) {
-            null
-        }
-    }
-
-    override fun loadIntegratedServerIcon(): BufferedImage? {
-        val integratedServer = UMinecraft.getMinecraft().integratedServer
-        val icon = integratedServer?.worldDirectory?.resolve("icon.png")
-        return if (icon != null && icon.isRegularFile()) {
-            ImageIO.read(icon.toFile())
-        } else {
-            null
-        }
-    }
-
-    // TODO: Eventually move to :gui:essential project
-    override val modalPrerequisites
-        get() = McModalPrerequisites
 }

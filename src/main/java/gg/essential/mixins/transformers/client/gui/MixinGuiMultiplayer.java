@@ -124,18 +124,6 @@ public abstract class MixinGuiMultiplayer extends GuiScreen implements GuiMultip
         );
     }
 
-    //#if MC>=12109
-    //$$ @Inject(method = "refreshWidgetPositions", at = @At("RETURN"))
-    //$$ private void essential$updateButtonPositions(CallbackInfo ci) {
-    //$$     essentialGui.initGui((MultiplayerScreen) (Object) this);
-    //$$     essentialGui.setupButtons(
-    //$$             CollectionsKt.filterIsInstance(this.children(), ButtonWidget.class),
-    //$$             this::addDrawableChild,
-    //$$             this::removeButton
-    //$$     );
-    //$$ }
-    //#endif
-
     @Inject(method = "refreshServerList", at = @At("HEAD"))
     private void essential$markRefresh(CallbackInfo ci) {
         EssentialMultiplayerGui.Companion.setRefreshing(true);

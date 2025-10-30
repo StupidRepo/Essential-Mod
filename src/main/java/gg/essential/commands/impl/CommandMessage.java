@@ -13,10 +13,12 @@ package gg.essential.commands.impl;
 
 import com.google.common.collect.ImmutableSet;
 import com.sparkuniverse.toolbox.chat.model.Message;
+import gg.essential.Essential;
 import gg.essential.api.commands.*;
 import gg.essential.commands.engine.EssentialFriend;
 import gg.essential.connectionmanager.common.packet.Packet;
 import gg.essential.connectionmanager.common.packet.chat.ServerChatChannelMessagePacket;
+import gg.essential.network.connectionmanager.chat.ChatManager;
 import gg.essential.util.MinecraftUtils;
 import kotlin.collections.CollectionsKt;
 import org.jetbrains.annotations.NotNull;
@@ -27,6 +29,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 public class CommandMessage extends Command {
+
+    private static final ChatManager cm = Essential.getInstance().getConnectionManager().getChatManager();
 
     public CommandMessage() {
         super("essentialmessage");
@@ -40,7 +44,7 @@ public class CommandMessage extends Command {
 
     @DefaultHandler
     public void handle(@DisplayName("ign")EssentialFriend friend, @DisplayName("message") @Greedy String message) throws ExecutionException, InterruptedException {
-        CommandMessageKt.handleMessageCommand(friend, message, new EarlyResponseHandler(friend));
+        cm.sendMessage(friend.getChannel().getId(), message, new EarlyResponseHandler(friend));
     }
 
     public void onConfirm(String message) {

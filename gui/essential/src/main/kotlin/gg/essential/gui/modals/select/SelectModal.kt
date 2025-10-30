@@ -49,7 +49,6 @@ private typealias SelectionListenerBlock<T> = SelectModal<T>.(identifier: T, sel
  */
 class SelectModal<T>(
     modalManager: ModalManager,
-    private val modalSimpleName: String,
     private val sections: List<Section<T, *>>,
     requiresButtonPress: Boolean,
     requiresSelection: Boolean,
@@ -65,9 +64,6 @@ class SelectModal<T>(
     private val selectionListeners = mutableListOf<SelectionListenerBlock<T>>()
 
     private val sectionTitleScaleOffset = -1f
-
-    override val modalName: String
-        get() = "${super.modalName}-$modalSimpleName"
 
     /**
      * Returns a list of selected identifiers

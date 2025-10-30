@@ -11,7 +11,6 @@
  */
 package gg.essential.connectionmanager.common.packet.profile;
 
-import gg.essential.connectionmanager.common.model.profile.ProfilePunishmentStatus;
 import gg.essential.lib.gson.annotations.SerializedName;
 import gg.essential.connectionmanager.common.enums.ProfileStatus;
 import gg.essential.connectionmanager.common.packet.Packet;
@@ -32,9 +31,6 @@ public class ServerProfileStatusPacket extends Packet {
 
     private final @Nullable Long lastOnlineTimestamp;
 
-    @SerializedName("punishment_status")
-    private @Nullable ProfilePunishmentStatus punishmentStatus = null;
-
     public ServerProfileStatusPacket(final @NotNull UUID uuid, final @NotNull ProfileStatus profileStatus) {
         this(uuid, profileStatus, (Long) null);
     }
@@ -43,17 +39,6 @@ public class ServerProfileStatusPacket extends Packet {
         this.uuid = uuid;
         this.status = status;
         this.lastOnlineTimestamp = lastOnlineTimestamp;
-    }
-
-    public ServerProfileStatusPacket(final @NotNull UUID uuid, final @NotNull ProfileStatus profileStatus, final @Nullable ProfilePunishmentStatus punishmentStatus) {
-        this(uuid, profileStatus, null, punishmentStatus);
-    }
-
-    public ServerProfileStatusPacket(@NotNull final UUID uuid, @NotNull final ProfileStatus status, final @Nullable Long lastOnlineTimestamp, final @Nullable ProfilePunishmentStatus punishmentStatus) {
-        this.uuid = uuid;
-        this.status = status;
-        this.lastOnlineTimestamp = lastOnlineTimestamp;
-        this.punishmentStatus = punishmentStatus;
     }
 
     @NotNull
@@ -70,8 +55,4 @@ public class ServerProfileStatusPacket extends Packet {
         return this.lastOnlineTimestamp;
     }
 
-    @Nullable
-    public ProfilePunishmentStatus getPunishmentStatus() {
-        return this.punishmentStatus;
-    }
 }

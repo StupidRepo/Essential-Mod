@@ -50,9 +50,6 @@ class IngameEquippedOutfitsManager(
     override fun getSkin(playerId: UUID): Skin? =
         managerImpl.getSkin(playerId)
 
-    override fun getCapeHash(playerId: UUID): String? =
-        managerImpl.getCapeHash(playerId)
-
     fun applyUpdates(list: List<Pair<UUID, List<Update>>>) {
         for ((uuid, updates) in list) {
             applyUpdates(uuid, updates)

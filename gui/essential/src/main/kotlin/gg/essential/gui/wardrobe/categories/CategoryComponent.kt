@@ -151,10 +151,9 @@ class CategoryComponent(
             if (previousCategory == category && highlightedItem == null) return@onSetValueAndNow
 
             previousCategory = category
+            updatingScrollBasedOnCategory = true
 
             fun doScroll() {
-                updatingScrollBasedOnCategory = true
-
                 scroller.animationFrame() // Force recalculate of position to avoid scrolling an incorrect amount
 
                 if (category == this.category) return scroller.scrollToTop()
@@ -175,10 +174,11 @@ class CategoryComponent(
                 scroller.scrollToTopOf(target, offset = -CosmeticGroup.headerHeight)
             }
 
-            // Delay is needed because the effect which swaps out the current category component has undefined ordering
-            // compared to this effect, so we'll wait until before the next frame, by which point it will definitely
-            // have ran.
-            Window.enqueueRenderOperation(::doScroll)
+            // Double delay is needed because this component isn't added to the component tree until the next frame
+            // because WardrobeContainer calls layoutSafe() on the current category. Additionally, this listener
+            // on the state is called before the component is added to the component tree, so we need to wait for
+            // the next frame to scroll to the correct position.
+            Window.enqueueRenderOperation { Window.enqueueRenderOperation(::doScroll) }
         }
 
         scroller.addScrollAdjustEvent(false) { _, _ ->

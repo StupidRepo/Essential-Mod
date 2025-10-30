@@ -58,12 +58,6 @@ public final class Channel {
     @SerializedName("joined_at")
     public final long joinedAt;
 
-    @SerializedName("last_read_message_id")
-    private @Nullable Long lastReadMessageId;
-
-    @SerializedName("unread_messages")
-    private int unreadMessages;
-
     public Channel(
             final long id, @NotNull final ChannelType type, @NotNull final String name, @Nullable final String topic,
             @Nullable final ChannelSettings settings, @NotNull final Set<UUID> members,
@@ -80,8 +74,6 @@ public final class Channel {
         this.closedInfo = closedInfo;
         this.muted = muted;
         this.joinedAt = joinedAt;
-        this.lastReadMessageId = lastReadMessageId;
-        this.unreadMessages = unreadMessages;
     }
 
     public long getId() {
@@ -127,11 +119,11 @@ public final class Channel {
     }
 
     public @Nullable Long getLastReadMessageId() {
-        return lastReadMessageId;
+        return null;
     }
 
     public int getUnreadMessages() {
-        return unreadMessages;
+        return -1;
     }
 
     public void setName(@NotNull final String name) {
@@ -147,10 +139,8 @@ public final class Channel {
     }
 
     public void setLastReadMessageId(@Nullable Long lastReadMessageId) {
-        this.lastReadMessageId = lastReadMessageId;
     }
 
     public void setUnreadMessages(int unreadMessages) {
-        this.unreadMessages = unreadMessages;
     }
 }

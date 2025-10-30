@@ -75,14 +75,6 @@ object MessageUtils {
         )
     )
 
-    val blockedMessageMarkdownConfig = restrictedMarkdownConfig.copy(
-        textConfig = restrictedMarkdownConfig.textConfig.copy(
-            color = EssentialPalette.TEXT_DISABLED,
-            shadowColor = EssentialPalette.TEXT_SHADOW,
-        ),
-        urlConfig = URLConfig(enabled = false),
-    )
-
     val fullMarkdownConfig: MarkdownConfig = markdownStyleConfig.copy(
         textConfig = markdownStyleConfig.textConfig.copy(
             shadowColor = Color(0x101010),

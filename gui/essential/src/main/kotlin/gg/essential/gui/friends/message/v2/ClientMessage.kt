@@ -102,21 +102,4 @@ sealed interface SendState {
 
     data object Failed : SendState
 
-    data class Blocked(val reason: String) : SendState {
-
-        val toastMessage = when(reason) {
-            CONTAINS_NON_WHITELISTED_DOMAIN -> "You cannot share this link"
-            else -> "You cannot send this message"
-        }
-
-        val tooltipMessage = when(reason) {
-            CONTAINS_NON_WHITELISTED_DOMAIN -> "Message not sent: This link is not allowed"
-            else -> "Message not sent: This isn't allowed"
-        }
-
-        companion object {
-
-            private const val CONTAINS_NON_WHITELISTED_DOMAIN = "CONTAINS_NON_WHITELISTED_DOMAIN"
-        }
-    }
 }

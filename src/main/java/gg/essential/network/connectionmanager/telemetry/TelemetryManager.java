@@ -17,7 +17,6 @@ import gg.essential.connectionmanager.common.packet.telemetry.ServerRecognizedTe
 import gg.essential.elementa.state.v2.ReferenceHolder;
 import gg.essential.event.client.InitializationEvent;
 import gg.essential.event.essential.TosAcceptedEvent;
-import gg.essential.event.gui.InitGuiEvent;
 import gg.essential.event.network.server.ServerJoinEvent;
 import gg.essential.gui.elementa.state.v2.ReferenceHolderImpl;
 import gg.essential.gui.elementa.state.v2.StateKt;
@@ -30,7 +29,6 @@ import gg.essential.network.connectionmanager.NetworkedManager;
 import gg.essential.network.connectionmanager.queue.SequentialPacketQueue;
 import gg.essential.sps.SpsAddress;
 import gg.essential.universal.UMinecraft;
-import gg.essential.universal.UResolution;
 import gg.essential.util.ModLoaderUtil;
 import gg.essential.util.Multithreading;
 import kotlin.jvm.functions.Function0;
@@ -74,8 +72,6 @@ public class TelemetryManager implements NetworkedManager {
     private final ReferenceHolder referenceHolder = new ReferenceHolderImpl();
     @Nullable
     private Function0<Unit> modPartnerEffect = null;
-    @Nullable
-    private Map<String, Object> previousDisplayMetadata = null;
 
     public TelemetryManager(@NotNull final ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
@@ -160,7 +156,6 @@ public class TelemetryManager implements NetworkedManager {
         setupAbFeatureTracking(this, referenceHolder);
         setupSettingsTracking(this, referenceHolder);
         ImpressionTelemetryManager.INSTANCE.initialize();
-        FPSTelemetryManager.INSTANCE.initialize();
 
         enqueue(new ClientTelemetryPacket("LANGUAGE", new HashMap<String, Object>(){{
             put("lang", UMinecraft.getMinecraft().gameSettings.language);
@@ -244,18 +239,6 @@ public class TelemetryManager implements NetworkedManager {
         }
 
         enqueue(new ClientTelemetryPacket("HARDWARE_V2", hardwareMap));
-    }
-
-    @Subscribe
-    public void sendDisplayData(@NotNull final InitGuiEvent event) {
-        final Map<String, Object> displayMetadata = new HashMap<>();
-        displayMetadata.put("windowWidth", UResolution.getWindowWidth());
-        displayMetadata.put("windowHeight", UResolution.getWindowHeight());
-        displayMetadata.put("guiSize", UResolution.getScaleFactor());
-        if (!displayMetadata.equals(previousDisplayMetadata)) {
-            enqueue(new ClientTelemetryPacket("DISPLAY_DATA", displayMetadata));
-            this.previousDisplayMetadata = displayMetadata;
-        }
     }
 
     private void queueInstallerTelemetryPacket() {

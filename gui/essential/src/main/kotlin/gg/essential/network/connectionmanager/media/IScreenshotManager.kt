@@ -15,14 +15,12 @@ import com.sparkuniverse.toolbox.chat.model.Channel
 import gg.essential.gui.elementa.state.v2.ListState
 import gg.essential.gui.screenshot.ScreenshotId
 import gg.essential.gui.screenshot.ScreenshotInfo
-import gg.essential.gui.screenshot.ScreenshotUploadToast
 import gg.essential.handlers.screenshot.ClientScreenshotMetadata
 import gg.essential.media.model.Media
 import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.function.Consumer
 
 interface IScreenshotManager {
     val screenshotFolder: Path
@@ -40,8 +38,6 @@ interface IScreenshotManager {
 
     fun handleScreenshotEdited(source: ScreenshotId, originalMetadata: ClientScreenshotMetadata, screenshot: BufferedImage, favorite: Boolean): File
 
-    fun upload(path: Path, metadata: ClientScreenshotMetadata?, onProgress: Consumer<ScreenshotUploadToast.ToastProgress>): CompletableFuture<Media>
-
     fun uploadAndCopyLinkToClipboard(path: Path): CompletableFuture<Media>
     fun uploadAndCopyLinkToClipboard(path: Path, metadata: ClientScreenshotMetadata?): CompletableFuture<Media>
     fun copyLinkToClipboard(media: Media)
@@ -49,6 +45,4 @@ interface IScreenshotManager {
     fun uploadAndShareLinkToChannels(channels: List<Channel>, path: Path): CompletableFuture<Media>
     fun uploadAndShareLinkToChannels(channels: List<Channel>,path: Path, metadata: ClientScreenshotMetadata?): CompletableFuture<Media>
     fun shareLinkToChannels(channels: List<Channel>, media: Media)
-
-    fun getUploadedLocalPathsCache(mediaId: String): List<Path>
 }

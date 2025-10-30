@@ -16,16 +16,14 @@ import gg.essential.connectionmanager.common.packet.cosmetic.ClientCosmeticCheck
 import gg.essential.connectionmanager.common.packet.cosmetic.ServerCosmeticsUserUnlockedPacket
 import gg.essential.connectionmanager.common.packet.cosmetic.capes.ClientCosmeticCapesUnlockedPacket
 import gg.essential.connectionmanager.common.packet.response.ResponseActionPacket
-import gg.essential.handlers.MinecraftGameProfileTexturesRefresher
-import gg.essential.mod.cosmetics.CAPE_DISABLED_COSMETIC_ID
 import gg.essential.mod.cosmetics.CosmeticSlot
+import gg.essential.mod.cosmetics.CAPE_DISABLED_COSMETIC_ID
 import gg.essential.network.connectionmanager.ConnectionManager
 import gg.essential.network.connectionmanager.cosmetics.CosmeticsManager
 import gg.essential.util.Multithreading
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EnumPlayerModelParts
 import java.util.concurrent.Semaphore
-
 
 class CapeCosmeticsManager(
     private val connectionManager: ConnectionManager,
@@ -78,7 +76,6 @@ class CapeCosmeticsManager(
 
             MojangCapeApi.putCape(cape?.id)
             Essential.logger.info("Updated Mojang cape to \"${cape?.name ?: "<none>"}\"")
-            MinecraftGameProfileTexturesRefresher.updateTextures(activeCape, "CAPE")
         } catch (e: Throwable) {
             Essential.logger.error("Error enabling cape $cape at Mojang:", e)
         } finally {

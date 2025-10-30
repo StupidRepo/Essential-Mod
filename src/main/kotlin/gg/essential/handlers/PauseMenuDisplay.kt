@@ -59,7 +59,6 @@ import gg.essential.gui.elementa.state.v2.stateOf
 import gg.essential.gui.elementa.state.v2.toV2
 import gg.essential.gui.layoutdsl.Alignment
 import gg.essential.gui.layoutdsl.Arrangement
-import gg.essential.gui.layoutdsl.LayoutScope
 import gg.essential.gui.layoutdsl.Modifier
 import gg.essential.gui.layoutdsl.alignBoth
 import gg.essential.gui.layoutdsl.alignVertical
@@ -84,7 +83,6 @@ import gg.essential.gui.modals.NotAuthenticatedModal
 import gg.essential.gui.modals.TOSModal
 import gg.essential.gui.modals.UpdateAvailableModal
 import gg.essential.gui.modals.UpdateNotificationModal
-import gg.essential.gui.modals.ensurePrerequisites
 import gg.essential.gui.notification.Notifications
 import gg.essential.gui.notification.error
 import gg.essential.gui.notification.toastButton
@@ -92,7 +90,6 @@ import gg.essential.gui.notification.warning
 import gg.essential.gui.overlay.Layer
 import gg.essential.gui.overlay.LayerPriority
 import gg.essential.gui.overlay.ModalManager
-import gg.essential.gui.overlay.launchModalFlow
 import gg.essential.gui.sps.InviteFriendsModal
 import gg.essential.gui.sps.WorldSelectionModal
 import gg.essential.gui.util.addTag
@@ -103,7 +100,6 @@ import gg.essential.util.findButtonByLabel
 import gg.essential.gui.util.pollingState
 import gg.essential.network.connectionmanager.serverdiscovery.NewServerDiscoveryManager
 import gg.essential.network.connectionmanager.sps.SPSSessionSource
-import gg.essential.network.connectionmanager.suspension.suspensionModal
 import gg.essential.sps.SpsAddress
 import gg.essential.universal.USound
 import gg.essential.util.FirewallUtil
@@ -302,15 +298,6 @@ class PauseMenuDisplay {
             AutoUpdate.seenUpdateToast = true
         }
 
-        // Suspension modal
-        Essential.getInstance().connectionManager.suspensionManager.activeSuspension.getUntracked()?.let { suspension ->
-            if (suspension.unseen) {
-                GuiUtil.launchModalFlow {
-                    suspensionModal(suspension)
-                }
-            }
-        }
-
         // Update Notification Modal
         if (VersionData.getMajorComponents(VersionData.essentialVersion) != VersionData.getMajorComponents(VersionData.getLastSeenModal())
             && EssentialConfig.updateModal
@@ -407,43 +394,21 @@ class PauseMenuDisplay {
             source: SPSSessionSource,
             prepopulatedInvites: Set<UUID> = emptySet(),
             worldSummary: WorldSummary? = null,
-            showIPWarning: Boolean = true,
-            callback: () -> Unit = {},
-        ) {
-            GuiUtil.launchModalFlow {
-                ensurePrerequisites(social = true, rules = false)
-
-                awaitModal {
-                    object : Modal(modalManager) {
-                        override fun onOpen() {
-                            super.onOpen()
-                            showInviteOrHostModalInternal(source, prepopulatedInvites, worldSummary, this, showIPWarning, callback)
-                        }
-
-                        override val modalName: String? get() = null
-                        override fun LayoutScope.layoutModal() {}
-                        override fun handleEscapeKeyPress() {}
-                    }
-                }
-            }
-        }
-
-        fun showInviteOrHostModalInternal(
-            source: SPSSessionSource,
-            prepopulatedInvites: Set<UUID> = emptySet(),
-            worldSummary: WorldSummary? = null,
-            previousModal: Modal,
+            previousModal: Modal? = null,
             showIPWarning: Boolean = true,
             callback: () -> Unit = {},
         ) {
             val connectionManager = Essential.getInstance().connectionManager
-
             val currentServerData = UMinecraft.getMinecraft().currentServerData
             val spsManager = connectionManager.spsManager
 
             // Attempts to replace the previously opened modal, or, push a new modal if one is not open.
             fun pushModal(builder: (ModalManager) -> Modal) {
-                previousModal.replaceWith(builder(previousModal.modalManager))
+                if (previousModal != null) {
+                    previousModal.replaceWith(builder(previousModal.modalManager))
+                } else {
+                    GuiUtil.pushModal(builder)
+                }
             }
 
             // Attempts to show the user various warnings (TOS, Connection Manager, Firewall, etc.) before pushing
@@ -453,7 +418,7 @@ class PauseMenuDisplay {
                 builder: (ModalManager) -> Modal
             ) {
                 fun Modal.retryModal(showIPWarningOverride: Boolean = showIPWarning) {
-                    showInviteOrHostModalInternal(
+                    showInviteOrHostModal(
                         source,
                         prepopulatedInvites,
                         worldSummary,
@@ -564,7 +529,6 @@ class PauseMenuDisplay {
             } else {
                 // Realms, ReplayMod, etc.
                 Notifications.error("Can't invite to this world", "")
-                previousModal.close()
             }
         }
 
